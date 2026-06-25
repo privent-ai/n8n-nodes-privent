@@ -138,6 +138,11 @@ async function priventRequest<T>(
     url,
     body,
     json: true,
+    // Auto/cloud Tokenize scores the original text via /v1/risk/score, whose
+    // backend ML budget is 180s (cold start). Must exceed n8n's ~120s default so
+    // the backend wins — otherwise auto silently degrades to regex-only (PHI
+    // leak) and cloud errors. Blanket is fine: vault/audit calls are fast.
+    timeout: 200_000,
   })) as T;
 }
 
@@ -297,16 +302,25 @@ interface CloudScoreResponse {
   entities?: RiskScore['entities'];
 }
 
-/** `POST /v1/risk/score` → developer-facing `RiskScore`. */
+/** Entity rows returned by (or seeded into) `/v1/risk/score`. */
+type EntityItem = NonNullable<RiskScore['entities']>[number];
+
+/** `POST /v1/risk/score` → developer-facing `RiskScore`.
+ *  `opts.lang` sets the detection language hint; `opts.bootstrapEntities`
+ *  seeds the server with caller-side regex hits (capped at the schema's 256). */
 export async function riskScore(
   ctx: IExecuteFunctions,
   text: string,
   baseUrl: string,
+  opts?: { lang?: string; bootstrapEntities?: EntityItem[] },
 ): Promise<RiskScore> {
   const start = Date.now();
+  const bootstrap = opts?.bootstrapEntities?.slice(0, 256);
   const r = await priventRequest<CloudScoreResponse>(ctx, baseUrl, 'POST', '/v1/risk/score', {
     text,
     include_entities: true,
+    ...(opts?.lang != null ? { lang: opts.lang } : {}),
+    ...(bootstrap != null && bootstrap.length > 0 ? { bootstrap_entities: bootstrap } : {}),
   });
   return {
     risk_score: r.risk_score,

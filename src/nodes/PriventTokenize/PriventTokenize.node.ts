@@ -17,27 +17,61 @@ import {
   safeTriggerMode,
 } from '../../shared/privent-http.js';
 
-/** A regex hit in the source text, in detection order. */
-interface DetectionMatch {
+/** A detected span in the source text (regex or backend ML), detection order. */
+interface Span {
   kind: EntityKind;
-  raw: string;
+  value: string;
   index: number;
   length: number;
   confidence: number;
+  source: 'regex' | 'model' | 'hint';
+}
+
+// On an exact-span tie, the more-specific source wins (ML over a generic hint
+// over a regex). For regex-only (local) detection all sources are 'regex', so
+// this rank is a no-op and ordering matches the previous behavior exactly.
+const SOURCE_RANK: Record<Span['source'], number> = { model: 0, hint: 1, regex: 2 };
+
+/**
+ * Longest span wins on overlap; total ordering for determinism. Mirrors core's
+ * `removeOverlaps` (tokenizer/hybrid.ts) so the regex pass stays byte-identical;
+ * also used to merge regex + backend-ML spans into one non-overlapping set.
+ */
+function removeOverlaps(spans: Span[]): Span[] {
+  const sorted = [...spans].sort(
+    (a, b) =>
+      a.index - b.index ||
+      b.length - a.length ||
+      SOURCE_RANK[a.source] - SOURCE_RANK[b.source] ||
+      a.kind.localeCompare(b.kind) ||
+      a.value.localeCompare(b.value),
+  );
+  const kept: Span[] = [];
+  let lastEnd = -1;
+  for (const s of sorted) {
+    if (s.index >= lastEnd) {
+      kept.push(s);
+      lastEnd = s.index + s.length;
+    }
+  }
+  return kept;
 }
 
 /**
- * Pure regex detection — mirrors the regex pass + overlap removal in core's
- * `HybridTokenizer` (tokenizer/hybrid.ts). Reimplemented here (rather than
- * importing the class) because `hybrid.ts` statically pulls the ML extractor +
- * http client, which would drag `process`/fetch into this Cloud-verified
- * bundle. Keep in sync with core's `removeOverlaps` ordering.
+ * Pure regex detection — mirrors the regex pass in core's `HybridTokenizer`
+ * (tokenizer/hybrid.ts). Reimplemented here (rather than importing the class)
+ * because `hybrid.ts` statically pulls the ML extractor + http client, which
+ * would drag `process`/fetch into this Cloud-verified bundle.
+ *
+ * NOTE: regex only finds structured PII (email/phone/SSN/card/…). Person names,
+ * dates of birth and street addresses are NOT detectable by regex — those come
+ * from the backend ML pass (auto/cloud modes only).
  */
 function detectMatches(
   text: string,
   detectors: readonly RegexDetector[],
-): DetectionMatch[] {
-  const matches: DetectionMatch[] = [];
+): Span[] {
+  const matches: Span[] = [];
   for (const detector of detectors) {
     const re = new RegExp(detector.regex.source, 'g');
     for (const m of text.matchAll(re)) {
@@ -46,30 +80,15 @@ function detectMatches(
       if (detector.validate && !detector.validate(raw)) continue;
       matches.push({
         kind: detector.kind,
-        raw,
+        value: raw,
         index: m.index,
         length: raw.length,
         confidence: detector.confidence,
+        source: 'regex',
       });
     }
   }
-  // Longest span wins on overlap; total ordering for determinism.
-  matches.sort(
-    (a, b) =>
-      a.index - b.index ||
-      b.length - a.length ||
-      a.kind.localeCompare(b.kind) ||
-      a.raw.localeCompare(b.raw),
-  );
-  const kept: DetectionMatch[] = [];
-  let lastEnd = -1;
-  for (const m of matches) {
-    if (m.index >= lastEnd) {
-      kept.push(m);
-      lastEnd = m.index + m.length;
-    }
-  }
-  return kept;
+  return removeOverlaps(matches);
 }
 
 export class PriventTokenize implements INodeType {
@@ -81,7 +100,7 @@ export class PriventTokenize implements INodeType {
     version: 1,
     subtitle: '={{$parameter["detectionMode"]}}',
     description:
-      'Replaces sensitive values (emails, phones, API keys, etc.) with reversible [KIND_NNN] placeholders before the text reaches an LLM or external service.',
+      'Replaces sensitive values with reversible [KIND_NNN] placeholders before the text reaches an LLM or external service. Auto/Cloud modes also mask ML-detected names, dates of birth and addresses; Local mode is regex-only (structured PII).',
     defaults: { name: 'Privent Tokenize' },
     inputs: [NodeConnectionTypes.Main],
     outputs: [NodeConnectionTypes.Main],
@@ -137,7 +156,7 @@ export class PriventTokenize implements INodeType {
             name: 'Local Only (Regex)',
             value: 'local',
             description:
-              'Regex-only detection. No network calls. No risk scoring. Deterministic and fast.',
+              'Regex-only detection (structured PII: emails, phones, SSN, cards, …). No network calls, no risk scoring — deterministic and fast. Does NOT mask names, dates of birth or addresses; use Auto or Cloud for full PHI coverage.',
           },
           {
             name: 'Cloud (Regex + ML)',
@@ -193,37 +212,80 @@ export class PriventTokenize implements INodeType {
           );
         }
 
-        // Pure regex detection → one find-or-create-batch → right-to-left replace.
-        const matches = detectMatches(text, DEFAULT_DETECTORS);
         const vault = new N8nHttpVault(this, sessionId, baseUrl);
 
-        let tokenizedText = text;
-        const entities: Array<{ token: string; kind: EntityKind; confidence: number; span: [number, number] }> = [];
-        if (matches.length > 0) {
-          const batched = await vault.findOrCreateBatch(
-            matches.map((m) => ({ kind: m.kind, value: m.raw })),
-          );
-          const withTokens = matches.map((m, idx) => ({ ...m, token: batched[idx]?.token }));
-          // Replace right-to-left so earlier span indices stay valid.
-          for (const m of [...withTokens].sort((a, b) => b.index - a.index)) {
-            if (m.token == null) continue;
-            tokenizedText = tokenizedText.slice(0, m.index) + m.token + tokenizedText.slice(m.index + m.length);
-          }
-          for (const m of withTokens) {
-            if (m.token == null) continue;
-            entities.push({ token: m.token, kind: m.kind, confidence: m.confidence, span: [m.index, m.index + m.length] });
-          }
-          entities.sort((a, b) => a.span[0] - b.span[0]);
-        }
+        // 1. Local regex detection — structured PII only (no names/DOB/address).
+        const localSpans = detectMatches(text, DEFAULT_DETECTORS);
 
+        // 2. auto/cloud: ONE /v1/risk/score on the ORIGINAL text — returns the
+        //    ML entities (names/DOB/address + structured) AND the risk score in
+        //    a single call. Privacy: the original text reaches Privent's TRUSTED
+        //    detector only; the external LLM still receives just the tokenized
+        //    text produced below, so raw PHI never reaches the untrusted model.
         let risk = null;
         let flaggedForReview = false;
-
+        const backendSpans: Span[] = [];
         if (detectionMode !== 'local') {
-          risk = await riskScore(this, tokenizedText, baseUrl);
-          if (risk.risk_score >= reviewThreshold) {
-            flaggedForReview = true;
+          try {
+            const scored = await riskScore(this, text, baseUrl, {
+              lang: 'auto',
+              bootstrapEntities: localSpans.map((s) => ({
+                kind: s.kind,
+                value: s.value,
+                span: [s.index, s.index + s.length] as [number, number],
+                confidence: s.confidence,
+                source: 'regex' as const,
+              })),
+            });
+            risk = scored;
+            for (const e of scored.entities ?? []) {
+              backendSpans.push({
+                kind: e.kind,
+                value: e.value,
+                index: e.span[0],
+                length: e.span[1] - e.span[0],
+                confidence: e.confidence,
+                source: e.source,
+              });
+            }
+            if (risk.risk_score >= reviewThreshold) flaggedForReview = true;
+          } catch (err) {
+            // cloud: ML is required — surface the failure. auto: degrade to
+            // regex-only masking (risk stays null) so the data path never breaks.
+            if (detectionMode === 'cloud') throw err;
           }
+        }
+
+        // 3. Merge regex + ML spans → one ordered, non-overlapping set. Guard
+        //    malformed spans; canonicalize the value to the exact substring so
+        //    the vault stores what we replace (detokenize round-trip fidelity).
+        const merged = removeOverlaps([...localSpans, ...backendSpans])
+          .filter((s) => s.length > 0 && s.index >= 0 && s.index + s.length <= text.length)
+          .map((s) => ({ ...s, value: text.slice(s.index, s.index + s.length) }));
+
+        // 4. One find-or-create-batch → right-to-left replace (indices stay valid).
+        let tokenizedText = text;
+        const entities: Array<{
+          token: string;
+          kind: EntityKind;
+          confidence: number;
+          source: Span['source'];
+          span: [number, number];
+        }> = [];
+        if (merged.length > 0) {
+          const batched = await vault.findOrCreateBatch(
+            merged.map((s) => ({ kind: s.kind, value: s.value })),
+          );
+          const withTokens = merged.map((s, idx) => ({ ...s, token: batched[idx]?.token }));
+          for (const s of [...withTokens].sort((a, b) => b.index - a.index)) {
+            if (s.token == null) continue;
+            tokenizedText = tokenizedText.slice(0, s.index) + s.token + tokenizedText.slice(s.index + s.length);
+          }
+          for (const s of withTokens) {
+            if (s.token == null) continue;
+            entities.push({ token: s.token, kind: s.kind, confidence: s.confidence, source: s.source, span: [s.index, s.index + s.length] });
+          }
+          entities.sort((a, b) => a.span[0] - b.span[0]);
         }
 
         const ctx = resolveContext(this, sessionId, traceIdParam, agentNameParam);
@@ -258,6 +320,7 @@ export class PriventTokenize implements INodeType {
                 token: e.token,
                 kind: e.kind,
                 confidence: e.confidence,
+                source: e.source,
               })),
               risk,
               flaggedForReview,

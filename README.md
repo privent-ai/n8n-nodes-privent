@@ -216,6 +216,6 @@ Metadata never contains raw text, tokenized text, or token literals. Audit emiss
 
 ## License
 
-Apache-2.0 © Privent AI
+MIT © Privent AI
 
 Questions? Contact us at hello@privent.ai.
