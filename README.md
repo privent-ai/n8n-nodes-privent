@@ -2,6 +2,8 @@
 
 <img width="1772" height="1080" alt="0626" src="https://github.com/user-attachments/assets/745ef688-4b0a-4e72-ae1c-9320831556fd" />
 
+
+
 > **Early Access.** Privent is currently in private rollout. API keys are issued through our access process. [Request access](https://www.privent.ai/request-access)
 
 
