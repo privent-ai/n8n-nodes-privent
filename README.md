@@ -1,3 +1,5 @@
+<img width="1920" height="540" alt="0521" src="https://github.com/user-attachments/assets/3bcb86ec-af72-4cff-b1a4-38883b17e3b3" />
+
 # Privent - Stop Data Leaks in n8n Workflows. 
 
 <img width="1772" height="1080" alt="privent-black" src="https://github.com/user-attachments/assets/9f221d49-6286-44fb-bf88-f0a4fc5e9341" />
@@ -58,8 +60,6 @@ npm install n8n-nodes-privent
 ```
 
 Restart n8n. The Privent nodes appear in the node panel.
-
-<img width="1920" height="540" alt="0521" src="https://github.com/user-attachments/assets/3bcb86ec-af72-4cff-b1a4-38883b17e3b3" />
 
 ---
 
