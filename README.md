@@ -1,6 +1,9 @@
 # n8n-nodes-privent
 
+<img width="1772" height="1080" alt="0626" src="https://github.com/user-attachments/assets/745ef688-4b0a-4e72-ae1c-9320831556fd" />
+
 > **Early Access.** Privent is currently in private rollout. API keys are issued through our access process. [Request access](https://www.privent.ai/request-access)
+
 
 Official **Privent DLP** community nodes for [n8n](https://n8n.io). Tokenize PII and secrets in prompts on the way to your AI agents and detokenize them at trusted egress points — without ever exposing raw data to the LLM.
 
