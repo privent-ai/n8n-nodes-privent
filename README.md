@@ -1,4 +1,4 @@
-# n8n-nodes-privent
+# Privent - Native Data Leak Prevention for n8n
 
 <img width="1772" height="1080" alt="privent-black" src="https://github.com/user-attachments/assets/9f221d49-6286-44fb-bf88-f0a4fc5e9341" />
 
