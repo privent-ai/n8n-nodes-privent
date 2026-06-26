@@ -1,5 +1,4 @@
 # n8n-nodes-privent
-
 <img width="1772" height="1080" alt="0626" src="https://github.com/user-attachments/assets/745ef688-4b0a-4e72-ae1c-9320831556fd" />
 
 
@@ -59,6 +58,8 @@ npm install n8n-nodes-privent
 ```
 
 Restart n8n. The Privent nodes appear in the node panel.
+
+<img width="1920" height="540" alt="0521" src="https://github.com/user-attachments/assets/3bcb86ec-af72-4cff-b1a4-38883b17e3b3" />
 
 ---
 
