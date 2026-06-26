@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/index.ts
+// index.ts
 var index_exports = {};
 __export(index_exports, {
   PriventApi: () => PriventApi,
@@ -30,7 +30,7 @@ __export(index_exports, {
 });
 module.exports = __toCommonJS(index_exports);
 
-// src/nodes/PriventSession/PriventSession.node.ts
+// nodes/PriventSession/PriventSession.node.ts
 var import_n8n_workflow = require("n8n-workflow");
 
 // node_modules/@priventai/core/dist/chunk-NSBPE2FW.js
@@ -223,7 +223,7 @@ function normalize(kind, value) {
 
 // node_modules/@priventai/core/dist/index.js
 var TRACER_VERSION = (() => {
-  const v = "1.1.1";
+  const v = "1.1.2";
   return typeof v === "string" && v.length > 0 ? v : "0.1.0";
 })();
 var DEFAULT_TTL_MS = 60 * 60 * 1e3;
@@ -416,7 +416,7 @@ var SPOOL_FILE_BYTES = 10 * 1024 * 1024;
 var SPOOL_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1e3;
 var SPOOL_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1e3;
 
-// src/shared/privent-http.ts
+// shared/privent-http.ts
 function frameworkForWire(framework) {
   if (framework === "manual") return "sdk";
   return framework;
@@ -728,7 +728,7 @@ function buildAuditMetadata(ctx, node, extras) {
   };
 }
 
-// src/nodes/PriventSession/PriventSession.node.ts
+// nodes/PriventSession/PriventSession.node.ts
 var PriventSession = class {
   description = {
     displayName: "Privent Session",
@@ -914,7 +914,7 @@ var PriventSession = class {
   }
 };
 
-// src/nodes/PriventTokenize/PriventTokenize.node.ts
+// nodes/PriventTokenize/PriventTokenize.node.ts
 var import_n8n_workflow2 = require("n8n-workflow");
 var SOURCE_RANK = { model: 0, hint: 1, regex: 2 };
 function removeOverlaps(spans) {
@@ -1159,7 +1159,7 @@ var PriventTokenize = class {
   }
 };
 
-// src/nodes/PriventDetokenize/PriventDetokenize.node.ts
+// nodes/PriventDetokenize/PriventDetokenize.node.ts
 var import_node_crypto = require("crypto");
 var import_n8n_workflow3 = require("n8n-workflow");
 function matchesTrustedSink(url, trusted) {
@@ -1376,7 +1376,7 @@ var PriventDetokenize = class {
   }
 };
 
-// src/nodes/PriventRiskCheck/PriventRiskCheck.node.ts
+// nodes/PriventRiskCheck/PriventRiskCheck.node.ts
 var import_n8n_workflow4 = require("n8n-workflow");
 var PriventRiskCheck = class {
   description = {
@@ -1498,7 +1498,7 @@ var PriventRiskCheck = class {
   }
 };
 
-// src/nodes/PriventAuditEvent/PriventAuditEvent.node.ts
+// nodes/PriventAuditEvent/PriventAuditEvent.node.ts
 var import_n8n_workflow5 = require("n8n-workflow");
 var PriventAuditEvent = class {
   description = {
@@ -1716,7 +1716,7 @@ var PriventAuditEvent = class {
   }
 };
 
-// src/nodes/PriventHandoff/PriventHandoff.node.ts
+// nodes/PriventHandoff/PriventHandoff.node.ts
 var import_n8n_workflow6 = require("n8n-workflow");
 var PriventHandoff = class {
   description = {
@@ -1919,7 +1919,7 @@ var PriventHandoff = class {
   }
 };
 
-// src/credentials/PriventApi.credentials.ts
+// credentials/PriventApi.credentials.ts
 var PriventApi = class {
   name = "priventApi";
   displayName = "Privent API";

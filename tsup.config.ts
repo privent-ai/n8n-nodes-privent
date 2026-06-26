@@ -19,9 +19,9 @@ const SDK_VERSION = JSON.stringify(process.env['npm_package_version'] ?? '1.0.0'
 
 export default defineConfig({
   entry: [
-    'src/nodes/**/*.node.ts',
-    'src/credentials/**/*.credentials.ts',
-    'src/index.ts',
+    'nodes/**/*.node.ts',
+    'credentials/**/*.credentials.ts',
+    'index.ts',
   ],
   format: ['cjs'],
   bundle: true,

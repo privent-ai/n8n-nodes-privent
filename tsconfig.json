@@ -13,8 +13,8 @@
     "declaration": false,
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "."
   },
-  "include": ["src/**/*"],
+  "include": ["nodes/**/*", "credentials/**/*", "shared/**/*", "__tests__/**/*", "index.ts"],
   "exclude": ["node_modules", "dist"]
 }

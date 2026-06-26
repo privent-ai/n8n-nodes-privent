@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/credentials/PriventApi.credentials.ts
+// credentials/PriventApi.credentials.ts
 var PriventApi_credentials_exports = {};
 __export(PriventApi_credentials_exports, {
   PriventApi: () => PriventApi

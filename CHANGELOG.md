@@ -4,6 +4,13 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.2] - 2026-06-26
+
+### Changed
+- Align source layout to n8n-nodes-starter (root `credentials/` + `nodes/` instead of
+  under `src/`) for verified-node vetting. Build output paths under `dist/` are unchanged;
+  no API change.
+
 ## [1.1.1] - 2026-06-26
 
 ### Packaging

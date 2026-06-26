@@ -11,7 +11,7 @@ const { cpSync, mkdirSync } = require('fs');
 const { resolve } = require('path');
 
 const root = resolve(__dirname, '..');
-const pngSrc = resolve(root, 'src/nodes/privent.png');
+const pngSrc = resolve(root, 'nodes/privent.png');
 
 const NODES = [
   'PriventSession',
@@ -27,7 +27,7 @@ for (const name of NODES) {
   mkdirSync(destDir, { recursive: true });
   cpSync(pngSrc, resolve(destDir, 'privent.png'));
   cpSync(
-    resolve(root, 'src/nodes', name, `${name}.node.json`),
+    resolve(root, 'nodes', name, `${name}.node.json`),
     resolve(destDir, `${name}.node.json`),
   );
 }

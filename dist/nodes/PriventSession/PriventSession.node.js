@@ -17,7 +17,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/nodes/PriventSession/PriventSession.node.ts
+// nodes/PriventSession/PriventSession.node.ts
 var PriventSession_node_exports = {};
 __export(PriventSession_node_exports, {
   PriventSession: () => PriventSession
@@ -201,7 +201,7 @@ var HealthResponseSchema = import_zod.z.object({
 
 // node_modules/@priventai/core/dist/index.js
 var TRACER_VERSION = (() => {
-  const v = "1.1.1";
+  const v = "1.1.2";
   return typeof v === "string" && v.length > 0 ? v : "0.1.0";
 })();
 var DEFAULT_TTL_MS = 60 * 60 * 1e3;
@@ -210,7 +210,7 @@ var SPOOL_FILE_BYTES = 10 * 1024 * 1024;
 var SPOOL_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1e3;
 var SPOOL_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1e3;
 
-// src/shared/privent-http.ts
+// shared/privent-http.ts
 function frameworkForWire(framework) {
   if (framework === "manual") return "sdk";
   return framework;
@@ -359,7 +359,7 @@ function buildAuditMetadata(ctx, node, extras) {
   };
 }
 
-// src/nodes/PriventSession/PriventSession.node.ts
+// nodes/PriventSession/PriventSession.node.ts
 var PriventSession = class {
   description = {
     displayName: "Privent Session",
