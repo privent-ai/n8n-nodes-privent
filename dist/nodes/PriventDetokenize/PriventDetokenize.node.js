@@ -218,7 +218,7 @@ function normalize(kind, value) {
 
 // node_modules/@priventai/core/dist/index.js
 var TRACER_VERSION = (() => {
-  const v = "1.1.0";
+  const v = "1.1.1";
   return typeof v === "string" && v.length > 0 ? v : "0.1.0";
 })();
 var DEFAULT_TTL_MS = 60 * 60 * 1e3;

@@ -4,6 +4,14 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2026-06-26
+
+### Packaging
+- Commit the built `dist/` to the repo so the n8n verified-node pre-check can find
+  the credential file (`dist/credentials/PriventApi.credentials.js`) in the GitHub
+  repo at the path declared in `package.json` → `n8n.credentials`. No functional or
+  API change.
+
 ## [1.1.0] - 2026-06-25
 
 ### Added
