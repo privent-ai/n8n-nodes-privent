@@ -1,0 +1,9 @@
+{
+  "node": "n8n-nodes-privent.priventDetokenize",
+  "nodeVersion": "1.0",
+  "codexVersion": "1.0",
+  "categories": ["Utility", "Data & Storage"],
+  "resources": {
+    "primaryDocumentation": [{ "url": "https://www.privent.ai/docs" }]
+  }
+}
