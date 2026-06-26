@@ -4,6 +4,12 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.4] - 2026-06-26
+
+### Docs
+- Update README demo image. Docs-only; no code or API change. Republished so the npm
+  package page reflects the new image.
+
 ## [1.1.3] - 2026-06-26
 
 ### Docs
