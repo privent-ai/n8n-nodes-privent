@@ -1,6 +1,6 @@
 # n8n-nodes-privent
-<img width="1772" height="1080" alt="0626" src="https://github.com/user-attachments/assets/745ef688-4b0a-4e72-ae1c-9320831556fd" />
 
+<img width="1772" height="1080" alt="privent-black" src="https://github.com/user-attachments/assets/9f221d49-6286-44fb-bf88-f0a4fc5e9341" />
 
 
 > **Early Access.** Privent is currently in private rollout. API keys are issued through our access process. [Request access](https://www.privent.ai/request-access)
