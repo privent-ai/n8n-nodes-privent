@@ -17,15 +17,12 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// index.ts
-var index_exports = {};
-__export(index_exports, {
-  Privent: () => Privent,
-  PriventApi: () => PriventApi
-});
-module.exports = __toCommonJS(index_exports);
-
 // nodes/Privent/Privent.node.ts
+var Privent_node_exports = {};
+__export(Privent_node_exports, {
+  Privent: () => Privent
+});
+module.exports = __toCommonJS(Privent_node_exports);
 var import_n8n_workflow7 = require("n8n-workflow");
 
 // node_modules/@priventai/core/dist/chunk-NSBPE2FW.js
@@ -1947,73 +1944,8 @@ var Privent = class {
     return [out];
   }
 };
-
-// credentials/PriventApi.credentials.ts
-var PriventApi = class {
-  name = "priventApi";
-  displayName = "Privent API";
-  documentationUrl = "https://www.privent.ai/docs";
-  icon = "file:privent.png";
-  properties = [
-    {
-      displayName: "API Key",
-      name: "apiKey",
-      type: "string",
-      typeOptions: { password: true },
-      default: "",
-      required: true,
-      description: "Your Privent API key (starts with pv_live_\u2026). Find it in the Privent dashboard under Settings \u2192 API Keys.",
-      hint: "This value is encrypted at rest by n8n and never written to workflow output or logs."
-    },
-    {
-      displayName: "Base URL",
-      name: "baseUrl",
-      type: "string",
-      default: "https://api.privent.ai",
-      description: "Privent Cloud API base URL. Override only for self-hosted Privent deployments."
-    },
-    {
-      displayName: "Vault Backend",
-      name: "vaultBackend",
-      type: "options",
-      options: [
-        {
-          name: "In-Memory (Recommended for self-hosted n8n)",
-          value: "memory",
-          description: "Tokens are stored in the worker process memory for the duration of the execution. Fast, zero-latency lookups."
-        },
-        {
-          name: "Privent Cloud (Recommended for n8n Cloud)",
-          value: "cloud",
-          description: "Tokens are stored in Privent Cloud. Required when executions span multiple worker processes."
-        }
-      ],
-      default: "memory",
-      description: "Where session tokens are stored. Use Cloud backend on n8n Cloud or when running n8n with multiple queue workers."
-    }
-  ];
-  // n8n uses this to attach the Authorization header automatically on any
-  // node that declares `credentials: [{ name: 'priventApi', required: true }]`.
-  authenticate = {
-    type: "generic",
-    properties: {
-      headers: {
-        Authorization: "=Bearer {{$credentials.apiKey}}"
-      }
-    }
-  };
-  // n8n calls this endpoint to validate the credential in the UI.
-  test = {
-    request: {
-      baseURL: "={{$credentials.baseUrl}}",
-      url: "/v1/health",
-      method: "GET"
-    }
-  };
-};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  Privent,
-  PriventApi
+  Privent
 });
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=Privent.node.js.map

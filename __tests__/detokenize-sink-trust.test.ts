@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  PriventDetokenize,
-  deriveSinkId,
-} from '../nodes/PriventDetokenize/PriventDetokenize.node.js';
+import { Privent } from '../nodes/Privent/Privent.node.js';
+import { deriveSinkId } from '../nodes/Privent/operations/detokenize.js';
 import { makeHttpExecFn } from './_http-helpers.js';
 
 async function flushPromises() {
@@ -12,11 +10,15 @@ async function flushPromises() {
 const DETOK_NODE = {
   id: 'node-uuid-1',
   name: 'Detokenize',
-  type: 'n8n-nodes-privent.priventDetokenize',
+  type: 'n8n-nodes-privent.privent',
 };
 
 function detokExec(params: Record<string, unknown>, items: Array<{ json: Record<string, unknown> }>) {
-  return makeHttpExecFn({ items, params, node: DETOK_NODE });
+  return makeHttpExecFn({
+    items,
+    params: { resource: 'detokenize', operation: 'detokenize', ...params },
+    node: DETOK_NODE,
+  });
 }
 
 function firstMeta(events: Array<Record<string, unknown>>): Record<string, unknown> {
@@ -37,7 +39,7 @@ describe('PriventDetokenize sink trust matrix', () => {
       [{ json: { body: 'plain' } }],
     );
 
-    const out = await new PriventDetokenize().execute.call(exec);
+    const out = await new Privent().execute.call(exec);
     await flushPromises();
 
     expect(firstMeta(auditEvents())).toMatchObject({
@@ -61,7 +63,7 @@ describe('PriventDetokenize sink trust matrix', () => {
       [{ json: { body: 'plain' } }],
     );
 
-    const out = await new PriventDetokenize().execute.call(exec);
+    const out = await new Privent().execute.call(exec);
     await flushPromises();
 
     const events = auditEvents();
@@ -83,7 +85,7 @@ describe('PriventDetokenize sink trust matrix', () => {
       [{ json: { body: 'plain' } }],
     );
 
-    await new PriventDetokenize().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     expect(firstMeta(auditEvents())).toMatchObject({
@@ -107,7 +109,7 @@ describe('PriventDetokenize sink trust matrix', () => {
       [{ json: { body: 'plain' } }],
     );
 
-    await new PriventDetokenize().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const meta = firstMeta(auditEvents());

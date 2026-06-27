@@ -9,9 +9,13 @@
 Official **Privent DLP** community nodes for [n8n](https://n8n.io). Tokenize PII and secrets in prompts on the way to your AI agents and detokenize them at trusted egress points — without ever exposing raw data to the LLM.
 
 ```
-[Webhook] → [Privent Session] → [Privent Tokenize] → [OpenAI Chat]
-                              → [Privent Detokenize] → [Respond]
+[Webhook] → [Privent: Session] → [Privent: Tokenize] → [OpenAI Chat]
+                               → [Privent: Detokenize] → [Respond]
 ```
+
+Privent ships as a **single node** with a **Resource → Operation** selector. Each box above is the
+same **Privent** node configured to a different resource (Session, Tokenize, Detokenize, Risk Check,
+Audit, Handoff).
 
 > **n8n Cloud verified: in progress.** These nodes are zero-runtime-dependency and free of restricted globals/filesystem/network primitives; the package is being submitted for the n8n Cloud verified-community program.
 
@@ -30,8 +34,8 @@ Privent sits in the middle: it replaces sensitive values with reversible placeho
 The nodes hold **no state in the n8n process**. Token state, risk scoring, and audit ingest all live in a **Privent backend** (Privent Cloud or a self-hosted deployment) reached over HTTP through the `priventApi` credential's **Base URL**. Each node call uses n8n's authenticated request helper — there is no local vault, no background timer, and no environment-variable configuration.
 
 Consequences:
-- A reachable Privent backend is **required** (the credential is mandatory on every node).
-- Correlation context (`sessionId`, `traceId`, `agentName`) travels on the n8n item between nodes — **Privent Session** writes it, downstream nodes read it via expression defaults.
+- A reachable Privent backend is **required** (the credential is mandatory on the node).
+- Correlation context (`sessionId`, `traceId`, `agentName`) travels on the n8n item between nodes — the **Session** resource writes it; downstream resources read it via expression defaults.
 - Entity detection for tokenization runs **in-node** (regex); ML risk scoring is server-side.
 
 ---
@@ -57,13 +61,13 @@ cd ~/.n8n
 npm install n8n-nodes-privent
 ```
 
-Restart n8n. The Privent nodes appear in the node panel.
+Restart n8n. The **Privent** node appears in the node panel.
 
 ---
 
 ## Credential: PriventApi
 
-Create a **PriventApi** credential before using any Privent node.
+Create a **PriventApi** credential before using the Privent node.
 
 | Field | Description | Default |
 |---|---|---|
@@ -76,20 +80,36 @@ The credential injects `Authorization: Bearer <API Key>` on every request. Point
 
 ## `usableAsTool`
 
-| Node | Tool? | Why |
+Tool-callability in n8n is **node-level** (all-or-nothing) — it cannot be gated per operation. The
+Privent node sets **`usableAsTool: true`** so agents can call the safe operations (Tokenize, Risk
+Check, Audit). A side effect is that **every** operation — including Detokenize — becomes
+agent-reachable.
+
+| Operation | Agent-safe? | Why |
 |---|---|---|
-| Privent Tokenize | ✅ | Safe for an agent to call — masks PII before egress. |
-| Privent Risk Check | ✅ | Read-only scoring. |
-| Privent Audit Event | ✅ | Records an event; no data exposure. |
-| Privent Session | ❌ | Lifecycle/setup node, not an agent action. |
-| Privent Detokenize | ❌ | Restores raw PII — agent-callable detokenization is a security footgun. |
-| Privent Handoff | ❌ | Trust-graph marker, not an agent action. |
+| Tokenize | ✅ | Masks PII before egress. |
+| Risk Check | ✅ | Read-only scoring. |
+| Audit | ✅ | Records an event; no data exposure. |
+| Session | ➖ | Lifecycle/setup, not a meaningful agent action. |
+| Handoff | ➖ | Trust-graph marker, not a meaningful agent action. |
+| Detokenize | ⚠️ | Restores raw PII. **Agent-reachable** — guard it with **Strict Mode + Trusted Sinks** so an agent cannot un-mask data to an untrusted destination. The Detokenize operation description carries this warning in the UI. |
 
 ---
 
-## Nodes
+## The Privent node — resources & operations
 
-### Privent Session
+One node, selected by **Resource** then **Operation**:
+
+| Resource | Operation | Purpose |
+|---|---|---|
+| Session | Open | Opens a session; seeds correlation context. |
+| Tokenize | Tokenize | Masks PII/secrets with `[KIND_NNN]` tokens. |
+| Detokenize | Detokenize | Restores tokens at a trusted egress point. |
+| Risk Check | Score | Scores text for data-leak risk (sessionless). |
+| Audit | Emit | Emits an audit event (LLM cost, policy, egress, error). |
+| Handoff | Record | Marks an agent → agent / agent → sink handoff. |
+
+### Resource: Session
 
 Opens a Privent session. Place this **first** — downstream nodes consume its `sessionId`/`traceId`/`agentName`.
 
@@ -97,7 +117,7 @@ Opens a Privent session. Place this **first** — downstream nodes consume its `
 
 **Parameters:** **Session ID Mode** (`auto` = new UUID per execution; `manual` = supply your own, **must be a UUID**), **Agent Name** (logical agent id, written to the item and audit `metadata.agent_name`), **Framework** (`n8n`/`manual`), **Webhook Node Name** (optional; extracts client IP / User-Agent from an upstream Webhook trigger).
 
-### Privent Tokenize
+### Resource: Tokenize
 
 Detects PII and secrets in a text field (regex) and replaces them with `[KIND_NNN]` tokens via the server vault.
 
@@ -120,13 +140,13 @@ Detects PII and secrets in a text field (regex) and replaces them with `[KIND_NN
 
 `risk` is `null` when Detection Mode is `local` (server risk scoring is skipped).
 
-### Privent Detokenize
+### Resource: Detokenize
 
-Replaces tokens with their original values (one batched vault retrieve). Use at trusted egress points **after** the LLM step.
+Replaces tokens with their original values (one batched vault retrieve). Use at trusted egress points **after** the LLM step. **Agent-reachable as a tool** — pair with Strict Mode + Trusted Sinks.
 
 **Parameters:** Session ID, Trace ID, Agent Name, Target Field (`*` deep-walks every string field), Strict Mode, Destination URL, Trusted Sinks, Target Agent Name (Trust Map). In strict mode, detokenization is blocked unless the Destination URL matches a Trusted Sink — the item passes through with `privent: { detokenized: false }` and a `detokenize` audit event with `reason: strict-mode-block` (it does **not** throw).
 
-### Privent Risk Check
+### Resource: Risk Check
 
 Scores text for data-leak risk via the server ML pipeline. **Sessionless** — no Session required.
 
@@ -136,13 +156,13 @@ Scores text for data-leak risk via the server ML pipeline. **Sessionless** — n
 { "privent": { "risk_score": 0.92, "risk_level": "HIGH", "categories": { "pii": 0.95 }, "model": "...", "latencyMs": 43 } }
 ```
 
-### Privent Audit Event
+### Resource: Audit
 
 Emits a Privent audit event for non-tokenization steps (LLM-call cost tracking, policy decisions, egress, errors). Place after an HTTP Request to an LLM provider to record provider/model/token usage; the backend computes USD cost from your org's ModelPricing table.
 
 **Parameters:** Session ID, Trace ID, Agent Name, Event Type (`llm_call`/`policy_decision`/`egress`/`error`), LLM Model (searchable picker, `llm_call` only), Prompt/Completion Tokens (`llm_call` only), Extra Metadata (JSON, merged into the event).
 
-### Privent Handoff
+### Resource: Handoff
 
 Marks an explicit agent → agent (or agent → external sink) handoff. The backend Trust Map aggregator turns each event into an AgentInteraction edge.
 
@@ -153,14 +173,16 @@ Marks an explicit agent → agent (or agent → external sink) handoff. The back
 ## Example workflow
 
 ```
-[Webhook] → [Privent Session] → [Privent Tokenize]
-         → [OpenAI Chat] → [Privent Detokenize] → [Respond to Webhook]
+[Webhook] → [Privent: Session] → [Privent: Tokenize]
+         → [OpenAI Chat] → [Privent: Detokenize] → [Respond to Webhook]
 ```
 
-1. **Privent Session** — generates a `sessionId`, seeds correlation context.
-2. **Privent Tokenize** — masks every PII / secret in the prompt.
+Each Privent box is the same node with a different **Resource** selected.
+
+1. **Privent · Session** — generates a `sessionId`, seeds correlation context.
+2. **Privent · Tokenize** — masks every PII / secret in the prompt.
 3. **OpenAI Chat** — sees only tokens, never raw data.
-4. **Privent Detokenize** — restores tokens in the LLM response at a trusted sink.
+4. **Privent · Detokenize** — restores tokens in the LLM response at a trusted sink.
 
 ---
 
@@ -185,20 +207,29 @@ Tokens are session-scoped: the same value maps to the same token within one sess
 
 ## Audit emission
 
-Every node emits a typed audit event to the Privent backend after a successful operation. Context populated by **Privent Session** (`agent_name`, `workflow_id`, `workflow_name`, `execution_id`) rides along on the item and attaches to every downstream event.
+Every operation emits a typed audit event to the Privent backend after a successful run. Context populated by the **Session** resource (`agent_name`, `workflow_id`, `workflow_name`, `execution_id`) rides along on the item and attaches to every downstream event.
 
-| Node | `event.type` |
+| Resource | `event.type` |
 |---|---|
-| Privent Session | `session_open` |
-| Privent Tokenize | `tokenize` |
-| Privent Detokenize | `detokenize` |
-| Privent Risk Check | `risk_check` |
-| Privent Audit Event | `llm_call` / `policy_decision` / `egress` / `error` |
-| Privent Handoff | `agent_handoff` |
+| Session | `session_open` |
+| Tokenize | `tokenize` |
+| Detokenize | `detokenize` |
+| Risk Check | `risk_check` |
+| Audit | `llm_call` / `policy_decision` / `egress` / `error` |
+| Handoff | `agent_handoff` |
 
-`Privent Detokenize` writes `sink_id`, `sink_url_host`, and `sink_trusted` into `metadata` on both the trusted-egress and strict-mode-block paths.
+The **Detokenize** resource writes `sink_id`, `sink_url_host`, and `sink_trusted` into `metadata` on both the trusted-egress and strict-mode-block paths.
 
 Metadata never contains raw text, tokenized text, or token literals. Audit emission is best-effort — network/transport failures are swallowed and never break workflow execution. The audit wire contract requires UUID `session_id`/`trace_id`, which is why manual Session IDs must be UUIDs.
+
+---
+
+## Error handling
+
+HTTP-origin failures (vault, risk scoring) surface as an n8n **`NodeApiError`**, so the backend HTTP
+status and response body are visible in the UI; validation/logic failures surface as
+`NodeOperationError`. **Continue On Fail** is honored on every resource, including the batched Risk
+Check. Audit emission is the one exception — it is fire-and-forget and never fails the node.
 
 ---
 
@@ -208,6 +239,21 @@ Metadata never contains raw text, tokenized text, or token literals. Audit emiss
 - Tenancy is isolated by API key at the backend.
 - Detokenization at egress is gated by Strict Mode + Trusted Sinks.
 - Audit emission is fail-open: backend unreachable never blocks the workflow.
+
+---
+
+## Upgrading from 1.x
+
+**2.0 is a breaking change.** The six standalone nodes (Privent Session, Tokenize, Detokenize, Risk
+Check, Audit Event, Handoff) are now a **single Privent node** with a Resource → Operation selector.
+Behaviour is unchanged — same fields, defaults, endpoints, outputs and audit events — but the node
+identity changed, so existing workflows must be updated:
+
+1. Add the **Privent** node where the old node was.
+2. Pick the **Resource** matching the old node (e.g. old *Privent Tokenize* → Resource **Tokenize**),
+   then its **Operation**.
+3. Re-enter the parameters (the field names and expression defaults are identical).
+4. Delete the old node.
 
 ---
 

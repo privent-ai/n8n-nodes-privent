@@ -4,6 +4,22 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] - 2026-06-27
+
+### Changed
+- **BREAKING — consolidated the 6 Privent nodes into a single `Privent` node** using the
+  Resource → Operation pattern (Session, Tokenize, Detokenize, Risk Check, Audit, Handoff are now
+  resources of one node). n8n Cloud verification allows one regular node per package. Field names,
+  defaults, options, endpoints, request bodies, outputs and audit events are unchanged — only the
+  node identity changed. **Migration:** re-add the **Privent** node in existing workflows and pick the
+  Resource/Operation that matches the old node.
+- HTTP-origin failures (vault find-or-create/retrieve, risk score, risk batch) now surface as
+  `NodeApiError` (HTTP status + response body reach the UI) instead of raw/uncaught errors;
+  validation/logic failures remain `NodeOperationError`. Continue-On-Fail is honored everywhere,
+  including the batched Risk Check. Audit emission stays fire-and-forget (never fails the node).
+- `usableAsTool: true` on the single node (tool gating is node-level in n8n). The Detokenize
+  operation description now warns that it is agent-reachable — use Strict Mode + Trusted Sinks.
+
 ## [1.1.4] - 2026-06-26
 
 ### Docs

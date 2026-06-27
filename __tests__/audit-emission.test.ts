@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PriventSession } from '../nodes/PriventSession/PriventSession.node.js';
-import { PriventTokenize } from '../nodes/PriventTokenize/PriventTokenize.node.js';
-import { PriventDetokenize } from '../nodes/PriventDetokenize/PriventDetokenize.node.js';
-import { PriventRiskCheck } from '../nodes/PriventRiskCheck/PriventRiskCheck.node.js';
+import { Privent } from '../nodes/Privent/Privent.node.js';
 import { makeHttpExecFn } from './_http-helpers.js';
 
 const EXEC_ID = 'exec-emit-1';
@@ -17,12 +14,12 @@ describe('PriventSession audit emission', () => {
   it('emits a session_open event with snake_case metadata', async () => {
     const { exec, auditEvents } = makeHttpExecFn({
       items: [{ json: { foo: 'bar' } }],
-      params: { sessionIdMode: 'auto', agentName: 'router-bot', framework: 'n8n', webhookNodeName: '' },
+      params: { resource: 'session', operation: 'open', sessionIdMode: 'auto', agentName: 'router-bot', framework: 'n8n', webhookNodeName: '' },
       executionId: EXEC_ID,
-      node: { id: 'node-uuid-1', name: 'Session', type: 'n8n-nodes-privent.priventSession' },
+      node: { id: 'node-uuid-1', name: 'Session', type: 'n8n-nodes-privent.privent' },
     });
 
-    const result = await new PriventSession().execute.call(exec);
+    const result = await new Privent().execute.call(exec);
     await flushPromises();
 
     expect(result[0]).toHaveLength(1);
@@ -57,12 +54,12 @@ describe('PriventTokenize audit emission', () => {
   it('emits a tokenize event whose metadata excludes raw text/tokens', async () => {
     const { exec, auditEvents } = makeHttpExecFn({
       items: [{ json: { text: 'Reach me at alice@example.com' } }],
-      params: { sessionId: '123e4567-e89b-42d3-a456-426614174001', textField: 'text', detectionMode: 'local', reviewThreshold: 1 },
+      params: { resource: 'tokenize', operation: 'tokenize', sessionId: '123e4567-e89b-42d3-a456-426614174001', textField: 'text', detectionMode: 'local', reviewThreshold: 1 },
       executionId: EXEC_ID,
-      node: { id: 'node-uuid-1', name: 'Tokenize', type: 'n8n-nodes-privent.priventTokenize' },
+      node: { id: 'node-uuid-1', name: 'Tokenize', type: 'n8n-nodes-privent.privent' },
     });
 
-    const out = await new PriventTokenize().execute.call(exec);
+    const out = await new Privent().execute.call(exec);
     await flushPromises();
 
     expect(out[0]).toHaveLength(1);
@@ -95,12 +92,12 @@ describe('PriventDetokenize audit emission', () => {
   it('emits a detokenize event on the happy path with sink trust = true', async () => {
     const { exec, auditEvents } = makeHttpExecFn({
       items: [{ json: { body: 'no tokens here' } }],
-      params: { sessionId: '123e4567-e89b-42d3-a456-426614174002', targetField: '*', strict: false },
+      params: { resource: 'detokenize', operation: 'detokenize', sessionId: '123e4567-e89b-42d3-a456-426614174002', targetField: '*', strict: false },
       executionId: EXEC_ID,
-      node: { id: 'node-uuid-1', name: 'Detokenize', type: 'n8n-nodes-privent.priventDetokenize' },
+      node: { id: 'node-uuid-1', name: 'Detokenize', type: 'n8n-nodes-privent.privent' },
     });
 
-    const out = await new PriventDetokenize().execute.call(exec);
+    const out = await new Privent().execute.call(exec);
     await flushPromises();
 
     expect(out[0]).toHaveLength(1);
@@ -122,12 +119,12 @@ describe('PriventRiskCheck audit emission', () => {
   it('emits one risk_check event per item and never includes raw text', async () => {
     const { exec, auditEvents } = makeHttpExecFn({
       items: [{ json: { text: 'one' } }, { json: { text: 'two' } }],
-      params: { textField: 'text', traceId: '', agentName: '' },
+      params: { resource: 'riskCheck', operation: 'score', textField: 'text', traceId: '', agentName: '' },
       executionId: EXEC_ID,
-      node: { id: 'node-uuid-1', name: 'RiskCheck', type: 'n8n-nodes-privent.priventRiskCheck' },
+      node: { id: 'node-uuid-1', name: 'RiskCheck', type: 'n8n-nodes-privent.privent' },
     });
 
-    const out = await new PriventRiskCheck().execute.call(exec);
+    const out = await new Privent().execute.call(exec);
     await flushPromises();
 
     expect(out[0]).toHaveLength(2);

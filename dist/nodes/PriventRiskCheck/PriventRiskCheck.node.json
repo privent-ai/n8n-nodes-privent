@@ -1,9 +1,0 @@
-{
-  "node": "n8n-nodes-privent.priventRiskCheck",
-  "nodeVersion": "1.0",
-  "codexVersion": "1.0",
-  "categories": ["Utility"],
-  "resources": {
-    "primaryDocumentation": [{ "url": "https://www.privent.ai/docs" }]
-  }
-}

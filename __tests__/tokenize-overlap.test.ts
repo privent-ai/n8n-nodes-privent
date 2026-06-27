@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PriventTokenize } from '../nodes/PriventTokenize/PriventTokenize.node.js';
+import { Privent } from '../nodes/Privent/Privent.node.js';
 import { makeHttpExecFn } from './_http-helpers.js';
 
 const SID = '123e4567-e89b-42d3-a456-426614174777';
@@ -12,14 +12,14 @@ const SID = '123e4567-e89b-42d3-a456-426614174777';
 function tokExec(text: string) {
   return makeHttpExecFn({
     items: [{ json: { text } }],
-    params: { sessionId: SID, textField: 'text', detectionMode: 'local', reviewThreshold: 1 },
-    node: { id: 'n', name: 'Tokenize', type: 'n8n-nodes-privent.priventTokenize' },
+    params: { resource: 'tokenize', operation: 'tokenize', sessionId: SID, textField: 'text', detectionMode: 'local', reviewThreshold: 1 },
+    node: { id: 'n', name: 'Tokenize', type: 'n8n-nodes-privent.privent' },
   });
 }
 
 async function run(text: string) {
   const { exec } = tokExec(text);
-  const out = await new PriventTokenize().execute.call(exec);
+  const out = await new Privent().execute.call(exec);
   const json = out[0]![0]!.json as Record<string, unknown>;
   const entities = (json.privent as { entities: Array<{ token: string; kind: string }> }).entities;
   return { text: json.text as string, entities };

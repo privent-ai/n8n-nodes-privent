@@ -1,5 +1,5 @@
 {
-  "node": "n8n-nodes-privent.priventDetokenize",
+  "node": "n8n-nodes-privent.privent",
   "nodeVersion": "1.0",
   "codexVersion": "1.0",
   "categories": ["Utility", "Data & Storage"],

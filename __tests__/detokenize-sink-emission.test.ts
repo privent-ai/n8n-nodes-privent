@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  PriventDetokenize,
-  deriveSinkId,
-  deriveSinkUrlHost,
-} from '../nodes/PriventDetokenize/PriventDetokenize.node.js';
+import { Privent } from '../nodes/Privent/Privent.node.js';
+import { deriveSinkId, deriveSinkUrlHost } from '../nodes/Privent/operations/detokenize.js';
 import { makeHttpExecFn } from './_http-helpers.js';
 
 const URL_A = 'https://api.salesforce.com/v1/leads';
@@ -16,7 +13,7 @@ async function flushPromises() {
 const DETOK_NODE = {
   id: 'node-123',
   name: 'Privent Detokenize',
-  type: 'n8n-nodes-privent.priventDetokenize',
+  type: 'n8n-nodes-privent.privent',
 };
 
 // ─── Helper-level cases ───────────────────────────────────────────────────────
@@ -73,7 +70,7 @@ function detokExec(
 ) {
   return makeHttpExecFn({
     items,
-    params,
+    params: { resource: 'detokenize', operation: 'detokenize', ...params },
     node: DETOK_NODE,
     workflow: { id: 'wf-42', name: 'demo' },
     ...extra,
@@ -98,7 +95,7 @@ describe('PriventDetokenize.execute audit emission', () => {
       [{ json: { body: 'hello [EMAIL_001] world [PHONE_001]' } }],
     );
 
-    const result = await new PriventDetokenize().execute.call(exec);
+    const result = await new Privent().execute.call(exec);
     await flushPromises();
 
     const event = lastAuditEvent(auditEvents());
@@ -127,12 +124,12 @@ describe('PriventDetokenize.execute audit emission', () => {
       { sessionId: '123e4567-e89b-42d3-a456-426614174004', targetField: '*', strict: true, sinkUrl: URL_A, trustedSinks: '' },
       [{ json: {} }],
     );
-    await new PriventDetokenize().execute.call(a.exec);
+    await new Privent().execute.call(a.exec);
     const b = detokExec(
       { sessionId: '123e4567-e89b-42d3-a456-426614174004', targetField: '*', strict: true, sinkUrl: URL_B, trustedSinks: '' },
       [{ json: {} }],
     );
-    await new PriventDetokenize().execute.call(b.exec);
+    await new Privent().execute.call(b.exec);
     await flushPromises();
 
     const evA = lastAuditEvent(a.auditEvents()).metadata as Record<string, unknown>;
@@ -153,7 +150,7 @@ describe('PriventDetokenize.execute audit emission', () => {
       [{ json: { body: '[EMAIL_001]' } }],
     );
 
-    const result = await new PriventDetokenize().execute.call(exec);
+    const result = await new Privent().execute.call(exec);
     await flushPromises();
 
     // No vault retrieve happened — detokenization was blocked.
@@ -179,7 +176,7 @@ describe('PriventDetokenize.execute audit emission', () => {
       { failUrls: ['/v1/audit/events'] },
     );
 
-    const result = await new PriventDetokenize().execute.call(exec);
+    const result = await new Privent().execute.call(exec);
     await flushPromises();
 
     expect(result[0]?.[0]?.json).toMatchObject({
@@ -193,7 +190,7 @@ describe('PriventDetokenize.execute audit emission', () => {
       [{ json: {} }],
     );
 
-    await new PriventDetokenize().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const meta = lastAuditEvent(auditEvents()).metadata as Record<string, unknown>;
@@ -211,7 +208,7 @@ describe('PriventDetokenize.execute audit emission', () => {
       [{ json: { body: '[EMAIL_001] and [PHONE_002] and [EMAIL_001] again' } }],
     );
 
-    await new PriventDetokenize().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const meta = lastAuditEvent(auditEvents()).metadata as Record<string, unknown>;
@@ -228,7 +225,7 @@ describe('PriventDetokenize.execute audit emission', () => {
       [{ json: { body: 'no tokens here' } }],
     );
 
-    await new PriventDetokenize().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const meta = lastAuditEvent(auditEvents()).metadata as Record<string, unknown>;
@@ -248,7 +245,7 @@ describe('PriventDetokenize.execute audit emission', () => {
       [{ json: { body: '[EMAIL_001]' } }],
     );
 
-    await new PriventDetokenize().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const meta = lastAuditEvent(auditEvents()).metadata as Record<string, unknown>;
@@ -260,9 +257,9 @@ describe('PriventDetokenize.execute audit emission', () => {
   it('value_fingerprint: deterministic — same placeholders → same digest across runs', async () => {
     const body = '[CARD_007] [IBAN_003]';
     const a = detokExec({ sessionId: '123e4567-e89b-42d3-a456-426614174004', targetField: '*', strict: false }, [{ json: { body } }]);
-    await new PriventDetokenize().execute.call(a.exec);
+    await new Privent().execute.call(a.exec);
     const b = detokExec({ sessionId: '123e4567-e89b-42d3-a456-426614174004', targetField: '*', strict: false }, [{ json: { body } }]);
-    await new PriventDetokenize().execute.call(b.exec);
+    await new Privent().execute.call(b.exec);
     await flushPromises();
 
     const fpA = (lastAuditEvent(a.auditEvents()).metadata as Record<string, unknown>).value_fingerprint;

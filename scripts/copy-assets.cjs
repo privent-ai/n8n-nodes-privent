@@ -13,14 +13,7 @@ const { resolve } = require('path');
 const root = resolve(__dirname, '..');
 const pngSrc = resolve(root, 'nodes/privent.png');
 
-const NODES = [
-  'PriventSession',
-  'PriventTokenize',
-  'PriventDetokenize',
-  'PriventRiskCheck',
-  'PriventAuditEvent',
-  'PriventHandoff',
-];
+const NODES = ['Privent'];
 
 for (const name of NODES) {
   const destDir = resolve(root, 'dist/nodes', name);

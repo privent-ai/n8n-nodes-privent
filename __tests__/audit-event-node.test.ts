@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { PriventAuditEvent } from '../nodes/PriventAuditEvent/PriventAuditEvent.node.js';
+import { Privent } from '../nodes/Privent/Privent.node.js';
 import { makeHttpExecFn } from './_http-helpers.js';
 
 const SID = '123e4567-e89b-42d3-a456-426614174abc';
-const AUDIT_NODE = { id: 'node-audit-1', name: 'Privent Audit Event', type: 'n8n-nodes-privent.priventAuditEvent' };
+const AUDIT_NODE = { id: 'node-audit-1', name: 'Privent Audit Event', type: 'n8n-nodes-privent.privent' };
 
 async function flushPromises() {
   await new Promise((r) => setImmediate(r));
@@ -12,7 +12,7 @@ async function flushPromises() {
 function auditExec(params: Record<string, unknown>) {
   return makeHttpExecFn({
     items: [{ json: {} }],
-    params: { traceId: '', agentName: 'cost-tracked-flow', ...params },
+    params: { resource: 'audit', operation: 'emit', traceId: '', agentName: 'cost-tracked-flow', ...params },
     node: AUDIT_NODE,
     workflow: { id: 'wf-99', name: 'cost-tracked-flow' },
     executionId: '42',
@@ -36,7 +36,7 @@ describe('PriventAuditEvent.execute', () => {
       extraMetadata: '{}',
     });
 
-    const result = await new PriventAuditEvent().execute.call(exec);
+    const result = await new Privent().execute.call(exec);
     await flushPromises();
 
     const event = lastEvent(auditEvents());
@@ -70,7 +70,7 @@ describe('PriventAuditEvent.execute', () => {
       extraMetadata: '{}',
     });
 
-    await new PriventAuditEvent().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const meta = lastEvent(auditEvents()).metadata as Record<string, unknown>;
@@ -88,7 +88,7 @@ describe('PriventAuditEvent.execute', () => {
       extraMetadata: '{}',
     });
 
-    await new PriventAuditEvent().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const meta = lastEvent(auditEvents()).metadata as Record<string, unknown>;
@@ -103,7 +103,7 @@ describe('PriventAuditEvent.execute', () => {
       extraMetadata: '{"decision":"BLOCK","reason":"PII over threshold"}',
     });
 
-    await new PriventAuditEvent().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const event = lastEvent(auditEvents());
@@ -122,7 +122,7 @@ describe('PriventAuditEvent.execute', () => {
       extraMetadata: '{not valid json',
     });
 
-    await new PriventAuditEvent().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const event = lastEvent(auditEvents());
@@ -137,7 +137,7 @@ describe('PriventAuditEvent.execute', () => {
       extraMetadata: { sink_id: 'opaque-id', sink_trusted: true },
     });
 
-    await new PriventAuditEvent().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const meta = lastEvent(auditEvents()).metadata as Record<string, unknown>;

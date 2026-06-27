@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { PriventSession } from '../nodes/PriventSession/PriventSession.node.js';
+import { Privent } from '../nodes/Privent/Privent.node.js';
 import { makeHttpExecFn } from './_http-helpers.js';
 
 async function flushPromises() {
@@ -9,7 +9,7 @@ async function flushPromises() {
 const SESSION_NODE = {
   id: 'node-session-1',
   name: 'Privent Session',
-  type: 'n8n-nodes-privent.priventSession',
+  type: 'n8n-nodes-privent.privent',
 };
 
 function sessionExec(
@@ -18,7 +18,7 @@ function sessionExec(
 ) {
   return makeHttpExecFn({
     items: [{ json: {} }],
-    params,
+    params: { resource: 'session', operation: 'open', ...params },
     node: SESSION_NODE,
     workflow: { id: 'wf-99', name: 'webhook-flow' },
     mode: 'webhook',
@@ -50,7 +50,7 @@ describe('PriventSession trigger context auto-parse', () => {
       },
     );
 
-    await new PriventSession().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const events = auditEvents();
@@ -74,7 +74,7 @@ describe('PriventSession trigger context auto-parse', () => {
       }),
     );
 
-    await new PriventSession().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const meta = lastMeta(auditEvents());
@@ -90,7 +90,7 @@ describe('PriventSession trigger context auto-parse', () => {
       },
     );
 
-    await new PriventSession().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     const events = auditEvents();
@@ -108,7 +108,7 @@ describe('PriventSession trigger context auto-parse', () => {
       evaluateExpression,
     );
 
-    await new PriventSession().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     expect(evaluateExpression).not.toHaveBeenCalled();
@@ -122,7 +122,7 @@ describe('PriventSession trigger context auto-parse', () => {
       () => ({ 'user-agent': ua }),
     );
 
-    await new PriventSession().execute.call(exec);
+    await new Privent().execute.call(exec);
     await flushPromises();
 
     expect((lastMeta(auditEvents()).trigger_principal_user_agent as string).length).toBe(500);

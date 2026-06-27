@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
-import { PriventTokenize } from '../nodes/PriventTokenize/PriventTokenize.node.js';
-import { PriventDetokenize } from '../nodes/PriventDetokenize/PriventDetokenize.node.js';
+import { Privent } from '../nodes/Privent/Privent.node.js';
 
 const SESSION_ID = '123e4567-e89b-42d3-a456-426614174abc';
 
@@ -105,10 +104,10 @@ describe('PriventTokenize — ML PII masking (auto mode)', () => {
   it('masks name/DOB/address (ML) + email (regex), one risk call, round-trips', async () => {
     const { handler, calls } = makeServer();
 
-    const tokOut = await new PriventTokenize().execute.call(
+    const tokOut = await new Privent().execute.call(
       makeExec(
-        { id: 'n-tok', name: 'Privent Tokenize', type: 'n8n-nodes-privent.priventTokenize' },
-        { sessionId: SESSION_ID, textField: 'text', detectionMode: 'auto', reviewThreshold: 0.9 },
+        { id: 'n-tok', name: 'Privent Tokenize', type: 'n8n-nodes-privent.privent' },
+        { resource: 'tokenize', operation: 'tokenize', sessionId: SESSION_ID, textField: 'text', detectionMode: 'auto', reviewThreshold: 0.9 },
         [{ json: { text: TEXT } }],
         handler,
       ),
@@ -140,10 +139,10 @@ describe('PriventTokenize — ML PII masking (auto mode)', () => {
     expect(calls.filter((c) => c.url === '/v1/risk/score')).toHaveLength(1);
 
     // Detokenize restores the original (incl. PERSON/DATE_OF_BIRTH/ADDRESS via TOKEN_RE).
-    const detOut = await new PriventDetokenize().execute.call(
+    const detOut = await new Privent().execute.call(
       makeExec(
-        { id: 'n-det', name: 'Privent Detokenize', type: 'n8n-nodes-privent.priventDetokenize' },
-        { sessionId: SESSION_ID, targetField: 'text', strict: false },
+        { id: 'n-det', name: 'Privent Detokenize', type: 'n8n-nodes-privent.privent' },
+        { resource: 'detokenize', operation: 'detokenize', sessionId: SESSION_ID, targetField: 'text', strict: false },
         [{ json: { text: tokenizedText } }],
         handler,
       ),
