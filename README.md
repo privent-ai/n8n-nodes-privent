@@ -2,9 +2,6 @@
   
 # n8n-nodes-privent
 
-<img width="1772" height="1080" alt="privent-black" src="https://github.com/user-attachments/assets/9f221d49-6286-44fb-bf88-f0a4fc5e9341" />
-
-
 **The DLP layer n8n's Guardrails doesn't have: reversible tokenization for AI workflows.**
 
 Guardrails masks PII and throws it away. Privent masks it, hands it to your LLM safely, and gives you the real value back exactly where you need it.
