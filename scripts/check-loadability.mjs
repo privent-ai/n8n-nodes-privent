@@ -45,7 +45,9 @@ try {
   const require = createRequire(join(tmp, 'package.json'));
 
   const targets = readdirSync(join(base, 'nodes')).map((d) => join(base, 'nodes', d, `${d}.node.js`));
-  targets.push(join(base, 'credentials', 'PriventApi.credentials.js'));
+  for (const f of readdirSync(join(base, 'credentials'))) {
+    if (f.endsWith('.credentials.js')) targets.push(join(base, 'credentials', f));
+  }
 
   let zodSeen = false;
   let instantiated = 0;

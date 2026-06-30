@@ -50,13 +50,38 @@ export class Privent implements INodeType {
     defaults: { name: 'Privent' },
     inputs: [NodeConnectionTypes.Main],
     outputs: [NodeConnectionTypes.Main],
-    credentials: [{ name: 'priventApi', required: true }],
+    credentials: [
+      { name: 'priventApi', required: true, displayOptions: { show: { authentication: ['apiKey'] } } },
+      { name: 'priventVisitorApi', required: true, displayOptions: { show: { authentication: ['tokenless'] } } },
+    ],
     properties: [
+      {
+        displayName: 'Authentication',
+        name: 'authentication',
+        type: 'options',
+        noDataExpression: true,
+        options: [
+          {
+            name: 'API Key',
+            value: 'apiKey',
+            description:
+              'Full Privent: vault tokenization, audit, handoff and risk scoring. Requires a Privent API key.',
+          },
+          {
+            name: 'Tokenless (Visitor)',
+            value: 'tokenless',
+            description:
+              'No API key — in-memory tokenization + risk scoring via an anonymous visitor id. The backend must have visitor auth enabled.',
+          },
+        ],
+        default: 'apiKey',
+      },
       {
         displayName: 'Resource',
         name: 'resource',
         type: 'options',
         noDataExpression: true,
+        displayOptions: { show: { authentication: ['apiKey'] } },
         options: [
           { name: 'Session', value: 'session' },
           { name: 'Tokenize', value: 'tokenize' },
@@ -64,6 +89,20 @@ export class Privent implements INodeType {
           { name: 'Risk Check', value: 'riskCheck' },
           { name: 'Audit', value: 'audit' },
           { name: 'Handoff', value: 'handoff' },
+        ],
+        default: 'tokenize',
+      },
+      {
+        displayName: 'Resource',
+        name: 'resource',
+        type: 'options',
+        noDataExpression: true,
+        displayOptions: { show: { authentication: ['tokenless'] } },
+        options: [
+          { name: 'Session', value: 'session' },
+          { name: 'Tokenize', value: 'tokenize' },
+          { name: 'Detokenize', value: 'detokenize' },
+          { name: 'Risk Check', value: 'riskCheck' },
         ],
         default: 'tokenize',
       },
@@ -142,7 +181,7 @@ export class Privent implements INodeType {
         name: 'operation',
         type: 'options',
         noDataExpression: true,
-        displayOptions: { show: { resource: ['audit'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'] } },
         options: [
           {
             name: 'Emit',
@@ -159,7 +198,7 @@ export class Privent implements INodeType {
         name: 'operation',
         type: 'options',
         noDataExpression: true,
-        displayOptions: { show: { resource: ['handoff'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'] } },
         options: [
           {
             name: 'Record',
@@ -434,7 +473,7 @@ export class Privent implements INodeType {
         default: '={{$("Privent Session").item.json.sessionId}}',
         required: true,
         description: 'Session ID from the upstream Privent Session node',
-        displayOptions: { show: { resource: ['audit'], operation: ['emit'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'] } },
       },
       {
         displayName: 'Trace ID',
@@ -443,7 +482,7 @@ export class Privent implements INodeType {
         default: '={{ $("Privent Session").item.json.traceId }}',
         description:
           'Correlation ID from the upstream Privent Session node. Links this event to the session trace. Leave as-is; a fresh ID is generated if no Session is upstream.',
-        displayOptions: { show: { resource: ['audit'], operation: ['emit'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'] } },
       },
       {
         displayName: 'Agent Name',
@@ -452,7 +491,7 @@ export class Privent implements INodeType {
         default: '={{ $("Privent Session").item.json.agentName }}',
         description:
           'Logical agent identifier from the upstream Privent Session node, recorded on the audit event. Optional.',
-        displayOptions: { show: { resource: ['audit'], operation: ['emit'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'] } },
       },
       {
         displayName: 'Event Type',
@@ -466,7 +505,7 @@ export class Privent implements INodeType {
         ],
         default: 'llm_call',
         description: 'Audit event type. LLM Call triggers backend cost calculation from ModelPricing.',
-        displayOptions: { show: { resource: ['audit'], operation: ['emit'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'] } },
       },
       {
         displayName: 'LLM Model',
@@ -476,7 +515,7 @@ export class Privent implements INodeType {
         required: true,
         description:
           'Model used for this LLM call. Pick from your org\'s priced models (popular first) or enter a custom one as provider|model. The provider is taken from the selection.',
-        displayOptions: { show: { resource: ['audit'], operation: ['emit'], eventType: ['llm_call'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'], eventType: ['llm_call'] } },
         modes: [
           {
             displayName: 'From List',
@@ -500,7 +539,7 @@ export class Privent implements INodeType {
         default: '={{$json.usage.prompt_tokens}}',
         description:
           'n8n expression resolving to the prompt token count. Default reads OpenAI-style {usage:{prompt_tokens}} from the previous node.',
-        displayOptions: { show: { resource: ['audit'], operation: ['emit'], eventType: ['llm_call'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'], eventType: ['llm_call'] } },
       },
       {
         displayName: 'Completion Tokens',
@@ -508,7 +547,7 @@ export class Privent implements INodeType {
         type: 'string',
         default: '={{$json.usage.completion_tokens}}',
         description: 'n8n expression resolving to the completion token count',
-        displayOptions: { show: { resource: ['audit'], operation: ['emit'], eventType: ['llm_call'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'], eventType: ['llm_call'] } },
       },
       {
         displayName: 'Extra Metadata (JSON)',
@@ -517,7 +556,7 @@ export class Privent implements INodeType {
         default: '{}',
         description:
           'Optional. Merged into the audit event metadata. For event types other than LLM Call, use this to attach event-specific fields (e.g. policy decision rationale).',
-        displayOptions: { show: { resource: ['audit'], operation: ['emit'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'] } },
       },
 
       // ── handoff ─────────────────────────────────────────────────────────
@@ -529,7 +568,7 @@ export class Privent implements INodeType {
         required: true,
         description:
           'Session ID from the upstream Privent Session node — the "from" side of the handoff edge.',
-        displayOptions: { show: { resource: ['handoff'], operation: ['record'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
       },
       {
         displayName: 'Trace ID',
@@ -538,7 +577,7 @@ export class Privent implements INodeType {
         default: '={{ $("Privent Session").item.json.traceId }}',
         description:
           'Correlation ID from the upstream Privent Session node. Leave as-is; a fresh ID is generated if no Session is upstream.',
-        displayOptions: { show: { resource: ['handoff'], operation: ['record'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
       },
       {
         displayName: 'From Agent Name',
@@ -548,7 +587,7 @@ export class Privent implements INodeType {
         required: true,
         description:
           'Canonical name of the source agent, from the upstream Privent Session node. Required — identifies the "from" side of the handoff edge.',
-        displayOptions: { show: { resource: ['handoff'], operation: ['record'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
       },
       {
         displayName: 'Target Kind',
@@ -567,7 +606,7 @@ export class Privent implements INodeType {
           },
         ],
         default: 'agent',
-        displayOptions: { show: { resource: ['handoff'], operation: ['record'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
       },
       {
         displayName: 'Target Agent Name',
@@ -579,7 +618,7 @@ export class Privent implements INodeType {
           'Canonical agent name of the downstream agent. Must match the agentName the downstream PriventSession will emit.',
         hint: 'Example: "Translator", "billing-agent". Resolves to Agent.id post-ingest.',
         displayOptions: {
-          show: { resource: ['handoff'], operation: ['record'], targetKind: ['agent'] },
+          show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'], targetKind: ['agent'] },
         },
       },
       {
@@ -590,7 +629,7 @@ export class Privent implements INodeType {
         required: true,
         description: 'Opaque identifier for an external sink (e.g. webhook URL hash, partner ID).',
         displayOptions: {
-          show: { resource: ['handoff'], operation: ['record'], targetKind: ['sink'] },
+          show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'], targetKind: ['sink'] },
         },
       },
       {
@@ -606,7 +645,7 @@ export class Privent implements INodeType {
         ],
         default: 'delegation',
         description: 'Categorises the handoff for the Trust Map graph filters',
-        displayOptions: { show: { resource: ['handoff'], operation: ['record'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
       },
       {
         displayName: 'Payload Token Count',
@@ -616,7 +655,7 @@ export class Privent implements INodeType {
         description:
           'Optional. Token volume hint for blast-radius math in the Trust Map (set 0 to omit).',
         typeOptions: { minValue: 0 },
-        displayOptions: { show: { resource: ['handoff'], operation: ['record'] } },
+        displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
       },
     ],
   };

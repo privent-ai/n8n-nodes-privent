@@ -4,6 +4,16 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] - 2026-06-30
+
+### Added
+- **Tokenless (Visitor) mode** — use Privent with no API key. A new **Authentication** switch (API Key |
+  Tokenless) on the node and a **Privent Tokenless** credential (base URL only). In tokenless mode the node
+  mints an anonymous signed visitor id (`X-Visitor-Id`) and supports Session, Tokenize, Detokenize
+  (in-memory vault in n8n workflow static data, keyed by `sessionId`) and Risk Check. Audit, Handoff and the
+  managed cloud vault remain API-key only. Requires backend visitor auth (`VISITOR_AUTH_ENABLED=true`).
+  apiKey behavior is unchanged.
+
 ## [2.0.0] - 2026-06-27
 
 ### Changed

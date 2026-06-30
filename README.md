@@ -78,6 +78,47 @@ The credential injects `Authorization: Bearer <API Key>` on every request. Point
 
 ---
 
+## Tokenless (Visitor) mode
+
+Use Privent **without an API key**. On the node, set **Authentication = Tokenless (Visitor)**. The node
+mints an anonymous, signed visitor id against the backend (`POST /v1/visitor/credentials`) and sends it as
+`X-Visitor-Id` — no Bearer key, no account.
+
+| | Tokenless |
+|---|---|
+| **Available** | Session, Tokenize, Detokenize (in-memory), Risk Check |
+| **Not available** | Audit, Handoff, the managed Privent Cloud vault (these need an API key) |
+
+**In-memory vault.** In tokenless mode tokens are stored in n8n **workflow static data**, keyed by
+`sessionId` — never in the Privent Cloud vault. Consequences:
+
+- Tokenize and Detokenize must run in the **same workflow** and share the same `sessionId`.
+- Raw values rest **inside your own n8n** and are never sent to Privent. (Risk Check / Cloud detection still
+  send text to the backend for scoring; Detection Mode = **Local (Regex)** keeps tokenization fully offline.)
+- On multi-worker n8n Cloud, sharing relies on n8n persisting static data across workers.
+
+**Backend requirement.** The Privent backend must have visitor auth enabled
+(`VISITOR_AUTH_ENABLED=true` + a real signing secret). Otherwise minting — and the credential test —
+returns `404`.
+
+### Credential: PriventVisitorApi
+
+| Field | Description | Default |
+|---|---|---|
+| Base URL | Privent backend base URL (visitor auth must be enabled) | `https://api.privent.ai` |
+
+No API key field — the node attaches the minted `X-Visitor-Id` itself.
+
+### Example — tokenless Tokenize → Detokenize
+
+1. **Privent** node → Authentication **Tokenless**, Resource **Session**, Operation **Open**.
+2. **Privent** node → Tokenless, Resource **Tokenize** — same `sessionId`; Detection Mode **Local (Regex)**
+   for a fully offline round-trip (or **Auto** to add visitor-ML detection).
+3. **Privent** node → Tokenless, Resource **Detokenize** — same `sessionId` — restores the original values
+   at a trusted egress point.
+
+---
+
 ## `usableAsTool`
 
 Tool-callability in n8n is **node-level** (all-or-nothing) — it cannot be gated per operation. The

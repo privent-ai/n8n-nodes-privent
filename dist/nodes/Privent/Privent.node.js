@@ -23,7 +23,10 @@ __export(Privent_node_exports, {
   Privent: () => Privent
 });
 module.exports = __toCommonJS(Privent_node_exports);
-var import_n8n_workflow7 = require("n8n-workflow");
+var import_n8n_workflow8 = require("n8n-workflow");
+
+// shared/privent-http.ts
+var import_n8n_workflow = require("n8n-workflow");
 
 // node_modules/@priventai/core/dist/chunk-NSBPE2FW.js
 var __defProp2 = Object.defineProperty;
@@ -215,7 +218,7 @@ function normalize(kind, value) {
 
 // node_modules/@priventai/core/dist/index.js
 var TRACER_VERSION = (() => {
-  const v = "2.0.0";
+  const v = "2.1.0";
   return typeof v === "string" && v.length > 0 ? v : "0.1.0";
 })();
 var DEFAULT_TTL_MS = 60 * 60 * 1e3;
@@ -490,9 +493,86 @@ async function priventRequest(ctx, baseUrl, method, url, body) {
     timeout: 2e5
   });
 }
+function getAuthMode(ctx) {
+  return ctx.getNodeParameter("authentication", 0, "apiKey");
+}
 async function getPriventBaseUrl(ctx) {
-  const creds = await ctx.getCredentials("priventApi");
+  const credName = getAuthMode(ctx) === "tokenless" ? "priventVisitorApi" : "priventApi";
+  const creds = await ctx.getCredentials(credName);
   return creds.baseUrl;
+}
+function httpErrorStatus(err) {
+  const e = err;
+  const raw = e.httpCode ?? e.statusCode ?? e.response?.status;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : void 0;
+}
+async function resolveVisitorId(ctx, baseUrl) {
+  const staticData = ctx.getWorkflowStaticData("global");
+  const cache = staticData.priventVisitor ??= {};
+  const nowSec = Math.floor(Date.now() / 1e3);
+  const cached = cache[baseUrl];
+  if (cached && cached.expiresAt - nowSec > 300) {
+    return cached.visitorId;
+  }
+  let res;
+  try {
+    res = await ctx.helpers.httpRequest({
+      method: "POST",
+      baseURL: baseUrl,
+      url: "/v1/visitor/credentials",
+      body: {},
+      json: true
+    });
+  } catch (err) {
+    const status = httpErrorStatus(err);
+    if (status === 404) {
+      throw new import_n8n_workflow.NodeOperationError(
+        ctx.getNode(),
+        "Tokenless mode isn't enabled on this Privent backend \u2014 switch Authentication to API Key, or enable visitor auth on the backend."
+      );
+    }
+    if (status === 429) {
+      throw new import_n8n_workflow.NodeOperationError(
+        ctx.getNode(),
+        "Rate limited minting a visitor credential; retry shortly."
+      );
+    }
+    throw new import_n8n_workflow.NodeOperationError(
+      ctx.getNode(),
+      `Failed to mint a Privent visitor credential${status != null ? ` (HTTP ${status})` : ""}: ${err.message}`
+    );
+  }
+  const visitorId = res.visitor_id;
+  const expiresAt = res.expires_at;
+  if (typeof visitorId !== "string" || typeof expiresAt !== "number") {
+    throw new import_n8n_workflow.NodeOperationError(
+      ctx.getNode(),
+      "Privent visitor credential response was malformed (missing visitor_id/expires_at)."
+    );
+  }
+  cache[baseUrl] = { visitorId, expiresAt };
+  return visitorId;
+}
+async function priventVisitorRequest(ctx, baseUrl, method, url, body) {
+  const send = async (visitorId2) => await ctx.helpers.httpRequest({
+    method,
+    baseURL: baseUrl,
+    url,
+    body,
+    json: true,
+    timeout: 2e5,
+    headers: { "X-Visitor-Id": visitorId2 }
+  });
+  const visitorId = await resolveVisitorId(ctx, baseUrl);
+  try {
+    return await send(visitorId);
+  } catch (err) {
+    if (httpErrorStatus(err) !== 401) throw err;
+    const cache = ctx.getWorkflowStaticData("global").priventVisitor ?? {};
+    delete cache[baseUrl];
+    return send(await resolveVisitorId(ctx, baseUrl));
+  }
 }
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function isUuid(value) {
@@ -577,6 +657,64 @@ var N8nHttpVault = class {
     }
   }
 };
+var MAX_VAULT_SESSIONS = 50;
+var WorkflowStaticDataVault = class {
+  constructor(ctx, sessionId) {
+    this.ctx = ctx;
+    this.sessionId = sessionId;
+  }
+  ctx;
+  sessionId;
+  root() {
+    const sd = this.ctx.getWorkflowStaticData("global");
+    return sd.priventVault ??= { sessions: {}, order: [] };
+  }
+  session() {
+    const root = this.root();
+    let s = root.sessions[this.sessionId];
+    if (!s) {
+      s = { byKey: {}, byToken: {}, counters: {} };
+      root.sessions[this.sessionId] = s;
+      root.order.push(this.sessionId);
+      while (root.order.length > MAX_VAULT_SESSIONS) {
+        const evicted = root.order.shift();
+        if (evicted != null) delete root.sessions[evicted];
+      }
+    }
+    return s;
+  }
+  async findOrCreateBatch(items) {
+    const s = this.session();
+    return items.map((it) => {
+      const normalized = normalize(it.kind, it.value);
+      const key = `${it.kind}|${normalized}`;
+      let token = s.byKey[key];
+      if (token == null) {
+        const n = s.counters[it.kind] = (s.counters[it.kind] ?? 0) + 1;
+        token = `[${it.kind}_${String(n).padStart(3, "0")}]`;
+        s.byKey[key] = token;
+        s.byToken[token] = { kind: it.kind, value: it.value };
+      }
+      return { kind: it.kind, value: normalized, token };
+    });
+  }
+  async retrieveBatch(tokens) {
+    if (tokens.length === 0) return [];
+    const s = this.session();
+    const out = [];
+    for (const token of tokens) {
+      const entry = s.byToken[token];
+      if (entry) out.push({ token, kind: entry.kind, value: entry.value });
+    }
+    return out;
+  }
+  async destroy() {
+    const root = this.root();
+    delete root.sessions[this.sessionId];
+    const idx = root.order.indexOf(this.sessionId);
+    if (idx >= 0) root.order.splice(idx, 1);
+  }
+};
 function makeResolvedVault(sessionId, entries) {
   const byToken = new Map(entries.map((e) => [e.token, e]));
   return {
@@ -606,7 +744,8 @@ function makeResolvedVault(sessionId, entries) {
 async function riskScore(ctx, text, baseUrl, opts) {
   const start = Date.now();
   const bootstrap = opts?.bootstrapEntities?.slice(0, 256);
-  const r = await priventRequest(ctx, baseUrl, "POST", "/v1/risk/score", {
+  const send = getAuthMode(ctx) === "tokenless" ? priventVisitorRequest : priventRequest;
+  const r = await send(ctx, baseUrl, "POST", "/v1/risk/score", {
     text,
     include_entities: true,
     ...opts?.lang != null ? { lang: opts.lang } : {},
@@ -624,7 +763,8 @@ async function riskScore(ctx, text, baseUrl, opts) {
 async function riskScoreBatch(ctx, texts, baseUrl) {
   if (texts.length === 0) return [];
   const start = Date.now();
-  const res = await priventRequest(
+  const send = getAuthMode(ctx) === "tokenless" ? priventVisitorRequest : priventRequest;
+  const res = await send(
     ctx,
     baseUrl,
     "POST",
@@ -646,6 +786,7 @@ async function riskScoreBatch(ctx, texts, baseUrl) {
   }));
 }
 async function auditLog(ctx, event, baseUrl) {
+  if (getAuthMode(ctx) === "tokenless") return;
   try {
     await priventRequest(ctx, baseUrl, "POST", "/v1/audit/events", {
       events: [serializeForWire(event)]
@@ -721,7 +862,7 @@ function buildAuditMetadata(ctx, node, extras) {
 }
 
 // nodes/Privent/operations/session.ts
-var import_n8n_workflow = require("n8n-workflow");
+var import_n8n_workflow2 = require("n8n-workflow");
 async function handleSession(ctx, i, baseUrl) {
   const item = ctx.getInputData()[i];
   const framework = ctx.getNodeParameter("framework", i, "n8n") === "manual" ? "manual" : "n8n";
@@ -731,12 +872,12 @@ async function handleSession(ctx, i, baseUrl) {
   const mode = ctx.getNodeParameter("sessionIdMode", i);
   const sessionId = mode === "manual" ? ctx.getNodeParameter("sessionId", i).trim() : crypto.randomUUID();
   if (!sessionId) {
-    throw new import_n8n_workflow.NodeOperationError(ctx.getNode(), "Session ID cannot be empty in manual mode", {
+    throw new import_n8n_workflow2.NodeOperationError(ctx.getNode(), "Session ID cannot be empty in manual mode", {
       itemIndex: i
     });
   }
   if (mode === "manual" && !isUuid(sessionId)) {
-    throw new import_n8n_workflow.NodeOperationError(
+    throw new import_n8n_workflow2.NodeOperationError(
       ctx.getNode(),
       "Manual Session ID must be a UUID \u2014 auto mode generates one",
       { itemIndex: i }
@@ -813,7 +954,7 @@ async function handleSession(ctx, i, baseUrl) {
 }
 
 // nodes/Privent/operations/tokenize.ts
-var import_n8n_workflow2 = require("n8n-workflow");
+var import_n8n_workflow3 = require("n8n-workflow");
 var SOURCE_RANK = { model: 0, hint: 1, regex: 2 };
 function removeOverlaps(spans) {
   const sorted = [...spans].sort(
@@ -860,7 +1001,7 @@ async function handleTokenize(ctx, i, baseUrl) {
   const agentNameParam = ctx.getNodeParameter("agentName", i, "");
   const text = item.json[textField];
   if (typeof text !== "string") {
-    throw new import_n8n_workflow2.NodeOperationError(
+    throw new import_n8n_workflow3.NodeOperationError(
       ctx.getNode(),
       `Field "${textField}" is not a string. Got: ${typeof text}`,
       {
@@ -869,7 +1010,7 @@ async function handleTokenize(ctx, i, baseUrl) {
       }
     );
   }
-  const vault = new N8nHttpVault(ctx, sessionId, baseUrl);
+  const vault = getAuthMode(ctx) === "tokenless" ? new WorkflowStaticDataVault(ctx, sessionId) : new N8nHttpVault(ctx, sessionId, baseUrl);
   const localSpans = detectMatches(text, DEFAULT_DETECTORS);
   let risk = null;
   let flaggedForReview = false;
@@ -900,7 +1041,7 @@ async function handleTokenize(ctx, i, baseUrl) {
       if (risk.risk_score >= reviewThreshold) flaggedForReview = true;
     } catch (err) {
       if (detectionMode === "cloud") {
-        throw new import_n8n_workflow2.NodeApiError(ctx.getNode(), err, { itemIndex: i });
+        throw new import_n8n_workflow3.NodeApiError(ctx.getNode(), err, { itemIndex: i });
       }
     }
   }
@@ -912,7 +1053,7 @@ async function handleTokenize(ctx, i, baseUrl) {
     try {
       batched = await vault.findOrCreateBatch(merged.map((s) => ({ kind: s.kind, value: s.value })));
     } catch (err) {
-      throw new import_n8n_workflow2.NodeApiError(ctx.getNode(), err, { itemIndex: i });
+      throw new import_n8n_workflow3.NodeApiError(ctx.getNode(), err, { itemIndex: i });
     }
     const withTokens = merged.map((s, idx) => ({ ...s, token: batched[idx]?.token }));
     for (const s of [...withTokens].sort((a, b) => b.index - a.index)) {
@@ -971,7 +1112,7 @@ async function handleTokenize(ctx, i, baseUrl) {
 
 // nodes/Privent/operations/detokenize.ts
 var import_node_crypto = require("crypto");
-var import_n8n_workflow3 = require("n8n-workflow");
+var import_n8n_workflow4 = require("n8n-workflow");
 function matchesTrustedSink(url, trusted) {
   if (trusted.length === 0) return true;
   return trusted.some((prefix) => url.startsWith(prefix.trim()));
@@ -1039,7 +1180,7 @@ async function handleDetokenize(ctx, i, baseUrl) {
       }
     };
   }
-  const vault = new N8nHttpVault(ctx, sessionId, baseUrl);
+  const vault = getAuthMode(ctx) === "tokenless" ? new WorkflowStaticDataVault(ctx, sessionId) : new N8nHttpVault(ctx, sessionId, baseUrl);
   const scanTarget = targetField === "*" ? item.json : item.json[targetField];
   const placeholders = [...scanForTokens(scanTarget)];
   const tokensRedeemed = placeholders.length;
@@ -1050,7 +1191,7 @@ async function handleDetokenize(ctx, i, baseUrl) {
   try {
     entries = await vault.retrieveBatch([...new Set(placeholders)]);
   } catch (err) {
-    throw new import_n8n_workflow3.NodeApiError(ctx.getNode(), err, { itemIndex: i });
+    throw new import_n8n_workflow4.NodeApiError(ctx.getNode(), err, { itemIndex: i });
   }
   const resolvedVault = makeResolvedVault(sessionId, entries);
   let json;
@@ -1089,7 +1230,7 @@ async function handleDetokenize(ctx, i, baseUrl) {
 }
 
 // nodes/Privent/operations/riskCheck.ts
-var import_n8n_workflow4 = require("n8n-workflow");
+var import_n8n_workflow5 = require("n8n-workflow");
 function isBatchLengthMismatch(err) {
   return err instanceof Error && err.message.startsWith("Privent risk batch length mismatch");
 }
@@ -1105,7 +1246,7 @@ async function executeRiskCheck(ctx) {
       const textField = ctx.getNodeParameter("textField", i);
       const raw = item.json[textField];
       if (typeof raw !== "string") {
-        throw new import_n8n_workflow4.NodeOperationError(
+        throw new import_n8n_workflow5.NodeOperationError(
           ctx.getNode(),
           `Field "${textField}" is not a string. Got: ${typeof raw}`,
           {
@@ -1136,9 +1277,9 @@ async function executeRiskCheck(ctx) {
       return [out2];
     }
     if (isBatchLengthMismatch(err)) {
-      throw new import_n8n_workflow4.NodeOperationError(ctx.getNode(), err);
+      throw new import_n8n_workflow5.NodeOperationError(ctx.getNode(), err);
     }
-    throw new import_n8n_workflow4.NodeApiError(ctx.getNode(), err);
+    throw new import_n8n_workflow5.NodeApiError(ctx.getNode(), err);
   }
   const out = [];
   const node = ctx.getNode();
@@ -1190,14 +1331,14 @@ async function executeRiskCheck(ctx) {
 }
 
 // nodes/Privent/operations/audit.ts
-var import_n8n_workflow5 = require("n8n-workflow");
+var import_n8n_workflow6 = require("n8n-workflow");
 async function handleAudit(ctx, i, baseUrl) {
   const item = ctx.getInputData()[i];
   const triggerMode = safeTriggerMode(ctx);
   const frameworkVersion = safeFrameworkVersion();
   const sessionId = ctx.getNodeParameter("sessionId", i).trim();
   if (!sessionId) {
-    throw new import_n8n_workflow5.NodeOperationError(ctx.getNode(), "Session ID is required", { itemIndex: i });
+    throw new import_n8n_workflow6.NodeOperationError(ctx.getNode(), "Session ID is required", { itemIndex: i });
   }
   const traceIdParam = ctx.getNodeParameter("traceId", i, "");
   const agentNameParam = ctx.getNodeParameter("agentName", i, "");
@@ -1256,7 +1397,7 @@ async function handleAudit(ctx, i, baseUrl) {
 }
 
 // nodes/Privent/operations/handoff.ts
-var import_n8n_workflow6 = require("n8n-workflow");
+var import_n8n_workflow7 = require("n8n-workflow");
 async function handleHandoff(ctx, i, baseUrl) {
   const item = ctx.getInputData()[i];
   const triggerMode = safeTriggerMode(ctx);
@@ -1269,14 +1410,14 @@ async function handleHandoff(ctx, i, baseUrl) {
   const ctxAudit = resolveContext(ctx, sessionIdParam, traceIdParam, agentNameParam);
   const node = ctx.getNode();
   if (!ctxAudit.sessionId) {
-    throw new import_n8n_workflow6.NodeOperationError(
+    throw new import_n8n_workflow7.NodeOperationError(
       ctx.getNode(),
       "Privent Handoff requires an upstream Privent Session node \u2014 sessionId is missing.",
       { itemIndex: i }
     );
   }
   if (!ctxAudit.agentName) {
-    throw new import_n8n_workflow6.NodeOperationError(
+    throw new import_n8n_workflow7.NodeOperationError(
       ctx.getNode(),
       "Privent Handoff requires the upstream Privent Session to have an Agent Name set.",
       { itemIndex: i }
@@ -1287,7 +1428,7 @@ async function handleHandoff(ctx, i, baseUrl) {
   if (targetKind === "agent") {
     toAgentName = ctx.getNodeParameter("toAgentName", i, "").trim();
     if (!toAgentName) {
-      throw new import_n8n_workflow6.NodeOperationError(
+      throw new import_n8n_workflow7.NodeOperationError(
         ctx.getNode(),
         "Target Agent Name is required when Target Kind = Agent",
         { itemIndex: i }
@@ -1296,7 +1437,7 @@ async function handleHandoff(ctx, i, baseUrl) {
   } else {
     toSinkId = ctx.getNodeParameter("toSinkId", i, "").trim();
     if (!toSinkId) {
-      throw new import_n8n_workflow6.NodeOperationError(
+      throw new import_n8n_workflow7.NodeOperationError(
         ctx.getNode(),
         "External Sink ID is required when Target Kind = External Sink",
         { itemIndex: i }
@@ -1356,15 +1497,38 @@ var Privent = class {
     subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
     description: "Privent DLP: session-scoped tokenization, detokenization, risk scoring, audit events and agent handoffs for AI agent workflows.",
     defaults: { name: "Privent" },
-    inputs: [import_n8n_workflow7.NodeConnectionTypes.Main],
-    outputs: [import_n8n_workflow7.NodeConnectionTypes.Main],
-    credentials: [{ name: "priventApi", required: true }],
+    inputs: [import_n8n_workflow8.NodeConnectionTypes.Main],
+    outputs: [import_n8n_workflow8.NodeConnectionTypes.Main],
+    credentials: [
+      { name: "priventApi", required: true, displayOptions: { show: { authentication: ["apiKey"] } } },
+      { name: "priventVisitorApi", required: true, displayOptions: { show: { authentication: ["tokenless"] } } }
+    ],
     properties: [
+      {
+        displayName: "Authentication",
+        name: "authentication",
+        type: "options",
+        noDataExpression: true,
+        options: [
+          {
+            name: "API Key",
+            value: "apiKey",
+            description: "Full Privent: vault tokenization, audit, handoff and risk scoring. Requires a Privent API key."
+          },
+          {
+            name: "Tokenless (Visitor)",
+            value: "tokenless",
+            description: "No API key \u2014 in-memory tokenization + risk scoring via an anonymous visitor id. The backend must have visitor auth enabled."
+          }
+        ],
+        default: "apiKey"
+      },
       {
         displayName: "Resource",
         name: "resource",
         type: "options",
         noDataExpression: true,
+        displayOptions: { show: { authentication: ["apiKey"] } },
         options: [
           { name: "Session", value: "session" },
           { name: "Tokenize", value: "tokenize" },
@@ -1372,6 +1536,20 @@ var Privent = class {
           { name: "Risk Check", value: "riskCheck" },
           { name: "Audit", value: "audit" },
           { name: "Handoff", value: "handoff" }
+        ],
+        default: "tokenize"
+      },
+      {
+        displayName: "Resource",
+        name: "resource",
+        type: "options",
+        noDataExpression: true,
+        displayOptions: { show: { authentication: ["tokenless"] } },
+        options: [
+          { name: "Session", value: "session" },
+          { name: "Tokenize", value: "tokenize" },
+          { name: "Detokenize", value: "detokenize" },
+          { name: "Risk Check", value: "riskCheck" }
         ],
         default: "tokenize"
       },
@@ -1445,7 +1623,7 @@ var Privent = class {
         name: "operation",
         type: "options",
         noDataExpression: true,
-        displayOptions: { show: { resource: ["audit"] } },
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["audit"] } },
         options: [
           {
             name: "Emit",
@@ -1461,7 +1639,7 @@ var Privent = class {
         name: "operation",
         type: "options",
         noDataExpression: true,
-        displayOptions: { show: { resource: ["handoff"] } },
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["handoff"] } },
         options: [
           {
             name: "Record",
@@ -1713,7 +1891,7 @@ var Privent = class {
         default: '={{$("Privent Session").item.json.sessionId}}',
         required: true,
         description: "Session ID from the upstream Privent Session node",
-        displayOptions: { show: { resource: ["audit"], operation: ["emit"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["audit"], operation: ["emit"] } }
       },
       {
         displayName: "Trace ID",
@@ -1721,7 +1899,7 @@ var Privent = class {
         type: "string",
         default: '={{ $("Privent Session").item.json.traceId }}',
         description: "Correlation ID from the upstream Privent Session node. Links this event to the session trace. Leave as-is; a fresh ID is generated if no Session is upstream.",
-        displayOptions: { show: { resource: ["audit"], operation: ["emit"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["audit"], operation: ["emit"] } }
       },
       {
         displayName: "Agent Name",
@@ -1729,7 +1907,7 @@ var Privent = class {
         type: "string",
         default: '={{ $("Privent Session").item.json.agentName }}',
         description: "Logical agent identifier from the upstream Privent Session node, recorded on the audit event. Optional.",
-        displayOptions: { show: { resource: ["audit"], operation: ["emit"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["audit"], operation: ["emit"] } }
       },
       {
         displayName: "Event Type",
@@ -1743,7 +1921,7 @@ var Privent = class {
         ],
         default: "llm_call",
         description: "Audit event type. LLM Call triggers backend cost calculation from ModelPricing.",
-        displayOptions: { show: { resource: ["audit"], operation: ["emit"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["audit"], operation: ["emit"] } }
       },
       {
         displayName: "LLM Model",
@@ -1752,7 +1930,7 @@ var Privent = class {
         default: { mode: "list", value: "" },
         required: true,
         description: "Model used for this LLM call. Pick from your org's priced models (popular first) or enter a custom one as provider|model. The provider is taken from the selection.",
-        displayOptions: { show: { resource: ["audit"], operation: ["emit"], eventType: ["llm_call"] } },
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["audit"], operation: ["emit"], eventType: ["llm_call"] } },
         modes: [
           {
             displayName: "From List",
@@ -1775,7 +1953,7 @@ var Privent = class {
         type: "string",
         default: "={{$json.usage.prompt_tokens}}",
         description: "n8n expression resolving to the prompt token count. Default reads OpenAI-style {usage:{prompt_tokens}} from the previous node.",
-        displayOptions: { show: { resource: ["audit"], operation: ["emit"], eventType: ["llm_call"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["audit"], operation: ["emit"], eventType: ["llm_call"] } }
       },
       {
         displayName: "Completion Tokens",
@@ -1783,7 +1961,7 @@ var Privent = class {
         type: "string",
         default: "={{$json.usage.completion_tokens}}",
         description: "n8n expression resolving to the completion token count",
-        displayOptions: { show: { resource: ["audit"], operation: ["emit"], eventType: ["llm_call"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["audit"], operation: ["emit"], eventType: ["llm_call"] } }
       },
       {
         displayName: "Extra Metadata (JSON)",
@@ -1791,7 +1969,7 @@ var Privent = class {
         type: "json",
         default: "{}",
         description: "Optional. Merged into the audit event metadata. For event types other than LLM Call, use this to attach event-specific fields (e.g. policy decision rationale).",
-        displayOptions: { show: { resource: ["audit"], operation: ["emit"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["audit"], operation: ["emit"] } }
       },
       // ── handoff ─────────────────────────────────────────────────────────
       {
@@ -1801,7 +1979,7 @@ var Privent = class {
         default: '={{ $("Privent Session").item.json.sessionId }}',
         required: true,
         description: 'Session ID from the upstream Privent Session node \u2014 the "from" side of the handoff edge.',
-        displayOptions: { show: { resource: ["handoff"], operation: ["record"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["handoff"], operation: ["record"] } }
       },
       {
         displayName: "Trace ID",
@@ -1809,7 +1987,7 @@ var Privent = class {
         type: "string",
         default: '={{ $("Privent Session").item.json.traceId }}',
         description: "Correlation ID from the upstream Privent Session node. Leave as-is; a fresh ID is generated if no Session is upstream.",
-        displayOptions: { show: { resource: ["handoff"], operation: ["record"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["handoff"], operation: ["record"] } }
       },
       {
         displayName: "From Agent Name",
@@ -1818,7 +1996,7 @@ var Privent = class {
         default: '={{ $("Privent Session").item.json.agentName }}',
         required: true,
         description: 'Canonical name of the source agent, from the upstream Privent Session node. Required \u2014 identifies the "from" side of the handoff edge.',
-        displayOptions: { show: { resource: ["handoff"], operation: ["record"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["handoff"], operation: ["record"] } }
       },
       {
         displayName: "Target Kind",
@@ -1837,7 +2015,7 @@ var Privent = class {
           }
         ],
         default: "agent",
-        displayOptions: { show: { resource: ["handoff"], operation: ["record"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["handoff"], operation: ["record"] } }
       },
       {
         displayName: "Target Agent Name",
@@ -1848,7 +2026,7 @@ var Privent = class {
         description: "Canonical agent name of the downstream agent. Must match the agentName the downstream PriventSession will emit.",
         hint: 'Example: "Translator", "billing-agent". Resolves to Agent.id post-ingest.',
         displayOptions: {
-          show: { resource: ["handoff"], operation: ["record"], targetKind: ["agent"] }
+          show: { authentication: ["apiKey"], resource: ["handoff"], operation: ["record"], targetKind: ["agent"] }
         }
       },
       {
@@ -1859,7 +2037,7 @@ var Privent = class {
         required: true,
         description: "Opaque identifier for an external sink (e.g. webhook URL hash, partner ID).",
         displayOptions: {
-          show: { resource: ["handoff"], operation: ["record"], targetKind: ["sink"] }
+          show: { authentication: ["apiKey"], resource: ["handoff"], operation: ["record"], targetKind: ["sink"] }
         }
       },
       {
@@ -1875,7 +2053,7 @@ var Privent = class {
         ],
         default: "delegation",
         description: "Categorises the handoff for the Trust Map graph filters",
-        displayOptions: { show: { resource: ["handoff"], operation: ["record"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["handoff"], operation: ["record"] } }
       },
       {
         displayName: "Payload Token Count",
@@ -1884,7 +2062,7 @@ var Privent = class {
         default: 0,
         description: "Optional. Token volume hint for blast-radius math in the Trust Map (set 0 to omit).",
         typeOptions: { minValue: 0 },
-        displayOptions: { show: { resource: ["handoff"], operation: ["record"] } }
+        displayOptions: { show: { authentication: ["apiKey"], resource: ["handoff"], operation: ["record"] } }
       }
     ]
   };

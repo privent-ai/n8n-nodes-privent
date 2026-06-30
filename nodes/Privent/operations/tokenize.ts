@@ -4,11 +4,14 @@ import type { AuditEvent, EntityKind, RegexDetector } from '@priventai/core';
 import { DEFAULT_DETECTORS } from '@priventai/core';
 import {
   N8nHttpVault,
+  WorkflowStaticDataVault,
   auditLog,
   buildAuditMetadata,
+  getAuthMode,
   resolveContext,
   riskScore,
   safeTriggerMode,
+  type SessionVault,
 } from '../../../shared/privent-http.js';
 
 /** A detected span in the source text (regex or backend ML), detection order. */
@@ -112,7 +115,10 @@ export async function handleTokenize(
     );
   }
 
-  const vault = new N8nHttpVault(ctx, sessionId, baseUrl);
+  const vault: SessionVault =
+    getAuthMode(ctx) === 'tokenless'
+      ? new WorkflowStaticDataVault(ctx, sessionId)
+      : new N8nHttpVault(ctx, sessionId, baseUrl);
 
   // 1. Local regex detection — structured PII only (no names/DOB/address).
   const localSpans = detectMatches(text, DEFAULT_DETECTORS);

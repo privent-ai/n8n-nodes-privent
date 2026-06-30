@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-privent",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Privent DLP nodes for n8n: session-scoped tokenization, risk scoring, and safe detokenization for AI agent workflows",
   "homepage": "https://www.privent.ai/docs",
   "author": "Privent AI <hello@privent.ai>",
@@ -37,7 +37,8 @@
       "dist/nodes/Privent/Privent.node.js"
     ],
     "credentials": [
-      "dist/credentials/PriventApi.credentials.js"
+      "dist/credentials/PriventApi.credentials.js",
+      "dist/credentials/PriventVisitorApi.credentials.js"
     ]
   },
   "files": [

@@ -5,12 +5,15 @@ import type { AuditEvent } from '@priventai/core';
 import { scanForTokens, detokenizeDeep } from '@priventai/core';
 import {
   N8nHttpVault,
+  WorkflowStaticDataVault,
   auditLog,
   buildAuditMetadata,
+  getAuthMode,
   makeResolvedVault,
   resolveContext,
   safeTriggerMode,
   sha256short,
+  type SessionVault,
 } from '../../../shared/privent-http.js';
 
 /**
@@ -114,7 +117,10 @@ export async function handleDetokenize(
     };
   }
 
-  const vault = new N8nHttpVault(ctx, sessionId, baseUrl);
+  const vault: SessionVault =
+    getAuthMode(ctx) === 'tokenless'
+      ? new WorkflowStaticDataVault(ctx, sessionId)
+      : new N8nHttpVault(ctx, sessionId, baseUrl);
 
   const scanTarget =
     targetField === '*' ? item.json : (item.json as Record<string, unknown>)[targetField];

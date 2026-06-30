@@ -12,6 +12,7 @@
  * on the n8n item between nodes.
  */
 import type { IDataObject, IExecuteFunctions, IHttpRequestMethods } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
 import type {
   AuditEvent,
   EntityKind,
@@ -146,10 +147,130 @@ async function priventRequest<T>(
   })) as T;
 }
 
-/** Reads the `baseUrl` field of the `priventApi` credential. */
+/** Node-level auth mode. Defaults to `apiKey` (the pre-tokenless behavior). */
+export function getAuthMode(ctx: IExecuteFunctions): 'apiKey' | 'tokenless' {
+  return ctx.getNodeParameter('authentication', 0, 'apiKey') as 'apiKey' | 'tokenless';
+}
+
+/** Reads the backend `baseUrl` for the active auth mode. apiKey →
+ *  `priventApi.baseUrl` (unchanged); tokenless → `priventVisitorApi.baseUrl`. */
 export async function getPriventBaseUrl(ctx: IExecuteFunctions): Promise<string> {
-  const creds = await ctx.getCredentials('priventApi');
+  const credName = getAuthMode(ctx) === 'tokenless' ? 'priventVisitorApi' : 'priventApi';
+  const creds = await ctx.getCredentials(credName);
   return creds.baseUrl as string;
+}
+
+interface VisitorCacheEntry {
+  visitorId: string;
+  expiresAt: number; // unix seconds
+}
+
+/** Pulls an HTTP status off whatever shape the n8n/axios helper threw. */
+function httpErrorStatus(err: unknown): number | undefined {
+  const e = err as {
+    httpCode?: unknown;
+    statusCode?: unknown;
+    response?: { status?: unknown };
+  };
+  const raw = e.httpCode ?? e.statusCode ?? e.response?.status;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * Mint (or reuse) an anonymous signed visitor id for the tokenless path.
+ * Cached per-baseUrl in workflow static data; reused while >5 min from expiry.
+ * Minting uses the UNauthenticated helper — `/v1/visitor/credentials` is public.
+ */
+export async function resolveVisitorId(ctx: IExecuteFunctions, baseUrl: string): Promise<string> {
+  const staticData = ctx.getWorkflowStaticData('global');
+  const cache = (staticData.priventVisitor ??= {}) as Record<string, VisitorCacheEntry>;
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const cached = cache[baseUrl];
+  if (cached && cached.expiresAt - nowSec > 300) {
+    return cached.visitorId;
+  }
+
+  let res: { visitor_id?: unknown; expires_at?: unknown };
+  try {
+    res = (await ctx.helpers.httpRequest({
+      method: 'POST',
+      baseURL: baseUrl,
+      url: '/v1/visitor/credentials',
+      body: {},
+      json: true,
+    })) as { visitor_id?: unknown; expires_at?: unknown };
+  } catch (err) {
+    const status = httpErrorStatus(err);
+    if (status === 404) {
+      throw new NodeOperationError(
+        ctx.getNode(),
+        "Tokenless mode isn't enabled on this Privent backend — switch Authentication to API Key, or enable visitor auth on the backend.",
+      );
+    }
+    if (status === 429) {
+      throw new NodeOperationError(
+        ctx.getNode(),
+        'Rate limited minting a visitor credential; retry shortly.',
+      );
+    }
+    throw new NodeOperationError(
+      ctx.getNode(),
+      `Failed to mint a Privent visitor credential${status != null ? ` (HTTP ${status})` : ''}: ${
+        (err as Error).message
+      }`,
+    );
+  }
+
+  const visitorId = res.visitor_id;
+  const expiresAt = res.expires_at;
+  if (typeof visitorId !== 'string' || typeof expiresAt !== 'number') {
+    throw new NodeOperationError(
+      ctx.getNode(),
+      'Privent visitor credential response was malformed (missing visitor_id/expires_at).',
+    );
+  }
+
+  cache[baseUrl] = { visitorId, expiresAt };
+  return visitorId;
+}
+
+/**
+ * Tokenless request: attaches `X-Visitor-Id` (no Bearer, no credential auth).
+ * On a 401 the cached id is treated as stale — clear it, re-mint once, retry once.
+ */
+export async function priventVisitorRequest<T>(
+  ctx: IExecuteFunctions,
+  baseUrl: string,
+  method: IHttpRequestMethods,
+  url: string,
+  body: IDataObject,
+): Promise<T> {
+  const send = async (visitorId: string): Promise<T> =>
+    (await ctx.helpers.httpRequest({
+      method,
+      baseURL: baseUrl,
+      url,
+      body,
+      json: true,
+      timeout: 200_000,
+      headers: { 'X-Visitor-Id': visitorId },
+    })) as T;
+
+  const visitorId = await resolveVisitorId(ctx, baseUrl);
+  try {
+    return await send(visitorId);
+  } catch (err) {
+    if (httpErrorStatus(err) !== 401) throw err;
+    // Stale visitor id — drop the cache entry, mint fresh, retry exactly once.
+    const cache = (ctx.getWorkflowStaticData('global').priventVisitor ?? {}) as Record<
+      string,
+      VisitorCacheEntry
+    >;
+    delete cache[baseUrl];
+    return send(await resolveVisitorId(ctx, baseUrl));
+  }
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -262,6 +383,99 @@ export class N8nHttpVault implements TokenVault {
 }
 
 /**
+ * The vault surface the Tokenize/Detokenize operations actually use. Both
+ * `N8nHttpVault` (cloud, apiKey) and `WorkflowStaticDataVault` (tokenless)
+ * satisfy it, so the ops select between them by auth mode without caring which.
+ */
+export interface SessionVault {
+  readonly sessionId: string;
+  findOrCreateBatch(items: TokenVaultBatchItem[]): Promise<TokenVaultBatchResult[]>;
+  retrieveBatch(tokens: string[]): Promise<VaultEntryRow[]>;
+  destroy(): Promise<void>;
+}
+
+interface VaultSessionState {
+  byKey: Record<string, string>; // `${kind}|${normalized}` → token
+  byToken: Record<string, { kind: EntityKind; value: string }>; // token → original
+  counters: Record<string, number>; // kind → last per-kind counter
+}
+
+interface VaultRoot {
+  sessions: Record<string, VaultSessionState>;
+  order: string[]; // sessionId insertion order, for bounded eviction
+}
+
+const MAX_VAULT_SESSIONS = 50;
+
+/**
+ * Tokenless vault: the token↔value map lives in n8n workflow static data
+ * (`getWorkflowStaticData('global')`), keyed by sessionId — no backend, no API
+ * key. Emits core-format `[KIND_NNN]` tokens (per-kind counter) so the round-trip
+ * stays byte-compatible with `scanForTokens`/`detokenizeDeep`. State is bounded to
+ * the most-recent ${MAX_VAULT_SESSIONS} sessions (oldest insertion evicted).
+ */
+export class WorkflowStaticDataVault implements SessionVault {
+  constructor(
+    private readonly ctx: IExecuteFunctions,
+    readonly sessionId: string,
+  ) {}
+
+  private root(): VaultRoot {
+    const sd = this.ctx.getWorkflowStaticData('global');
+    return (sd.priventVault ??= { sessions: {}, order: [] }) as VaultRoot;
+  }
+
+  private session(): VaultSessionState {
+    const root = this.root();
+    let s = root.sessions[this.sessionId];
+    if (!s) {
+      s = { byKey: {}, byToken: {}, counters: {} };
+      root.sessions[this.sessionId] = s;
+      root.order.push(this.sessionId);
+      while (root.order.length > MAX_VAULT_SESSIONS) {
+        const evicted = root.order.shift();
+        if (evicted != null) delete root.sessions[evicted];
+      }
+    }
+    return s;
+  }
+
+  async findOrCreateBatch(items: TokenVaultBatchItem[]): Promise<TokenVaultBatchResult[]> {
+    const s = this.session();
+    return items.map((it) => {
+      const normalized = normalize(it.kind, it.value);
+      const key = `${it.kind}|${normalized}`;
+      let token = s.byKey[key];
+      if (token == null) {
+        const n = (s.counters[it.kind] = (s.counters[it.kind] ?? 0) + 1);
+        token = `[${it.kind}_${String(n).padStart(3, '0')}]`;
+        s.byKey[key] = token;
+        s.byToken[token] = { kind: it.kind, value: it.value };
+      }
+      return { kind: it.kind, value: normalized, token };
+    });
+  }
+
+  async retrieveBatch(tokens: string[]): Promise<VaultEntryRow[]> {
+    if (tokens.length === 0) return [];
+    const s = this.session();
+    const out: VaultEntryRow[] = [];
+    for (const token of tokens) {
+      const entry = s.byToken[token];
+      if (entry) out.push({ token, kind: entry.kind, value: entry.value });
+    }
+    return out;
+  }
+
+  async destroy(): Promise<void> {
+    const root = this.root();
+    delete root.sessions[this.sessionId];
+    const idx = root.order.indexOf(this.sessionId);
+    if (idx >= 0) root.order.splice(idx, 1);
+  }
+}
+
+/**
  * Read-only vault seeded from a single `retrieveBatch` result, so the pure
  * `detokenizeDeep` deep-walk resolves tokens locally with zero extra
  * round-trips.
@@ -316,7 +530,8 @@ export async function riskScore(
 ): Promise<RiskScore> {
   const start = Date.now();
   const bootstrap = opts?.bootstrapEntities?.slice(0, 256);
-  const r = await priventRequest<CloudScoreResponse>(ctx, baseUrl, 'POST', '/v1/risk/score', {
+  const send = getAuthMode(ctx) === 'tokenless' ? priventVisitorRequest : priventRequest;
+  const r = await send<CloudScoreResponse>(ctx, baseUrl, 'POST', '/v1/risk/score', {
     text,
     include_entities: true,
     ...(opts?.lang != null ? { lang: opts.lang } : {}),
@@ -340,7 +555,8 @@ export async function riskScoreBatch(
 ): Promise<RiskScore[]> {
   if (texts.length === 0) return [];
   const start = Date.now();
-  const res = await priventRequest<{ results: CloudScoreResponse[] }>(
+  const send = getAuthMode(ctx) === 'tokenless' ? priventVisitorRequest : priventRequest;
+  const res = await send<{ results: CloudScoreResponse[] }>(
     ctx,
     baseUrl,
     'POST',
@@ -370,6 +586,9 @@ export async function auditLog(
   event: AuditEvent,
   baseUrl: string,
 ): Promise<void> {
+  // Audit is org-scoped — anonymous visitors have no org, so skip entirely
+  // in tokenless mode (don't rely on the swallow / waste a round-trip).
+  if (getAuthMode(ctx) === 'tokenless') return;
   try {
     await priventRequest(ctx, baseUrl, 'POST', '/v1/audit/events', {
       events: [serializeForWire(event)],
