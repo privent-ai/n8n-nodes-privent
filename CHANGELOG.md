@@ -4,6 +4,12 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.1] - 2026-06-30
+
+### Docs
+- README: mark the package as verified + live on n8n Cloud (direct nodes-panel install); split
+  Cloud vs self-hosted install steps. Docs-only; no code or API change.
+
 ## [2.1.0] - 2026-06-30
 
 ### Added
