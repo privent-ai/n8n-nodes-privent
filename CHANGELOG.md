@@ -4,6 +4,18 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] - 2026-06-30
+
+### Added
+- **Local (No Backend) mode** — a third Authentication option alongside API Key and Tokenless. Tokenize
+  and Detokenize run entirely inside n8n with local regex detection: **no API key, no backend, zero
+  network — your data never leaves your n8n**. Adds 575 detectors (core structured PII plus a catalog
+  vendored from [openredaction](https://github.com/sam247/openredaction), MIT — see `NOTICE`), tier-gated
+  by a **Detection Level** toggle (Standard = high-precision structured PII; Aggressive = also names,
+  addresses, bare-number IDs and crypto). Tokens live in an in-memory vault (n8n workflow static data) and
+  the Privent **Session** node is optional (session id is auto-managed and rides on the item). Session,
+  Risk Check, Audit and Handoff remain backend-only. API Key and Tokenless behavior is unchanged.
+
 ## [2.1.1] - 2026-06-30
 
 ### Docs

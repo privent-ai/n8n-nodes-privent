@@ -7,12 +7,14 @@ import {
   WorkflowStaticDataVault,
   auditLog,
   buildAuditMetadata,
+  buildLocalDetectors,
   getAuthMode,
   resolveContext,
   riskScore,
   safeTriggerMode,
   type SessionVault,
 } from '../../../shared/privent-http.js';
+import { isLocalFalsePositive } from '../../../shared/local-detectors.js';
 
 /** A detected span in the source text (regex or backend ML), detection order. */
 interface Span {
@@ -64,10 +66,18 @@ function removeOverlaps(spans: Span[]): Span[] {
  * dates of birth and street addresses are NOT detectable by regex — those come
  * from the backend ML pass (auto/cloud modes only).
  */
-function detectMatches(text: string, detectors: readonly RegexDetector[]): Span[] {
+function detectMatches(
+  text: string,
+  detectors: readonly RegexDetector[],
+  opts: { preserveFlags?: boolean } = {},
+): Span[] {
   const matches: Span[] = [];
   for (const detector of detectors) {
-    const re = new RegExp(detector.regex.source, 'g');
+    // Default: rebuild with `g` only (drops other flags) — keeps the apiKey/
+    // tokenless core path byte-identical. Local passes preserveFlags so the
+    // pre-built global regex (with its original i/s/m flags) is reused as-is;
+    // matchAll clones it internally, so sharing the object across calls is safe.
+    const re = opts.preserveFlags ? detector.regex : new RegExp(detector.regex.source, 'g');
     for (const m of text.matchAll(re)) {
       if (m.index == null) continue;
       const raw = m[0];
@@ -85,12 +95,91 @@ function detectMatches(text: string, detectors: readonly RegexDetector[]): Span[
   return removeOverlaps(matches);
 }
 
+/**
+ * `tokenize` in `local` (no-backend) mode: regex-only detection over the
+ * Detection-Level-gated detector set, an in-memory vault, and ZERO network
+ * (no riskScore, no audit). Session id is optional — auto-generated and emitted
+ * on the item so a downstream local Detokenize can pick it up.
+ */
+async function handleTokenizeLocal(ctx: IExecuteFunctions, i: number): Promise<IDataObject> {
+  const item = ctx.getInputData()[i]!;
+  const textField = ctx.getNodeParameter('textField', i) as string;
+  const level = ctx.getNodeParameter('detectionLevel', i, 'standard') as 'standard' | 'aggressive';
+  const sessionIdParam = (ctx.getNodeParameter('sessionId', i, '') as string).trim();
+  const sessionId = sessionIdParam || crypto.randomUUID();
+
+  const text = (item.json as Record<string, unknown>)[textField];
+  if (typeof text !== 'string') {
+    throw new NodeOperationError(
+      ctx.getNode(),
+      `Field "${textField}" is not a string. Got: ${typeof text}`,
+      {
+        itemIndex: i,
+        description:
+          'Check the "Text Field" parameter — it should match the property name in your input data.',
+      },
+    );
+  }
+
+  const detectors = buildLocalDetectors(level);
+  const spans = removeOverlaps(
+    detectMatches(text, detectors, { preserveFlags: true }).filter(
+      (s) => !isLocalFalsePositive(s.value, s.kind),
+    ),
+  )
+    .filter((s) => s.length > 0 && s.index >= 0 && s.index + s.length <= text.length)
+    .map((s) => ({ ...s, value: text.slice(s.index, s.index + s.length) }));
+
+  const vault = new WorkflowStaticDataVault(ctx, sessionId);
+  let tokenizedText = text;
+  const entities: Array<{
+    token: string;
+    kind: EntityKind;
+    confidence: number;
+    source: Span['source'];
+  }> = [];
+  if (spans.length > 0) {
+    const batched = await vault.findOrCreateBatch(spans.map((s) => ({ kind: s.kind, value: s.value })));
+    const withTokens = spans.map((s, idx) => ({ ...s, token: batched[idx]?.token }));
+    for (const s of [...withTokens].sort((a, b) => b.index - a.index)) {
+      if (s.token == null) continue;
+      tokenizedText =
+        tokenizedText.slice(0, s.index) + s.token + tokenizedText.slice(s.index + s.length);
+    }
+    for (const s of withTokens) {
+      if (s.token == null) continue;
+      entities.push({ token: s.token, kind: s.kind, confidence: s.confidence, source: s.source });
+    }
+    entities.sort((a, b) => a.token.localeCompare(b.token));
+  }
+
+  return {
+    ...item.json,
+    [textField]: tokenizedText,
+    privent: {
+      sessionId,
+      entities: entities.map((e) => ({
+        token: e.token,
+        kind: e.kind,
+        confidence: e.confidence,
+        source: e.source,
+      })),
+      risk: null,
+      flaggedForReview: false,
+    },
+  };
+}
+
 /** `tokenize` resource → `tokenize` operation. Migrated from PriventTokenize. */
 export async function handleTokenize(
   ctx: IExecuteFunctions,
   i: number,
   baseUrl: string,
 ): Promise<IDataObject> {
+  // Local (no-backend) mode runs an entirely separate regex-only path; the
+  // apiKey/tokenless body below is left untouched.
+  if (getAuthMode(ctx) === 'local') return handleTokenizeLocal(ctx, i);
+
   const item = ctx.getInputData()[i]!;
   const triggerMode = safeTriggerMode(ctx);
 

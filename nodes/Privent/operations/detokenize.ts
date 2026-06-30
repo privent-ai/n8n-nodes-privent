@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { IDataObject, IExecuteFunctions, JsonObject } from 'n8n-workflow';
-import { NodeApiError } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import type { AuditEvent } from '@priventai/core';
 import { scanForTokens, detokenizeDeep } from '@priventai/core';
 import {
@@ -60,7 +60,21 @@ export async function handleDetokenize(
   const item = ctx.getInputData()[i]!;
   const triggerMode = safeTriggerMode(ctx);
 
-  const sessionId = ctx.getNodeParameter('sessionId', i) as string;
+  const authMode = getAuthMode(ctx);
+  let sessionId = (ctx.getNodeParameter('sessionId', i, '') as string).trim();
+  if (authMode === 'local' && !sessionId) {
+    // Session is optional in local mode: fall back to the id the upstream local
+    // Tokenize emitted on the item.
+    const upstream = (item.json as { privent?: { sessionId?: unknown } }).privent;
+    sessionId = typeof upstream?.sessionId === 'string' ? upstream.sessionId : '';
+    if (!sessionId) {
+      throw new NodeOperationError(
+        ctx.getNode(),
+        'No session id — add a Privent Tokenize node upstream, or set Session ID.',
+        { itemIndex: i },
+      );
+    }
+  }
   const targetField = ctx.getNodeParameter('targetField', i) as string;
   const strict = ctx.getNodeParameter('strict', i) as boolean;
   const traceIdParam = ctx.getNodeParameter('traceId', i, '') as string;
@@ -118,7 +132,7 @@ export async function handleDetokenize(
   }
 
   const vault: SessionVault =
-    getAuthMode(ctx) === 'tokenless'
+    authMode !== 'apiKey'
       ? new WorkflowStaticDataVault(ctx, sessionId)
       : new N8nHttpVault(ctx, sessionId, baseUrl);
 

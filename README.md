@@ -132,6 +132,34 @@ Point **Base URL** at your self-hosted deployment to keep all token/risk/audit t
 
 ---
 
+## Local (No Backend) mode
+
+Even more offline than Tokenless: **no API key, no backend, no network at all**. Set **Authentication = Local (No Backend)** on the node — Tokenize and Detokenize run entirely inside n8n with local regex detection, so **your data never leaves your n8n instance**.
+
+| | Available |
+|---|---|
+| Tokenize, Detokenize (in-memory) | ✅ |
+| Session, Risk Check, Audit, Handoff | ❌ (need a backend) |
+
+- **No credential** — local mode requests neither the API key nor the visitor credential.
+- **575 detectors** — core structured PII plus a large catalog of regex patterns vendored from [openredaction](https://github.com/sam247/openredaction) (MIT — see [`NOTICE`](./NOTICE)).
+- **In-memory token map** — tokens live in n8n workflow static data, keyed by `sessionId`, same as Tokenless. Tokenize and Detokenize must run in the same workflow.
+- **Session optional** — no Privent Session node needed. Leave **Session ID** empty and a fresh id is generated and written to the item; a downstream local Detokenize reads it back automatically.
+
+**Detection Level** (Tokenize):
+
+| Level | Masks | Trade-off |
+|---|---|---|
+| **Standard** (recommended) | High-precision structured PII — emails, phones, financial, government IDs with checksums, secrets, API keys | Low false positives, safe to send downstream |
+| **Aggressive** | Also names, addresses, bare-number IDs, crypto addresses | Broader coverage, **more false positives — review the output first** |
+
+### Example — local round-trip, no key, no Session
+
+1. **Privent** node → `Local (No Backend)`, Resource `Tokenize` — set **Text Field**, leave **Session ID** empty, **Detection Level** = `Standard`. Sensitive values become `[KIND_NNN]` tokens.
+2. **Privent** node → `Local (No Backend)`, Resource `Detokenize` — leave **Session ID** empty (read from the item) — restores the originals at your trusted output.
+
+---
+
 ## ✅ Verified on n8n Cloud
 
 Available as a verified community node — installable directly on n8n Cloud, no self-hosting required. Zero runtime dependencies, free of restricted globals/filesystem/network primitives.

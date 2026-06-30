@@ -8,7 +8,7 @@ import type {
   INodeExecutionData,
 } from 'n8n-workflow';
 import { NodeConnectionTypes } from 'n8n-workflow';
-import { getPriventBaseUrl } from '../../shared/privent-http.js';
+import { getAuthMode, getPriventBaseUrl } from '../../shared/privent-http.js';
 import { handleSession } from './operations/session.js';
 import { handleTokenize } from './operations/tokenize.js';
 import { handleDetokenize } from './operations/detokenize.js';
@@ -73,6 +73,12 @@ export class Privent implements INodeType {
             description:
               'No API key — in-memory tokenization + risk scoring via an anonymous visitor id. The backend must have visitor auth enabled.',
           },
+          {
+            name: 'Local (No Backend)',
+            value: 'local',
+            description:
+              'No API key. Tokenize and Detokenize run entirely inside n8n with local regex detection — your data never leaves your n8n instance.',
+          },
         ],
         default: 'apiKey',
       },
@@ -106,6 +112,18 @@ export class Privent implements INodeType {
         ],
         default: 'tokenize',
       },
+      {
+        displayName: 'Resource',
+        name: 'resource',
+        type: 'options',
+        noDataExpression: true,
+        displayOptions: { show: { authentication: ['local'] } },
+        options: [
+          { name: 'Tokenize', value: 'tokenize' },
+          { name: 'Detokenize', value: 'detokenize' },
+        ],
+        default: 'tokenize',
+      },
 
       // ── Operations (one per resource) ───────────────────────────────────
       {
@@ -113,7 +131,7 @@ export class Privent implements INodeType {
         name: 'operation',
         type: 'options',
         noDataExpression: true,
-        displayOptions: { show: { resource: ['session'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'] } },
         options: [
           {
             name: 'Open',
@@ -164,7 +182,7 @@ export class Privent implements INodeType {
         name: 'operation',
         type: 'options',
         noDataExpression: true,
-        displayOptions: { show: { resource: ['riskCheck'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['riskCheck'] } },
         options: [
           {
             name: 'Score',
@@ -229,7 +247,7 @@ export class Privent implements INodeType {
           },
         ],
         default: 'auto',
-        displayOptions: { show: { resource: ['session'], operation: ['open'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'] } },
       },
       {
         displayName: 'Session ID',
@@ -239,7 +257,7 @@ export class Privent implements INodeType {
         required: true,
         description: 'A stable string that identifies this session',
         displayOptions: {
-          show: { resource: ['session'], operation: ['open'], sessionIdMode: ['manual'] },
+          show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'], sessionIdMode: ['manual'] },
         },
       },
       {
@@ -250,7 +268,7 @@ export class Privent implements INodeType {
         description:
           'Logical agent identifier written to the output item and forwarded to downstream Privent nodes (via their Agent Name expression default). Appears in every audit event as metadata.agent_name.',
         hint: 'Optional. Example: "support-bot", "billing-agent". Leave empty if not modeling distinct agents.',
-        displayOptions: { show: { resource: ['session'], operation: ['open'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'] } },
       },
       {
         displayName: 'Framework',
@@ -262,7 +280,7 @@ export class Privent implements INodeType {
         ],
         default: 'n8n',
         description: 'Identifies the orchestration framework in audit logs',
-        displayOptions: { show: { resource: ['session'], operation: ['open'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'] } },
       },
       {
         displayName: 'Webhook Node Name',
@@ -272,7 +290,7 @@ export class Privent implements INodeType {
         description:
           'Optional. Name of an upstream Webhook trigger node. When set, the SDK auto-extracts client IP and User-Agent from its headers and writes them to agent_sessions (trigger_principal_ip, trigger_principal_user_agent).',
         hint: 'Leave default if your workflow does not start with a Webhook trigger; parse failures are silent.',
-        displayOptions: { show: { resource: ['session'], operation: ['open'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'] } },
       },
 
       // ── tokenize ────────────────────────────────────────────────────────
@@ -285,7 +303,39 @@ export class Privent implements INodeType {
         description:
           'Session ID from the Privent Session node upstream in this workflow. Tokens are scoped to this session — Detokenize must use the same ID.',
         hint: 'Add a Privent Session node at the start of your workflow to generate this value.',
-        displayOptions: { show: { resource: ['tokenize'], operation: ['tokenize'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['tokenize'], operation: ['tokenize'] } },
+      },
+      {
+        displayName: 'Session ID',
+        name: 'sessionId',
+        type: 'string',
+        default: '',
+        description:
+          'Optional. Scopes tokens so Detokenize can reverse them. In local mode no Privent Session node is needed.',
+        hint: 'Leave empty to auto-manage the session — a fresh ID is generated and written to the output item.',
+        displayOptions: { show: { authentication: ['local'], resource: ['tokenize'], operation: ['tokenize'] } },
+      },
+      {
+        displayName: 'Detection Level',
+        name: 'detectionLevel',
+        type: 'options',
+        options: [
+          {
+            name: 'Standard (Recommended)',
+            value: 'standard',
+            description:
+              'Structured PII with high precision: emails, phones, financial, government IDs with checksums, secrets, crypto. Low false positives.',
+          },
+          {
+            name: 'Aggressive',
+            value: 'aggressive',
+            description:
+              'Also masks names, addresses and bare-number IDs. More false positives — review the output before sending it downstream.',
+          },
+        ],
+        default: 'standard',
+        description: 'How broadly local regex detection masks values. Local mode runs entirely inside n8n — no network.',
+        displayOptions: { show: { authentication: ['local'], resource: ['tokenize'], operation: ['tokenize'] } },
       },
       {
         displayName: 'Trace ID',
@@ -294,7 +344,7 @@ export class Privent implements INodeType {
         default: '={{ $("Privent Session").item.json.traceId }}',
         description:
           'Correlation ID from the upstream Privent Session node. Links this event to the session trace. Leave as-is; a fresh ID is generated if no Session is upstream.',
-        displayOptions: { show: { resource: ['tokenize'], operation: ['tokenize'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['tokenize'], operation: ['tokenize'] } },
       },
       {
         displayName: 'Agent Name',
@@ -303,7 +353,7 @@ export class Privent implements INodeType {
         default: '={{ $("Privent Session").item.json.agentName }}',
         description:
           'Logical agent identifier from the upstream Privent Session node, recorded on the audit event. Optional.',
-        displayOptions: { show: { resource: ['tokenize'], operation: ['tokenize'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['tokenize'], operation: ['tokenize'] } },
       },
       {
         displayName: 'Text Field',
@@ -339,7 +389,7 @@ export class Privent implements INodeType {
         ],
         default: 'auto',
         description: 'Controls entity extraction strategy and whether to call Privent Cloud ML',
-        displayOptions: { show: { resource: ['tokenize'], operation: ['tokenize'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['tokenize'], operation: ['tokenize'] } },
       },
       {
         displayName: 'Flag for Review Above Risk Score',
@@ -350,7 +400,7 @@ export class Privent implements INodeType {
         description:
           'When Privent Cloud returns a risk score at or above this value, the item is flagged with privent.flaggedForReview = true. The workflow continues — use an IF or Switch node to route flagged items.',
         displayOptions: {
-          show: { resource: ['tokenize'], operation: ['tokenize'] },
+          show: { authentication: ['apiKey', 'tokenless'], resource: ['tokenize'], operation: ['tokenize'] },
           hide: { detectionMode: ['local'] },
         },
       },
@@ -363,7 +413,17 @@ export class Privent implements INodeType {
         default: '={{$("Privent Session").item.json.sessionId}}',
         required: true,
         description: 'Must match the session ID used by the Privent Tokenize node upstream',
-        displayOptions: { show: { resource: ['detokenize'], operation: ['detokenize'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['detokenize'], operation: ['detokenize'] } },
+      },
+      {
+        displayName: 'Session ID',
+        name: 'sessionId',
+        type: 'string',
+        default: '',
+        description:
+          'Optional. Must match the session used by the upstream local Tokenize. Leave empty to read it from the item the Tokenize node produced.',
+        hint: 'Leave empty when the local Tokenize node is directly upstream — its session ID rides on the item.',
+        displayOptions: { show: { authentication: ['local'], resource: ['detokenize'], operation: ['detokenize'] } },
       },
       {
         displayName: 'Trace ID',
@@ -372,7 +432,7 @@ export class Privent implements INodeType {
         default: '={{ $("Privent Session").item.json.traceId }}',
         description:
           'Correlation ID from the upstream Privent Session node. Links this event to the session trace. Leave as-is; a fresh ID is generated if no Session is upstream.',
-        displayOptions: { show: { resource: ['detokenize'], operation: ['detokenize'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['detokenize'], operation: ['detokenize'] } },
       },
       {
         displayName: 'Agent Name',
@@ -381,7 +441,7 @@ export class Privent implements INodeType {
         default: '={{ $("Privent Session").item.json.agentName }}',
         description:
           'Logical agent identifier from the upstream Privent Session node, recorded on the audit event. Optional.',
-        displayOptions: { show: { resource: ['detokenize'], operation: ['detokenize'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['detokenize'], operation: ['detokenize'] } },
       },
       {
         displayName: 'Target Field',
@@ -433,7 +493,7 @@ export class Privent implements INodeType {
         description:
           'Optional. Canonical agent name of the downstream consumer — when set, the backend Trust Map aggregator materialises this detokenize as an A→B AgentInteraction edge instead of an A→sink edge. Leave empty for true external sinks (the InternalAgentEndpoint registry will auto-resolve in a future release).',
         hint: 'Use only when the destination URL belongs to another Privent-aware agent in the same organization.',
-        displayOptions: { show: { resource: ['detokenize'], operation: ['detokenize'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['detokenize'], operation: ['detokenize'] } },
       },
 
       // ── riskCheck ───────────────────────────────────────────────────────
@@ -444,7 +504,7 @@ export class Privent implements INodeType {
         default: 'text',
         required: true,
         description: 'Name of the input item property containing the text to score',
-        displayOptions: { show: { resource: ['riskCheck'], operation: ['score'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['riskCheck'], operation: ['score'] } },
       },
       {
         displayName: 'Trace ID',
@@ -453,7 +513,7 @@ export class Privent implements INodeType {
         default: '={{ $("Privent Session").item.json.traceId }}',
         description:
           'Correlation ID from the upstream Privent Session node. Links this risk check to the session trace. Leave as-is; a fresh ID is generated if no Session is upstream.',
-        displayOptions: { show: { resource: ['riskCheck'], operation: ['score'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['riskCheck'], operation: ['score'] } },
       },
       {
         displayName: 'Agent Name',
@@ -462,7 +522,7 @@ export class Privent implements INodeType {
         default: '={{ $("Privent Session").item.json.agentName }}',
         description:
           'Logical agent identifier from the upstream Privent Session node, recorded on the audit event. Optional.',
-        displayOptions: { show: { resource: ['riskCheck'], operation: ['score'] } },
+        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['riskCheck'], operation: ['score'] } },
       },
 
       // ── audit ───────────────────────────────────────────────────────────
@@ -709,7 +769,9 @@ export class Privent implements INodeType {
     }
 
     const items = this.getInputData();
-    const baseUrl = await getPriventBaseUrl(this);
+    // Local mode has no credential — never read one. Tokenize/Detokenize local
+    // paths ignore baseUrl entirely.
+    const baseUrl = getAuthMode(this) === 'local' ? '' : await getPriventBaseUrl(this);
     const out: INodeExecutionData[] = [];
 
     for (let i = 0; i < items.length; i++) {

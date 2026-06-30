@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-privent",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Privent DLP nodes for n8n: session-scoped tokenization, risk scoring, and safe detokenization for AI agent workflows",
   "homepage": "https://www.privent.ai/docs",
   "author": "Privent AI <hello@privent.ai>",
@@ -18,7 +18,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint dist/**/*.js package.json",
     "lint:fix": "eslint dist/**/*.js package.json --fix",
-    "loadability": "node scripts/check-loadability.mjs"
+    "loadability": "node scripts/check-loadability.mjs",
+    "gen:detectors": "node scripts/gen-local-detectors.mjs"
   },
   "keywords": [
     "n8n-community-node-package",
@@ -44,7 +45,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=20"
@@ -63,6 +65,7 @@
     "@typescript-eslint/parser": "^8.62.0",
     "eslint": "^9.29.0",
     "n8n-workflow": "^1.73.0",
+    "openredaction": "^1.1.2",
     "tsup": "^8.3.0",
     "typescript": "^5.6.0",
     "vitest": "^3.2.0"

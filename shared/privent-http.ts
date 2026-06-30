@@ -16,13 +16,15 @@ import { NodeOperationError } from 'n8n-workflow';
 import type {
   AuditEvent,
   EntityKind,
+  RegexDetector,
   RiskScore,
   TokenEntry,
   TokenVault,
   TokenVaultBatchItem,
   TokenVaultBatchResult,
 } from '@priventai/core';
-import { normalize, Contracts } from '@priventai/core';
+import { normalize, Contracts, DEFAULT_DETECTORS } from '@priventai/core';
+import { LOCAL_DETECTORS, runValidator } from './local-detectors.js';
 
 type AuditEventV1 = Contracts.v1.AuditEventV1;
 
@@ -148,8 +150,8 @@ async function priventRequest<T>(
 }
 
 /** Node-level auth mode. Defaults to `apiKey` (the pre-tokenless behavior). */
-export function getAuthMode(ctx: IExecuteFunctions): 'apiKey' | 'tokenless' {
-  return ctx.getNodeParameter('authentication', 0, 'apiKey') as 'apiKey' | 'tokenless';
+export function getAuthMode(ctx: IExecuteFunctions): 'apiKey' | 'tokenless' | 'local' {
+  return ctx.getNodeParameter('authentication', 0, 'apiKey') as 'apiKey' | 'tokenless' | 'local';
 }
 
 /** Reads the backend `baseUrl` for the active auth mode. apiKey →
@@ -158,6 +160,45 @@ export async function getPriventBaseUrl(ctx: IExecuteFunctions): Promise<string>
   const credName = getAuthMode(ctx) === 'tokenless' ? 'priventVisitorApi' : 'priventApi';
   const creds = await ctx.getCredentials(credName);
   return creds.baseUrl as string;
+}
+
+/** Ensure a regex carries the global flag (required for `matchAll`), reusing the
+ *  source + any original flags. */
+function withGlobal(re: RegExp): RegExp {
+  return re.flags.includes('g') ? re : new RegExp(re.source, re.flags + 'g');
+}
+
+const _localDetectorCache = new Map<string, RegexDetector[]>();
+
+/**
+ * Detector set for `local` (no-backend) tokenization: core `DEFAULT_DETECTORS`
+ * (the 10 structured-PII detectors) ∪ the generated `LOCAL_DETECTORS`, tier-gated
+ * by the Detection Level. Every regex is pre-built with the global flag baked in
+ * so `detectMatches({preserveFlags:true})` reuses them without recompiling 575
+ * patterns per item. Memoized per level (the inputs are static). No network, no
+ * openredaction at runtime.
+ */
+export function buildLocalDetectors(level: 'standard' | 'aggressive'): RegexDetector[] {
+  const cached = _localDetectorCache.get(level);
+  if (cached) return cached;
+
+  const core: RegexDetector[] = DEFAULT_DETECTORS.map((d) => ({ ...d, regex: withGlobal(d.regex) }));
+  const extra: RegexDetector[] = LOCAL_DETECTORS.filter(
+    (d) => level === 'aggressive' || d.tier !== 'contextual',
+  ).map((d) => {
+    const validatorName = d.validatorName;
+    return {
+      kind: d.kind,
+      regex: withGlobal(new RegExp(d.source, d.flags)),
+      confidence: d.confidence,
+      normalize: (v: string) => v,
+      ...(validatorName ? { validate: (raw: string) => runValidator(validatorName, raw) } : {}),
+    };
+  });
+
+  const detectors = [...core, ...extra];
+  _localDetectorCache.set(level, detectors);
+  return detectors;
 }
 
 interface VisitorCacheEntry {
@@ -586,9 +627,10 @@ export async function auditLog(
   event: AuditEvent,
   baseUrl: string,
 ): Promise<void> {
-  // Audit is org-scoped — anonymous visitors have no org, so skip entirely
-  // in tokenless mode (don't rely on the swallow / waste a round-trip).
-  if (getAuthMode(ctx) === 'tokenless') return;
+  // Audit is org-scoped and backend-bound — anonymous visitors have no org and
+  // local mode has no backend at all, so skip entirely for any non-apiKey mode
+  // (don't rely on the swallow / waste a round-trip).
+  if (getAuthMode(ctx) !== 'apiKey') return;
   try {
     await priventRequest(ctx, baseUrl, 'POST', '/v1/audit/events', {
       events: [serializeForWire(event)],
