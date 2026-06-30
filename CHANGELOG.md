@@ -4,6 +4,13 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.2.1] - 2026-06-30
+
+### Changed
+- Newly-added Privent nodes now default to **Local (No Backend)** Authentication (zero-setup: no API key,
+  no backend). Existing nodes — including pre-2.1.0 nodes that store no Authentication value — are
+  unaffected and keep their current mode; API Key and Tokenless remain selectable from the dropdown.
+
 ## [2.2.0] - 2026-06-30
 
 ### Added

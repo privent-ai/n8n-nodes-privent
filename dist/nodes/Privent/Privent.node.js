@@ -218,7 +218,7 @@ function normalize(kind, value) {
 
 // node_modules/@priventai/core/dist/index.js
 var TRACER_VERSION = (() => {
-  const v = "2.2.0";
+  const v = "2.2.1";
   return typeof v === "string" && v.length > 0 ? v : "0.1.0";
 })();
 var DEFAULT_TTL_MS = 60 * 60 * 1e3;
@@ -2540,7 +2540,11 @@ var Privent = class {
             description: "No API key. Tokenize and Detokenize run entirely inside n8n with local regex detection \u2014 your data never leaves your n8n instance."
           }
         ],
-        default: "apiKey"
+        // Newly-added nodes default to Local (no key, no backend). NOTE: the
+        // RUNTIME fallback in getAuthMode() stays 'apiKey' so pre-2.1.0 nodes
+        // (no stored authentication value) keep their original behavior — only
+        // this UI default, which applies to freshly-added nodes, changes.
+        default: "local"
       },
       {
         displayName: "Resource",

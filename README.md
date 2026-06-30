@@ -136,6 +136,8 @@ Point **Base URL** at your self-hosted deployment to keep all token/risk/audit t
 
 Even more offline than Tokenless: **no API key, no backend, no network at all**. Set **Authentication = Local (No Backend)** on the node — Tokenize and Detokenize run entirely inside n8n with local regex detection, so **your data never leaves your n8n instance**.
 
+> **This is the default for newly-added nodes** — a fresh Privent node lands on Local → Tokenize with no credential needed. Switch the **Authentication** dropdown to Tokenless or API Key to opt in. (Existing nodes keep whatever mode they were saved with.)
+
 | | Available |
 |---|---|
 | Tokenize, Detokenize (in-memory) | ✅ |

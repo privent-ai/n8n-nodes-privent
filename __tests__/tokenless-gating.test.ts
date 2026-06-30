@@ -32,6 +32,17 @@ describe('tokenless resource gating', () => {
   });
 });
 
+describe('authentication default', () => {
+  it('newly-added nodes default to Local (No Backend)', () => {
+    const auth = props.find((p) => p.name === 'authentication');
+    expect(auth).toBeDefined();
+    expect(auth!.default).toBe('local');
+    // The three modes remain selectable.
+    const values = (auth!.options as Array<{ value: string }>).map((o) => o.value);
+    expect(values).toEqual(['apiKey', 'tokenless', 'local']);
+  });
+});
+
 describe('PriventVisitorApi credential', () => {
   it('tests against POST /v1/visitor/credentials', () => {
     const cred = new PriventVisitorApi();
