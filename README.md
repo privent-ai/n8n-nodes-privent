@@ -17,7 +17,7 @@ Privent ships as a **single node** with a **Resource → Operation** selector. E
 same **Privent** node configured to a different resource (Session, Tokenize, Detokenize, Risk Check,
 Audit, Handoff).
 
-> **n8n Cloud verified: in progress.** These nodes are zero-runtime-dependency and free of restricted globals/filesystem/network primitives; the package is being submitted for the n8n Cloud verified-community program.
+> **✅ Verified on n8n Cloud.** Available as a verified community node — installable directly on n8n Cloud (no self-hosting required). Zero runtime dependencies and free of restricted globals/filesystem/network primitives.
 
 ---
 
@@ -52,7 +52,10 @@ Consequences:
 
 ## Installation
 
-In n8n: **Settings → Community Nodes → Install** → enter `n8n-nodes-privent`.
+**n8n Cloud** (verified node): open the **nodes panel**, search **Privent**, and add it directly — no
+community-node install step or instance-owner approval needed.
+
+**Self-hosted** — in n8n: **Settings → Community Nodes → Install** → enter `n8n-nodes-privent`.
 
 Manual install (self-hosted):
 
