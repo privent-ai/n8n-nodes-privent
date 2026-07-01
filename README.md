@@ -12,7 +12,7 @@ Guardrails masks PII and throws it away. Privent masks it, hands it to your LLM 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/privent-ai/n8n-nodes-privent?style=social)](https://github.com/privent-ai/n8n-nodes-privent)
 
-**[Quick Start](#-quick-start--30-seconds-no-api-key)** · **[Why Privent](#why)** · **[vs. Guardrails](#privent-vs-n8n-guardrails)** · **[Docs](https://www.privent.ai/docs)** · **[Discord](https://discord.gg/yZhFGqMS5Y)** · **[ProductHunt](https://discord.gg/yZhFGqMS5Y)**
+**[Quick Start](#-quick-start--30-seconds-no-api-key)** · **[Why Privent](#why)** · **[vs. Guardrails](#privent-vs-n8n-guardrails)** · **[Docs](https://www.privent.ai/docs)** · **[Discord](https://discord.gg/yZhFGqMS5Y)** · **[ProductHunt](https://www.producthunt.com/products/privent)**
 
 </div>
 
