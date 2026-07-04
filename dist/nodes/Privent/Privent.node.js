@@ -218,7 +218,7 @@ function normalize(kind, value) {
 
 // node_modules/@priventai/core/dist/index.js
 var TRACER_VERSION = (() => {
-  const v = "2.2.1";
+  const v = "2.3.0";
   return typeof v === "string" && v.length > 0 ? v : "0.1.0";
 })();
 var DEFAULT_TTL_MS = 60 * 60 * 1e3;
@@ -1334,6 +1334,10 @@ function isLocalFalsePositive(value, type) {
 }
 
 // shared/privent-http.ts
+var NODE_VERSION = (() => {
+  const v = true ? "2.3.0" : void 0;
+  return typeof v === "string" && v.length > 0 ? v : "unknown";
+})();
 function frameworkForWire(framework) {
   if (framework === "manual") return "sdk";
   return framework;
@@ -1422,6 +1426,10 @@ async function getPriventBaseUrl(ctx) {
   const credName = getAuthMode(ctx) === "tokenless" ? "priventVisitorApi" : "priventApi";
   const creds = await ctx.getCredentials(credName);
   return creds.baseUrl;
+}
+async function getVaultBackend(ctx) {
+  const creds = await ctx.getCredentials("priventApi");
+  return creds.vaultBackend;
 }
 function withGlobal(re) {
   return re.flags.includes("g") ? re : new RegExp(re.source, re.flags + "g");
@@ -1740,6 +1748,38 @@ async function auditLog(ctx, event, baseUrl) {
   } catch {
   }
 }
+async function telemetryPing(ctx, p) {
+  if (getAuthMode(ctx) !== "tokenless") return;
+  try {
+    const baseUrl = await getPriventBaseUrl(ctx);
+    const store = ctx.getWorkflowStaticData("global").priventTelemetry ??= {};
+    const installId = store.installId ??= crypto.randomUUID();
+    await ctx.helpers.httpRequest({
+      method: "POST",
+      baseURL: baseUrl,
+      url: "/v1/telemetry/events",
+      json: true,
+      timeout: 5e3,
+      body: {
+        events: [
+          {
+            install_id: installId,
+            event: "node_execution",
+            operation: p.operation,
+            auth_mode: "tokenless",
+            node_version: NODE_VERSION,
+            n8n_version: safeFrameworkVersion() ?? void 0,
+            item_count: p.item_count,
+            status: p.status,
+            ...p.error_type ? { error_type: p.error_type } : {},
+            timestamp: p.timestamp
+          }
+        ]
+      }
+    });
+  } catch {
+  }
+}
 async function sha256short(value) {
   const encoded = new TextEncoder().encode(value);
   const buf = await crypto.subtle.digest("SHA-256", encoded);
@@ -1785,7 +1825,7 @@ function safeTriggerMode(ctx) {
   }
   return void 0;
 }
-function resolveContext(ctx, sessionId, traceIdParam, agentNameParam) {
+function resolveContext(ctx, sessionId, traceIdParam, agentNameParam, vaultBackend) {
   const { id: workflowId, name: workflowName } = safeWorkflow(ctx);
   return {
     sessionId,
@@ -1793,7 +1833,8 @@ function resolveContext(ctx, sessionId, traceIdParam, agentNameParam) {
     agentName: agentNameParam.trim(),
     executionId: safeExecutionId(ctx),
     workflowId,
-    workflowName
+    workflowName,
+    vaultBackend
   };
 }
 function buildAuditMetadata(ctx, node, extras) {
@@ -1803,13 +1844,15 @@ function buildAuditMetadata(ctx, node, extras) {
     execution_id: ctx.executionId,
     node_name: node.name,
     framework: "n8n",
+    node_version: NODE_VERSION,
+    ...ctx.vaultBackend ? { vault_backend: ctx.vaultBackend } : {},
     ...extras ?? {}
   };
 }
 
 // nodes/Privent/operations/session.ts
 var import_n8n_workflow2 = require("n8n-workflow");
-async function handleSession(ctx, i, baseUrl) {
+async function handleSession(ctx, i, baseUrl, vaultBackend) {
   const item = ctx.getInputData()[i];
   const framework = ctx.getNodeParameter("framework", i, "n8n") === "manual" ? "manual" : "n8n";
   const triggerMode = safeTriggerMode(ctx);
@@ -1870,7 +1913,8 @@ async function handleSession(ctx, i, baseUrl) {
     executionId,
     agentName,
     workflowId,
-    workflowName
+    workflowName,
+    vaultBackend
   };
   const sessionOpen = {
     type: "session_open",
@@ -1991,7 +2035,7 @@ async function handleTokenizeLocal(ctx, i) {
     }
   };
 }
-async function handleTokenize(ctx, i, baseUrl) {
+async function handleTokenize(ctx, i, baseUrl, vaultBackend) {
   if (getAuthMode(ctx) === "local") return handleTokenizeLocal(ctx, i);
   const item = ctx.getInputData()[i];
   const triggerMode = safeTriggerMode(ctx);
@@ -2074,7 +2118,7 @@ async function handleTokenize(ctx, i, baseUrl) {
     }
     entities.sort((a, b) => a.span[0] - b.span[0]);
   }
-  const ctxAudit = resolveContext(ctx, sessionId, traceIdParam, agentNameParam);
+  const ctxAudit = resolveContext(ctx, sessionId, traceIdParam, agentNameParam, vaultBackend);
   const node = ctx.getNode();
   const tokenizeEvent = {
     type: "tokenize",
@@ -2131,7 +2175,7 @@ function deriveSinkUrlHost(sinkUrl) {
     return sinkUrl.slice(0, 64);
   }
 }
-async function handleDetokenize(ctx, i, baseUrl) {
+async function handleDetokenize(ctx, i, baseUrl, vaultBackend) {
   const item = ctx.getInputData()[i];
   const triggerMode = safeTriggerMode(ctx);
   const authMode = getAuthMode(ctx);
@@ -2162,7 +2206,7 @@ async function handleDetokenize(ctx, i, baseUrl) {
   const sinkId = deriveSinkId(sinkUrl);
   const sinkUrlHost = deriveSinkUrlHost(sinkUrl);
   const targetAgentName = (ctx.getNodeParameter("targetAgentName", i, "") ?? "").trim();
-  const ctxAudit = resolveContext(ctx, sessionId, traceIdParam, agentNameParam);
+  const ctxAudit = resolveContext(ctx, sessionId, traceIdParam, agentNameParam, vaultBackend);
   const node = ctx.getNode();
   if (!isTrusted) {
     const blockedEvent = {
@@ -2251,6 +2295,7 @@ function isBatchLengthMismatch(err) {
 async function executeRiskCheck(ctx) {
   const items = ctx.getInputData();
   const baseUrl = await getPriventBaseUrl(ctx);
+  const vaultBackend = getAuthMode(ctx) === "apiKey" ? await getVaultBackend(ctx) : void 0;
   const triggerMode = safeTriggerMode(ctx);
   const texts = [];
   const errors = /* @__PURE__ */ new Map();
@@ -2306,7 +2351,7 @@ async function executeRiskCheck(ctx) {
     }
     const traceIdParam = ctx.getNodeParameter("traceId", i, "");
     const agentNameParam = ctx.getNodeParameter("agentName", i, "");
-    const auditCtx = resolveContext(ctx, "", traceIdParam, agentNameParam);
+    const auditCtx = resolveContext(ctx, "", traceIdParam, agentNameParam, vaultBackend);
     const risk = scores[scoreIdx++];
     const event = {
       type: "risk_check",
@@ -2346,7 +2391,7 @@ async function executeRiskCheck(ctx) {
 
 // nodes/Privent/operations/audit.ts
 var import_n8n_workflow6 = require("n8n-workflow");
-async function handleAudit(ctx, i, baseUrl) {
+async function handleAudit(ctx, i, baseUrl, vaultBackend) {
   const item = ctx.getInputData()[i];
   const triggerMode = safeTriggerMode(ctx);
   const frameworkVersion = safeFrameworkVersion();
@@ -2385,7 +2430,7 @@ async function handleAudit(ctx, i, baseUrl) {
     metadata.prompt_tokens = Number.isFinite(promptTokens) && promptTokens > 0 ? Math.trunc(promptTokens) : 0;
     metadata.completion_tokens = Number.isFinite(completionTokens) && completionTokens > 0 ? Math.trunc(completionTokens) : 0;
   }
-  const auditCtx = resolveContext(ctx, sessionId, traceIdParam, agentNameParam);
+  const auditCtx = resolveContext(ctx, sessionId, traceIdParam, agentNameParam, vaultBackend);
   const node = ctx.getNode();
   if (triggerMode !== void 0) metadata.trigger_mode = triggerMode;
   if (frameworkVersion !== void 0) metadata.framework_version = frameworkVersion;
@@ -2412,7 +2457,7 @@ async function handleAudit(ctx, i, baseUrl) {
 
 // nodes/Privent/operations/handoff.ts
 var import_n8n_workflow7 = require("n8n-workflow");
-async function handleHandoff(ctx, i, baseUrl) {
+async function handleHandoff(ctx, i, baseUrl, vaultBackend) {
   const item = ctx.getInputData()[i];
   const triggerMode = safeTriggerMode(ctx);
   const targetKind = ctx.getNodeParameter("targetKind", i, "agent");
@@ -2421,7 +2466,7 @@ async function handleHandoff(ctx, i, baseUrl) {
   const sessionIdParam = ctx.getNodeParameter("sessionId", i, "").trim();
   const traceIdParam = ctx.getNodeParameter("traceId", i, "");
   const agentNameParam = ctx.getNodeParameter("agentName", i, "");
-  const ctxAudit = resolveContext(ctx, sessionIdParam, traceIdParam, agentNameParam);
+  const ctxAudit = resolveContext(ctx, sessionIdParam, traceIdParam, agentNameParam, vaultBackend);
   const node = ctx.getNode();
   if (!ctxAudit.sessionId) {
     throw new import_n8n_workflow7.NodeOperationError(
@@ -3170,29 +3215,46 @@ var Privent = class {
   };
   async execute() {
     const resource = this.getNodeParameter("resource", 0);
-    if (resource === "riskCheck") {
-      return executeRiskCheck(this);
-    }
-    const handler = PER_ITEM_HANDLERS[resource];
-    if (!handler) {
-      return [[]];
-    }
     const items = this.getInputData();
-    const baseUrl = getAuthMode(this) === "local" ? "" : await getPriventBaseUrl(this);
-    const out = [];
-    for (let i = 0; i < items.length; i++) {
-      try {
-        const json = await handler(this, i, baseUrl);
-        out.push({ json, pairedItem: { item: i } });
-      } catch (err) {
-        if (this.continueOnFail()) {
-          out.push({ json: { error: err.message }, pairedItem: { item: i } });
-          continue;
-        }
-        throw err;
+    let status = "success";
+    let errorType;
+    try {
+      if (resource === "riskCheck") {
+        return await executeRiskCheck(this);
       }
+      const handler = PER_ITEM_HANDLERS[resource];
+      if (!handler) {
+        return [[]];
+      }
+      const baseUrl = getAuthMode(this) === "local" ? "" : await getPriventBaseUrl(this);
+      const vaultBackend = getAuthMode(this) === "apiKey" ? await getVaultBackend(this) : void 0;
+      const out = [];
+      for (let i = 0; i < items.length; i++) {
+        try {
+          const json = await handler(this, i, baseUrl, vaultBackend);
+          out.push({ json, pairedItem: { item: i } });
+        } catch (err) {
+          if (this.continueOnFail()) {
+            out.push({ json: { error: err.message }, pairedItem: { item: i } });
+            continue;
+          }
+          throw err;
+        }
+      }
+      return [out];
+    } catch (err) {
+      status = "error";
+      errorType = err?.constructor?.name;
+      throw err;
+    } finally {
+      void telemetryPing(this, {
+        operation: resource,
+        item_count: items.length,
+        status,
+        error_type: errorType,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      });
     }
-    return [out];
   }
 };
 // Annotate the CommonJS export names for ESM import in node:

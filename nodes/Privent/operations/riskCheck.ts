@@ -4,7 +4,9 @@ import type { AuditEvent } from '@priventai/core';
 import {
   auditLog,
   buildAuditMetadata,
+  getAuthMode,
   getPriventBaseUrl,
+  getVaultBackend,
   resolveContext,
   riskScoreBatch,
   safeTriggerMode,
@@ -23,6 +25,8 @@ function isBatchLengthMismatch(err: unknown): boolean {
 export async function executeRiskCheck(ctx: IExecuteFunctions): Promise<INodeExecutionData[][]> {
   const items = ctx.getInputData();
   const baseUrl = await getPriventBaseUrl(ctx);
+  // Vault backend (audit metadata) is apiKey-only; read once before the loop.
+  const vaultBackend = getAuthMode(ctx) === 'apiKey' ? await getVaultBackend(ctx) : undefined;
   const triggerMode = safeTriggerMode(ctx);
 
   // Auto-batch: collect texts from all items and call riskScoreBatch() once.
@@ -95,7 +99,7 @@ export async function executeRiskCheck(ctx: IExecuteFunctions): Promise<INodeExe
     const traceIdParam = ctx.getNodeParameter('traceId', i, '') as string;
     const agentNameParam = ctx.getNodeParameter('agentName', i, '') as string;
     // Sessionless node: the audit session_id is the (UUID) traceId.
-    const auditCtx = resolveContext(ctx, '', traceIdParam, agentNameParam);
+    const auditCtx = resolveContext(ctx, '', traceIdParam, agentNameParam, vaultBackend);
     const risk = scores[scoreIdx++]!;
 
     const event: AuditEvent = {

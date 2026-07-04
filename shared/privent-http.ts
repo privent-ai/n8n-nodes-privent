@@ -29,6 +29,20 @@ import { LOCAL_DETECTORS, runValidator } from './local-detectors.js';
 type AuditEventV1 = Contracts.v1.AuditEventV1;
 
 /**
+ * This node package's own version, for audit `node_version`. `__SDK_VERSION__`
+ * is replaced by the node's `tsup define` with `npm_package_version` at bundle
+ * time (see tsup.config.ts). Do NOT use core's `TRACER_VERSION` — that resolves
+ * to `@priventai/core`'s own version (0.8.0) in the bundle, not this package's.
+ * `typeof` guard keeps un-bundled unit runs (`'unknown'`) and the n8n Cloud
+ * allowlist happy — no `globalThis`/`process` access.
+ */
+declare const __SDK_VERSION__: string;
+const NODE_VERSION = (() => {
+  const v: unknown = typeof __SDK_VERSION__ !== 'undefined' ? __SDK_VERSION__ : undefined;
+  return typeof v === 'string' && v.length > 0 ? v : 'unknown';
+})();
+
+/**
  * Inlined from `@priventai/core` `cloud/audit-wire.ts` — `serializeForWire` is
  * not part of the published 0.8.0 surface, but its `Contracts.v1.AuditEventV1Schema`
  * is. Byte-faithful copy so the v1 wire contract (camel→snake, ms→ISO,
@@ -160,6 +174,13 @@ export async function getPriventBaseUrl(ctx: IExecuteFunctions): Promise<string>
   const credName = getAuthMode(ctx) === 'tokenless' ? 'priventVisitorApi' : 'priventApi';
   const creds = await ctx.getCredentials(credName);
   return creds.baseUrl as string;
+}
+
+/** The apiKey credential's configured vault backend (audit `vault_backend`).
+ *  Read once per execution — never in a per-item loop. apiKey mode only. */
+export async function getVaultBackend(ctx: IExecuteFunctions): Promise<'memory' | 'cloud'> {
+  const creds = await ctx.getCredentials('priventApi');
+  return creds.vaultBackend as 'memory' | 'cloud';
 }
 
 /** Ensure a regex carries the global flag (required for `matchAll`), reusing the
@@ -640,6 +661,63 @@ export async function auditLog(
   }
 }
 
+/**
+ * Anonymous, always-on telemetry — **tokenless mode only**. apiKey already
+ * reports via the audit stream (no double-report); local mode stays fully
+ * offline (returns before any I/O). Fire-and-forget: a failure never breaks the
+ * op. The only identifier is a random per-install UUID cached in workflow static
+ * data (no org, no key, no PII) — mirrors the `resolveVisitorId` cache pattern.
+ * Posts UNauthenticated (no Bearer, no `X-Visitor-Id`) to the tokenless backend.
+ *
+ * PAYLOAD ALLOWLIST — send only the keys below. `error_type` is the error class
+ * name only (never a message/stack). No raw text, tokens, entity kinds/values,
+ * org, key, sink, ip, or workflow/node names.
+ */
+export async function telemetryPing(
+  ctx: IExecuteFunctions,
+  p: {
+    operation: string;
+    item_count: number;
+    status: 'success' | 'error';
+    error_type?: string | undefined;
+    timestamp: string;
+  },
+): Promise<void> {
+  if (getAuthMode(ctx) !== 'tokenless') return; // apiKey audits; local silent
+  try {
+    const baseUrl = await getPriventBaseUrl(ctx);
+    const store = (ctx.getWorkflowStaticData('global').priventTelemetry ??= {}) as {
+      installId?: string;
+    };
+    const installId = (store.installId ??= crypto.randomUUID());
+    await ctx.helpers.httpRequest({
+      method: 'POST',
+      baseURL: baseUrl,
+      url: '/v1/telemetry/events',
+      json: true,
+      timeout: 5000,
+      body: {
+        events: [
+          {
+            install_id: installId,
+            event: 'node_execution',
+            operation: p.operation,
+            auth_mode: 'tokenless',
+            node_version: NODE_VERSION,
+            n8n_version: safeFrameworkVersion() ?? undefined,
+            item_count: p.item_count,
+            status: p.status,
+            ...(p.error_type ? { error_type: p.error_type } : {}),
+            timestamp: p.timestamp,
+          },
+        ],
+      },
+    });
+  } catch {
+    // Fire-and-forget: telemetry failures never break the data path.
+  }
+}
+
 /** Non-cryptographic 8-hex digest (placeholder fingerprints). Pure; uses the
  *  Web Crypto global (`crypto.subtle`), which is allowlisted. */
 export async function sha256short(value: string): Promise<string> {
@@ -659,6 +737,8 @@ export interface PriventContext {
   agentName: string;
   workflowId: string;
   workflowName: string;
+  /** apiKey vault backend, for audit `vault_backend`. Undefined for tokenless/local. */
+  vaultBackend?: 'memory' | 'cloud' | undefined;
 }
 
 /** Defensive read of n8n workflow identity (older versions may lack accessors). */
@@ -724,6 +804,7 @@ export function resolveContext(
   sessionId: string,
   traceIdParam: string,
   agentNameParam: string,
+  vaultBackend?: 'memory' | 'cloud',
 ): PriventContext {
   const { id: workflowId, name: workflowName } = safeWorkflow(ctx);
   return {
@@ -733,6 +814,7 @@ export function resolveContext(
     executionId: safeExecutionId(ctx),
     workflowId,
     workflowName,
+    vaultBackend,
   };
 }
 
@@ -751,6 +833,8 @@ export function buildAuditMetadata(
     execution_id: ctx.executionId,
     node_name: node.name,
     framework: 'n8n',
+    node_version: NODE_VERSION,
+    ...(ctx.vaultBackend ? { vault_backend: ctx.vaultBackend } : {}),
     ...(extras ?? {}),
   };
 }

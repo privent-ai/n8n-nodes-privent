@@ -33,6 +33,8 @@ export interface HttpExecOpts {
   mode?: string;
   baseUrl?: string;
   continueOnFail?: boolean;
+  /** priventApi credential vault backend (audit `vault_backend`). Default 'cloud'. */
+  vaultBackend?: 'memory' | 'cloud';
   /** Custom find-or-create-batch response builder. */
   tokens?: (items: Array<{ kind: string; normalizedValue: string; originalValue: string }>) => VaultToken[];
   /** Custom retrieve-batch response builder. */
@@ -115,7 +117,7 @@ export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
     getCredentials: async () => ({
       apiKey: 'pv_live_test',
       baseUrl: opts.baseUrl ?? 'https://api.test.local',
-      vaultBackend: 'cloud',
+      vaultBackend: opts.vaultBackend ?? 'cloud',
     }),
     getNode: () => node,
     getExecutionId: () => opts.executionId ?? 'exec-1',

@@ -175,6 +175,7 @@ export async function handleTokenize(
   ctx: IExecuteFunctions,
   i: number,
   baseUrl: string,
+  vaultBackend?: 'memory' | 'cloud',
 ): Promise<IDataObject> {
   // Local (no-backend) mode runs an entirely separate regex-only path; the
   // apiKey/tokenless body below is left untouched.
@@ -296,7 +297,7 @@ export async function handleTokenize(
     entities.sort((a, b) => a.span[0] - b.span[0]);
   }
 
-  const ctxAudit = resolveContext(ctx, sessionId, traceIdParam, agentNameParam);
+  const ctxAudit = resolveContext(ctx, sessionId, traceIdParam, agentNameParam, vaultBackend);
   const node = ctx.getNode();
   const tokenizeEvent: AuditEvent = {
     type: 'tokenize',

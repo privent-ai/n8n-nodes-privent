@@ -13,6 +13,7 @@ export async function handleHandoff(
   ctx: IExecuteFunctions,
   i: number,
   baseUrl: string,
+  vaultBackend?: 'memory' | 'cloud',
 ): Promise<IDataObject> {
   const item = ctx.getInputData()[i]!;
   const triggerMode = safeTriggerMode(ctx);
@@ -24,7 +25,7 @@ export async function handleHandoff(
   const traceIdParam = ctx.getNodeParameter('traceId', i, '') as string;
   const agentNameParam = ctx.getNodeParameter('agentName', i, '') as string;
 
-  const ctxAudit = resolveContext(ctx, sessionIdParam, traceIdParam, agentNameParam);
+  const ctxAudit = resolveContext(ctx, sessionIdParam, traceIdParam, agentNameParam, vaultBackend);
   const node = ctx.getNode();
 
   if (!ctxAudit.sessionId) {

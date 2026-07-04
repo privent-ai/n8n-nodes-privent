@@ -14,6 +14,7 @@ export async function handleAudit(
   ctx: IExecuteFunctions,
   i: number,
   baseUrl: string,
+  vaultBackend?: 'memory' | 'cloud',
 ): Promise<IDataObject> {
   const item = ctx.getInputData()[i]!;
   const triggerMode = safeTriggerMode(ctx);
@@ -75,7 +76,7 @@ export async function handleAudit(
         : 0;
   }
 
-  const auditCtx = resolveContext(ctx, sessionId, traceIdParam, agentNameParam);
+  const auditCtx = resolveContext(ctx, sessionId, traceIdParam, agentNameParam, vaultBackend);
   const node = ctx.getNode();
   if (triggerMode !== undefined) metadata.trigger_mode = triggerMode;
   if (frameworkVersion !== undefined) metadata.framework_version = frameworkVersion;

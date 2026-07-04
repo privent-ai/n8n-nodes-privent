@@ -56,6 +56,7 @@ export async function handleDetokenize(
   ctx: IExecuteFunctions,
   i: number,
   baseUrl: string,
+  vaultBackend?: 'memory' | 'cloud',
 ): Promise<IDataObject> {
   const item = ctx.getInputData()[i]!;
   const triggerMode = safeTriggerMode(ctx);
@@ -94,7 +95,7 @@ export async function handleDetokenize(
   const targetAgentName = (
     (ctx.getNodeParameter('targetAgentName', i, '') as string) ?? ''
   ).trim();
-  const ctxAudit = resolveContext(ctx, sessionId, traceIdParam, agentNameParam);
+  const ctxAudit = resolveContext(ctx, sessionId, traceIdParam, agentNameParam, vaultBackend);
   const node = ctx.getNode();
 
   if (!isTrusted) {

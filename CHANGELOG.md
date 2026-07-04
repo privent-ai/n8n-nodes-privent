@@ -4,6 +4,26 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.3.0] - 2026-07-04
+
+### Added
+- **Anonymous tokenless telemetry** — Tokenless mode now sends one fire-and-forget, anonymous event per
+  node execution to the configured Tokenless Base URL (`POST /v1/telemetry/events`), so tokenless adoption
+  and health are visible. The only identifier is a random per-install `install_id`; the payload is a fixed
+  allowlist (`operation`, `auth_mode`, `node_version`, `n8n_version`, `item_count`, `status`, `error_type`
+  class name, `timestamp`) — never raw text, tokens, entities, org, key, sink, IP, or workflow/node names.
+  **API Key** mode sends nothing here (it already reports via the audit stream); **Local (No Backend)** mode
+  sends nothing at all (its zero-network guarantee is unchanged). A telemetry failure never affects the
+  workflow. See the README **Telemetry** section — there is no opt-out, so the exact fields are documented.
+
+## [2.2.2] - 2026-07-03
+
+### Changed
+- API Key audit events now carry two diagnostic fields in `metadata`: **`node_version`** (the build of
+  `n8n-nodes-privent` that produced the event) and **`vault_backend`** (`memory` or `cloud`, from the
+  Privent API credential). No new network call, no behavior change, no migration — the fields ride the
+  existing audit event. Tokenless and Local mode are unaffected (they emit no audit events).
+
 ## [2.2.1] - 2026-06-30
 
 ### Changed

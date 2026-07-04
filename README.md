@@ -355,6 +355,18 @@ HTTP-origin failures (vault, risk scoring) surface as an n8n `NodeApiError`, so 
 
 ---
 
+## Telemetry
+
+Tokenless mode sends **anonymous** usage telemetry so we can see how tokenless is adopted and whether it's healthy. There is no opt-out, so here is exactly what it does:
+
+- **When:** one fire-and-forget event per node execution, and **only in Tokenless mode**. **API Key** mode sends nothing here (it already reports through the audit stream); **Local (No Backend)** mode sends nothing at all — its zero-network guarantee is unchanged.
+- **Where:** `POST {baseUrl}/v1/telemetry/events` — the **same Tokenless Base URL you configured**. Self-hosters hit their own backend; nothing is ever sent to Privent unless you point the credential at Privent.
+- **Anonymous:** the only identifier is a random `install_id` (UUID) generated on first send and cached in n8n workflow static data. No organization, no API key, no IP, no account.
+- **Exact fields sent — nothing else:** `install_id`, `event` (`node_execution`), `operation` (the resource, e.g. `tokenize`), `auth_mode` (`tokenless`), `node_version`, `n8n_version`, `item_count`, `status` (`success`/`error`), `error_type` (the error **class name** only), `timestamp`.
+- **Never sent:** raw text, tokens, detected entity values or kinds, field/session/trace IDs, workflow or node names, organization, key, sink, or IP. A telemetry failure never affects the workflow.
+
+---
+
 ## Upgrading from 1.x
 
 2.0 is a breaking change. The six standalone nodes (Privent Session, Tokenize, Detokenize, Risk Check, Audit Event, Handoff) are now a single Privent node with a Resource → Operation selector. Behaviour is unchanged — same fields, defaults, endpoints, outputs and audit events — but the node identity changed, so existing workflows must be updated:

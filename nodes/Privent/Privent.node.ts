@@ -8,7 +8,12 @@ import type {
   INodeExecutionData,
 } from 'n8n-workflow';
 import { NodeConnectionTypes } from 'n8n-workflow';
-import { getAuthMode, getPriventBaseUrl } from '../../shared/privent-http.js';
+import {
+  getAuthMode,
+  getPriventBaseUrl,
+  getVaultBackend,
+  telemetryPing,
+} from '../../shared/privent-http.js';
 import { handleSession } from './operations/session.js';
 import { handleTokenize } from './operations/tokenize.js';
 import { handleDetokenize } from './operations/detokenize.js';
@@ -20,6 +25,7 @@ type PerItemHandler = (
   ctx: IExecuteFunctions,
   i: number,
   baseUrl: string,
+  vaultBackend?: 'memory' | 'cloud',
 ) => Promise<IDataObject>;
 
 const PER_ITEM_HANDLERS: Record<string, PerItemHandler> = {
@@ -759,38 +765,62 @@ export class Privent implements INodeType {
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const resource = this.getNodeParameter('resource', 0) as string;
-
-    // Risk Check is batched (one /v1/risk/batch call for all items) — it owns
-    // its own loop and error handling, so branch before the per-item dispatch.
-    if (resource === 'riskCheck') {
-      return executeRiskCheck(this);
-    }
-
-    const handler = PER_ITEM_HANDLERS[resource];
-    if (!handler) {
-      // Unknown resource should be unreachable (options-only param).
-      return [[]];
-    }
-
+    // Read items up front so item_count is available for every path (incl. the
+    // batched riskCheck early return) in the central telemetry ping below.
     const items = this.getInputData();
-    // Local mode has no credential — never read one. Tokenize/Detokenize local
-    // paths ignore baseUrl entirely.
-    const baseUrl = getAuthMode(this) === 'local' ? '' : await getPriventBaseUrl(this);
-    const out: INodeExecutionData[] = [];
 
-    for (let i = 0; i < items.length; i++) {
-      try {
-        const json = await handler(this, i, baseUrl);
-        out.push({ json, pairedItem: { item: i } });
-      } catch (err) {
-        if (this.continueOnFail()) {
-          out.push({ json: { error: (err as Error).message }, pairedItem: { item: i } });
-          continue;
-        }
-        throw err;
+    // One anonymous telemetry ping per execution (tokenless only — the helper
+    // self-guards; apiKey/local emit nothing). Fire-and-forget in `finally`, so
+    // it neither swallows the thrown error nor changes the return value.
+    let status: 'success' | 'error' = 'success';
+    let errorType: string | undefined;
+    try {
+      // Risk Check is batched (one /v1/risk/batch call for all items) — it owns
+      // its own loop and error handling, so branch before the per-item dispatch.
+      // `return await` so a rejection is caught here (marks status='error').
+      if (resource === 'riskCheck') {
+        return await executeRiskCheck(this);
       }
-    }
 
-    return [out];
+      const handler = PER_ITEM_HANDLERS[resource];
+      if (!handler) {
+        // Unknown resource should be unreachable (options-only param).
+        return [[]];
+      }
+
+      // Local mode has no credential — never read one. Tokenize/Detokenize local
+      // paths ignore baseUrl entirely.
+      const baseUrl = getAuthMode(this) === 'local' ? '' : await getPriventBaseUrl(this);
+      // Vault backend (audit metadata) is apiKey-only; read once per execution.
+      const vaultBackend = getAuthMode(this) === 'apiKey' ? await getVaultBackend(this) : undefined;
+      const out: INodeExecutionData[] = [];
+
+      for (let i = 0; i < items.length; i++) {
+        try {
+          const json = await handler(this, i, baseUrl, vaultBackend);
+          out.push({ json, pairedItem: { item: i } });
+        } catch (err) {
+          if (this.continueOnFail()) {
+            out.push({ json: { error: (err as Error).message }, pairedItem: { item: i } });
+            continue;
+          }
+          throw err;
+        }
+      }
+
+      return [out];
+    } catch (err) {
+      status = 'error';
+      errorType = (err as Error)?.constructor?.name;
+      throw err;
+    } finally {
+      void telemetryPing(this, {
+        operation: resource,
+        item_count: items.length,
+        status,
+        error_type: errorType,
+        timestamp: new Date().toISOString(),
+      });
+    }
   }
 }

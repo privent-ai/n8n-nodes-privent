@@ -17,6 +17,7 @@ export async function handleSession(
   ctx: IExecuteFunctions,
   i: number,
   baseUrl: string,
+  vaultBackend?: 'memory' | 'cloud',
 ): Promise<IDataObject> {
   const item = ctx.getInputData()[i]!;
   const framework =
@@ -102,6 +103,7 @@ export async function handleSession(
     agentName,
     workflowId,
     workflowName,
+    vaultBackend,
   };
   const sessionOpen: AuditEvent = {
     type: 'session_open',
