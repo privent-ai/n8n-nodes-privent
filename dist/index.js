@@ -221,7 +221,7 @@ function normalize(kind, value) {
 
 // node_modules/@priventai/core/dist/index.js
 var TRACER_VERSION = (() => {
-  const v = "2.3.0";
+  const v = "2.3.1";
   return typeof v === "string" && v.length > 0 ? v : "0.1.0";
 })();
 var DEFAULT_TTL_MS = 60 * 60 * 1e3;
@@ -1338,7 +1338,7 @@ function isLocalFalsePositive(value, type) {
 
 // shared/privent-http.ts
 var NODE_VERSION = (() => {
-  const v = true ? "2.3.0" : void 0;
+  const v = true ? "2.3.1" : void 0;
   return typeof v === "string" && v.length > 0 ? v : "unknown";
 })();
 function frameworkForWire(framework) {
@@ -2040,6 +2040,7 @@ async function handleTokenizeLocal(ctx, i) {
 }
 async function handleTokenize(ctx, i, baseUrl, vaultBackend) {
   if (getAuthMode(ctx) === "local") return handleTokenizeLocal(ctx, i);
+  const t0 = Date.now();
   const item = ctx.getInputData()[i];
   const triggerMode = safeTriggerMode(ctx);
   const sessionId = ctx.getNodeParameter("sessionId", i);
@@ -2131,6 +2132,7 @@ async function handleTokenize(ctx, i, baseUrl, vaultBackend) {
     framework: "n8n",
     workflowId: ctxAudit.workflowId,
     nodeId: node.id,
+    latencyMs: Date.now() - t0,
     metadata: buildAuditMetadata(ctxAudit, node, {
       entity_kinds: [...new Set(entities.map((e) => e.kind))],
       entity_count: entities.length,
@@ -2179,6 +2181,7 @@ function deriveSinkUrlHost(sinkUrl) {
   }
 }
 async function handleDetokenize(ctx, i, baseUrl, vaultBackend) {
+  const t0 = Date.now();
   const item = ctx.getInputData()[i];
   const triggerMode = safeTriggerMode(ctx);
   const authMode = getAuthMode(ctx);
@@ -2220,6 +2223,7 @@ async function handleDetokenize(ctx, i, baseUrl, vaultBackend) {
       framework: "n8n",
       workflowId: ctxAudit.workflowId,
       nodeId: node.id,
+      latencyMs: Date.now() - t0,
       ...targetAgentName ? { targetAgentName } : {},
       metadata: buildAuditMetadata(ctxAudit, node, {
         sink_id: sinkId,
@@ -2271,6 +2275,7 @@ async function handleDetokenize(ctx, i, baseUrl, vaultBackend) {
     framework: "n8n",
     workflowId: ctxAudit.workflowId,
     nodeId: node.id,
+    latencyMs: Date.now() - t0,
     ...targetAgentName ? { targetAgentName } : {},
     metadata: buildAuditMetadata(ctxAudit, node, {
       sink_id: sinkId,
@@ -2364,6 +2369,7 @@ async function executeRiskCheck(ctx) {
       framework: "n8n",
       workflowId: auditCtx.workflowId,
       nodeId: node.id,
+      latencyMs: risk.latencyMs,
       metadata: buildAuditMetadata(auditCtx, node, {
         risk_score: risk.risk_score,
         risk_level: risk.risk_level,

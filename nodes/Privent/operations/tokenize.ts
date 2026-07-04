@@ -181,6 +181,7 @@ export async function handleTokenize(
   // apiKey/tokenless body below is left untouched.
   if (getAuthMode(ctx) === 'local') return handleTokenizeLocal(ctx, i);
 
+  const t0 = Date.now(); // op wall-clock → audit latency_ms (detection + risk + vault)
   const item = ctx.getInputData()[i]!;
   const triggerMode = safeTriggerMode(ctx);
 
@@ -307,6 +308,7 @@ export async function handleTokenize(
     framework: 'n8n',
     workflowId: ctxAudit.workflowId,
     nodeId: node.id,
+    latencyMs: Date.now() - t0,
     metadata: buildAuditMetadata(ctxAudit, node, {
       entity_kinds: [...new Set(entities.map((e) => e.kind))],
       entity_count: entities.length,

@@ -4,6 +4,13 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.3.1] - 2026-07-04
+
+### Fixed
+- API Key audit events now report per-op `latency_ms` (tokenize, detokenize, risk_check) at the top level,
+  so backend latency analytics (avg/p95) populate instead of showing 0. No behavior change; tokenless/local
+  unaffected (they emit no audit).
+
 ## [2.3.0] - 2026-07-04
 
 ### Added

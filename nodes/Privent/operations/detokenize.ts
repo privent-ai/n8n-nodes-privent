@@ -58,6 +58,7 @@ export async function handleDetokenize(
   baseUrl: string,
   vaultBackend?: 'memory' | 'cloud',
 ): Promise<IDataObject> {
+  const t0 = Date.now(); // op wall-clock → audit latency_ms
   const item = ctx.getInputData()[i]!;
   const triggerMode = safeTriggerMode(ctx);
 
@@ -109,6 +110,7 @@ export async function handleDetokenize(
       framework: 'n8n',
       workflowId: ctxAudit.workflowId,
       nodeId: node.id,
+      latencyMs: Date.now() - t0,
       ...(targetAgentName ? { targetAgentName } : {}),
       metadata: buildAuditMetadata(ctxAudit, node, {
         sink_id: sinkId,
@@ -178,6 +180,7 @@ export async function handleDetokenize(
     framework: 'n8n',
     workflowId: ctxAudit.workflowId,
     nodeId: node.id,
+    latencyMs: Date.now() - t0,
     ...(targetAgentName ? { targetAgentName } : {}),
     metadata: buildAuditMetadata(ctxAudit, node, {
       sink_id: sinkId,

@@ -68,6 +68,10 @@ describe('PriventTokenize audit emission', () => {
     const event = events[0]!;
     expect(event.type).toBe('tokenize');
     expect(event.session_id).toBe('123e4567-e89b-42d3-a456-426614174001');
+    // Top-level latency_ms populates the backend analytics column.
+    expect(typeof event.latency_ms).toBe('number');
+    expect(Number.isFinite(event.latency_ms as number)).toBe(true);
+    expect(event.latency_ms as number).toBeGreaterThanOrEqual(0);
     const meta = event.metadata as Record<string, unknown>;
     expect(meta).toMatchObject({
       agent_name: '',
@@ -105,6 +109,8 @@ describe('PriventDetokenize audit emission', () => {
     expect(events).toHaveLength(1);
     const event = events[0]!;
     expect(event.type).toBe('detokenize');
+    expect(typeof event.latency_ms).toBe('number');
+    expect(event.latency_ms as number).toBeGreaterThanOrEqual(0);
     expect(event.metadata).toMatchObject({
       sink_trusted: true,
       sink_id: null,
@@ -132,6 +138,8 @@ describe('PriventRiskCheck audit emission', () => {
     expect(events).toHaveLength(2);
     for (const event of events) {
       expect(event.type).toBe('risk_check');
+      expect(typeof event.latency_ms).toBe('number');
+      expect(event.latency_ms as number).toBeGreaterThanOrEqual(0);
       // Sessionless node → session_id is the (UUID) traceId.
       expect(event.session_id as string).toMatch(/^[0-9a-f-]{36}$/);
       expect(event.session_id).toBe(event.trace_id);

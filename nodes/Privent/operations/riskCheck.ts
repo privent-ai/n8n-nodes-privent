@@ -110,6 +110,7 @@ export async function executeRiskCheck(ctx: IExecuteFunctions): Promise<INodeExe
       framework: 'n8n',
       workflowId: auditCtx.workflowId,
       nodeId: node.id,
+      latencyMs: risk.latencyMs,
       metadata: buildAuditMetadata(auditCtx, node, {
         risk_score: risk.risk_score,
         risk_level: risk.risk_level,
