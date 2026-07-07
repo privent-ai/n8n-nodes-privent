@@ -12,7 +12,7 @@ Guardrails masks PII and throws it away. Privent masks it, hands it to your LLM 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/privent-ai/n8n-nodes-privent?style=social)](https://github.com/privent-ai/n8n-nodes-privent)
 
-**[Quick Start](#-quick-start--30-seconds-no-api-key)** · **[Why Privent](#why)** · **[vs. Guardrails](#privent-vs-n8n-guardrails)** · **[Docs](https://www.privent.ai/docs)** · **[Discord](https://discord.gg/yZhFGqMS5Y)** · **[ProductHunt](https://www.producthunt.com/products/privent)**
+**[Quick Start](#-quick-start--30-seconds-no-api-key)** · **[Why Privent](#why)** · **[vs. Guardrails](#privent-vs-n8n-guardrails)** · **[Benchmarks](#benchmarks)** · **[Docs](https://www.privent.ai/docs)** · **[Discord](https://discord.gg/yZhFGqMS5Y)** · **[ProductHunt](https://www.producthunt.com/products/privent)**
 
 </div>
 
@@ -79,6 +79,30 @@ n8n's built-in Guardrails node is a good default for blocking jailbreaks and mas
 | Audit trail per token / agent handoff | ❌ | ✅ (Cloud mode) |
 
 Use Guardrails when you only need to block or mask. Reach for Privent when you need the value back on the other side.
+
+---
+
+## Benchmarks
+
+Independent PII/PHI detection benchmark comparing Privent against n8n Guardrails and Presidio (default config). Results below are for English (EN), detection-only lane.
+
+### Detection F2 by language
+
+Overall detection quality (F2 weights recall over precision). Privent Cloud leads; Privent Local trades recall for a fully offline round-trip.
+
+![Detection F2 by language, 95% bootstrap CI — privent_cloud leads, followed by presidio_default, guardrails, then privent_local](assets/benchmarks/detection-f2-by-language.jpeg)
+
+### Hard-negative false-alarm rate
+
+False-alarm rate on hard negatives (e.g. `organization_name` that looks like PII but isn't). **Lower is better.** Presidio over-flags organization names; Privent stays low.
+
+![Hard-negative flag rate by category, EN — presidio_default flags ~0.78, privent_cloud ~0.08, guardrails and privent_local near 0](assets/benchmarks/hard-negative-flag-rate-en.jpeg)
+
+### Recall by entity type
+
+Per-entity recall (relaxed matching). `n<min` marks cells with too few samples to score reliably.
+
+![Recall by entity type, EN (relaxed) heatmap across ACCOUNT_NUMBER, ADDRESS, DATE, EMAIL, LICENSE_NUMBER, NATIONAL_ID, PASSPORT, PERSON_NAME, PHONE, URL](assets/benchmarks/recall-by-entity-en.jpeg)
 
 ---
 
