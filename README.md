@@ -16,6 +16,9 @@ Guardrails masks PII and throws it away. Privent masks it, hands it to your LLM 
 
 </div>
 
+<img width="1772" height="1080" alt="privent-black" src="https://github.com/user-attachments/assets/7ec6cf05-e87a-4b90-9f44-dad2f11c89ad" />
+
+
 ---
 
 ```
