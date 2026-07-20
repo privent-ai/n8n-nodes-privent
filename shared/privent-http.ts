@@ -222,6 +222,110 @@ export function buildLocalDetectors(level: 'standard' | 'aggressive'): RegexDete
   return detectors;
 }
 
+/** One active org custom pattern as served by `GET /v1/custom-patterns/active`. */
+interface ActiveCustomPattern {
+  kind: EntityKind;
+  pattern: string;
+  flags: string;
+  category: string;
+  sensitivity: string;
+}
+
+/**
+ * A compiled custom (org) detector. `authoritative` marks it as always-wins in
+ * overlap resolution; `category`/`sensitivity` are threaded onto the emitted
+ * entity. Node-local type (core's bundled 0.8.0 `RegexDetector` predates these
+ * fields), a superset of `RegexDetector` so it runs anywhere a detector does.
+ */
+export interface CustomDetector extends RegexDetector {
+  readonly authoritative: true;
+  readonly category: string;
+  readonly sensitivity: string;
+}
+
+interface CustomDetectorCacheEntry {
+  detectors: CustomDetector[];
+  expiresAt: number; // unix seconds
+}
+
+const _customDetectorCache = new Map<string, CustomDetectorCacheEntry>();
+const CUSTOM_DETECTOR_TTL_SEC = 300;
+
+function compileCustomDetectors(rows: ActiveCustomPattern[]): CustomDetector[] {
+  const out: CustomDetector[] = [];
+  for (const row of rows) {
+    let regex: RegExp;
+    try {
+      // Native RegExp, flags preserved (i/m/s/u) + global for matchAll. Safe:
+      // the backend gates ReDoS at save time (recheck) before serving.
+      regex = withGlobal(new RegExp(row.pattern, row.flags ?? ''));
+    } catch {
+      continue; // skip an uncompilable stored pattern (save-time validation makes this rare)
+    }
+    out.push({
+      kind: row.kind,
+      regex,
+      confidence: 1,
+      normalize: (v: string) => v,
+      authoritative: true,
+      category: row.category,
+      sensitivity: row.sensitivity,
+    });
+  }
+  return out;
+}
+
+/**
+ * Fetch the org's active custom patterns (`GET /v1/custom-patterns/active`,
+ * AGENT_SDK-authed) and compile them to authoritative native-RegExp detectors,
+ * so org custom masking applies in the local tokenizer path (auto/cloud/local
+ * detection, even when ML is unreachable).
+ *
+ * apiKey mode ONLY — the serve endpoint requires an AGENT_SDK key; tokenless
+ * visitors and local mode have none, so they get built-ins only. FAIL-OPEN: any
+ * error → `[]` (never break tokenize on a patterns-fetch failure). Cached per
+ * credential (keyed by the apiKey hash — never the raw key) for
+ * ${CUSTOM_DETECTOR_TTL_SEC}s; patterns change rarely and this isn't latency-critical.
+ */
+export async function fetchActiveCustomDetectors(
+  ctx: IExecuteFunctions,
+  baseUrl: string,
+): Promise<CustomDetector[]> {
+  if (getAuthMode(ctx) !== 'apiKey') return [];
+
+  let keyHash: string;
+  try {
+    const creds = await ctx.getCredentials('priventApi');
+    keyHash = await sha256short(String(creds.apiKey ?? ''));
+  } catch {
+    return [];
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const cached = _customDetectorCache.get(keyHash);
+  if (cached && cached.expiresAt > nowSec) return cached.detectors;
+
+  let rows: unknown;
+  try {
+    rows = await ctx.helpers.httpRequestWithAuthentication.call(ctx, 'priventApi', {
+      method: 'GET',
+      baseURL: baseUrl,
+      url: '/v1/custom-patterns/active',
+      json: true,
+    });
+  } catch {
+    return []; // fail-open
+  }
+  if (!Array.isArray(rows)) return [];
+
+  const detectors = compileCustomDetectors(rows as ActiveCustomPattern[]);
+  _customDetectorCache.set(keyHash, {
+    detectors,
+    expiresAt: nowSec + CUSTOM_DETECTOR_TTL_SEC,
+  });
+  return detectors;
+}
+
 interface VisitorCacheEntry {
   visitorId: string;
   expiresAt: number; // unix seconds

@@ -8,10 +8,12 @@ import {
   auditLog,
   buildAuditMetadata,
   buildLocalDetectors,
+  fetchActiveCustomDetectors,
   getAuthMode,
   resolveContext,
   riskScore,
   safeTriggerMode,
+  type CustomDetector,
   type SessionVault,
 } from '../../../shared/privent-http.js';
 import { isLocalFalsePositive } from '../../../shared/local-detectors.js';
@@ -23,21 +25,44 @@ interface Span {
   index: number;
   length: number;
   confidence: number;
-  source: 'regex' | 'model' | 'hint';
+  source: 'regex' | 'model' | 'hint' | 'custom';
+  /** Org custom-pattern spans are authoritative: they win overlap resolution
+   *  over any built-in or ML span. Undefined for built-in/ML spans. */
+  authoritative?: boolean;
+  /** Org classification carried onto the emitted entity (custom spans only). */
+  category?: string;
+  sensitivity?: string;
 }
 
-// On an exact-span tie, the more-specific source wins (ML over a generic hint
-// over a regex). For regex-only (local) detection all sources are 'regex', so
-// this rank is a no-op and ordering matches the previous behavior exactly.
-const SOURCE_RANK: Record<Span['source'], number> = { model: 0, hint: 1, regex: 2 };
+// On an exact-span tie, the more-specific source wins (custom over ML over a
+// generic hint over a regex). For regex-only (local) detection all sources are
+// 'regex', so this rank is a no-op and ordering matches the previous behavior
+// exactly. `custom` also wins via the authoritative pre-filter in removeOverlaps.
+const SOURCE_RANK: Record<Span['source'], number> = { custom: -1, model: 0, hint: 1, regex: 2 };
 
 /**
  * Longest span wins on overlap; total ordering for determinism. Mirrors core's
  * `removeOverlaps` (tokenizer/hybrid.ts) so the regex pass stays byte-identical;
  * also used to merge regex + backend-ML spans into one non-overlapping set.
+ *
+ * Authoritative (custom) spans always survive: any non-authoritative span
+ * overlapping one is dropped before the greedy sweep — a longer built-in or an
+ * ML span can never evict a custom match. A no-op when there are no custom
+ * patterns (mirrors core's removeOverlaps pre-filter).
  */
 function removeOverlaps(spans: Span[]): Span[] {
-  const sorted = [...spans].sort(
+  const authoritative = spans.filter((s) => s.authoritative);
+  let pool = spans;
+  if (authoritative.length > 0) {
+    pool = spans.filter(
+      (s) =>
+        s.authoritative ||
+        !authoritative.some(
+          (a) => s.index < a.index + a.length && s.index + s.length > a.index,
+        ),
+    );
+  }
+  const sorted = [...pool].sort(
     (a, b) =>
       a.index - b.index ||
       b.length - a.length ||
@@ -93,6 +118,36 @@ function detectMatches(
     }
   }
   return removeOverlaps(matches);
+}
+
+/**
+ * Run org custom detectors → authoritative custom spans carrying the org
+ * classification. Kept separate from `detectMatches` so the built-in path stays
+ * byte-identical and custom flags (i/m/s) are preserved (each regex is already
+ * global from `withGlobal`; `matchAll` clones it, so reuse across items is safe).
+ * Zero-width matches are skipped so a degenerate pattern can't evict real spans.
+ */
+function detectCustomMatches(text: string, detectors: readonly CustomDetector[]): Span[] {
+  const spans: Span[] = [];
+  for (const detector of detectors) {
+    for (const m of text.matchAll(detector.regex)) {
+      if (m.index == null) continue;
+      const raw = m[0];
+      if (raw.length === 0) continue;
+      spans.push({
+        kind: detector.kind,
+        value: raw,
+        index: m.index,
+        length: raw.length,
+        confidence: detector.confidence,
+        source: 'custom',
+        authoritative: true,
+        category: detector.category,
+        sensitivity: detector.sensitivity,
+      });
+    }
+  }
+  return spans;
 }
 
 /**
@@ -214,6 +269,13 @@ export async function handleTokenize(
   // 1. Local regex detection — structured PII only (no names/DOB/address).
   const localSpans = detectMatches(text, DEFAULT_DETECTORS);
 
+  // 1b. Org custom patterns (authoritative). apiKey mode only, cached + fail-open
+  //     (fetchActiveCustomDetectors returns [] for tokenless/local or any error),
+  //     so custom masking applies even when ML/risk is skipped or unreachable.
+  const customDetectors = await fetchActiveCustomDetectors(ctx, baseUrl);
+  const customSpans =
+    customDetectors.length > 0 ? detectCustomMatches(text, customDetectors) : [];
+
   // 2. auto/cloud: ONE /v1/risk/score on the ORIGINAL text — returns the
   //    ML entities (names/DOB/address + structured) AND the risk score in
   //    a single call. Privacy: the original text reaches Privent's TRUSTED
@@ -259,7 +321,9 @@ export async function handleTokenize(
   // 3. Merge regex + ML spans → one ordered, non-overlapping set. Guard
   //    malformed spans; canonicalize the value to the exact substring so
   //    the vault stores what we replace (detokenize round-trip fidelity).
-  const merged = removeOverlaps([...localSpans, ...backendSpans])
+  //    Custom spans are authoritative — removeOverlaps drops any built-in/ML
+  //    span overlapping them.
+  const merged = removeOverlaps([...localSpans, ...customSpans, ...backendSpans])
     .filter((s) => s.length > 0 && s.index >= 0 && s.index + s.length <= text.length)
     .map((s) => ({ ...s, value: text.slice(s.index, s.index + s.length) }));
 
@@ -271,6 +335,8 @@ export async function handleTokenize(
     confidence: number;
     source: Span['source'];
     span: [number, number];
+    category?: string;
+    sensitivity?: string;
   }> = [];
   if (merged.length > 0) {
     let batched;
@@ -293,6 +359,8 @@ export async function handleTokenize(
         confidence: s.confidence,
         source: s.source,
         span: [s.index, s.index + s.length],
+        ...(s.category != null ? { category: s.category } : {}),
+        ...(s.sensitivity != null ? { sensitivity: s.sensitivity } : {}),
       });
     }
     entities.sort((a, b) => a.span[0] - b.span[0]);
@@ -331,6 +399,8 @@ export async function handleTokenize(
         kind: e.kind,
         confidence: e.confidence,
         source: e.source,
+        ...(e.category != null ? { category: e.category } : {}),
+        ...(e.sensitivity != null ? { sensitivity: e.sensitivity } : {}),
       })),
       risk,
       flaggedForReview,
