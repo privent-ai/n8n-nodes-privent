@@ -4,6 +4,18 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] - 2026-07-20
+
+### Added
+- **Org custom patterns in Tokenize** — API Key mode now fetches the org's active custom regex patterns
+  (`GET /v1/custom-patterns/active`, cached ~5 min per credential) and masks matching values to
+  `[KIND_NNN]`, so org-defined masking applies in the local tokenizer path — including `local` detection
+  and when the ML/risk pass is skipped or unreachable. Custom matches are **authoritative**: they win
+  overlap resolution over any built-in or backend/ML span, and their `category`/`sensitivity` are surfaced
+  on `privent.entities`. **Fail-open**: a patterns-fetch error never breaks tokenize (built-ins still run).
+  Tokenless and Local (No Backend) modes are unaffected — the serve endpoint needs an API key, so they get
+  built-ins only. No new runtime dependency (native `RegExp` + the existing authenticated HTTP helper).
+
 ## [2.3.1] - 2026-07-04
 
 ### Fixed

@@ -1458,6 +1458,60 @@ function buildLocalDetectors(level) {
   _localDetectorCache.set(level, detectors);
   return detectors;
 }
+var _customDetectorCache = /* @__PURE__ */ new Map();
+var CUSTOM_DETECTOR_TTL_SEC = 300;
+function compileCustomDetectors(rows) {
+  const out = [];
+  for (const row of rows) {
+    let regex;
+    try {
+      regex = withGlobal(new RegExp(row.pattern, row.flags ?? ""));
+    } catch {
+      continue;
+    }
+    out.push({
+      kind: row.kind,
+      regex,
+      confidence: 1,
+      normalize: (v) => v,
+      authoritative: true,
+      category: row.category,
+      sensitivity: row.sensitivity
+    });
+  }
+  return out;
+}
+async function fetchActiveCustomDetectors(ctx, baseUrl) {
+  if (getAuthMode(ctx) !== "apiKey") return [];
+  let keyHash;
+  try {
+    const creds = await ctx.getCredentials("priventApi");
+    keyHash = await sha256short(String(creds.apiKey ?? ""));
+  } catch {
+    return [];
+  }
+  const nowSec = Math.floor(Date.now() / 1e3);
+  const cached = _customDetectorCache.get(keyHash);
+  if (cached && cached.expiresAt > nowSec) return cached.detectors;
+  let rows;
+  try {
+    rows = await ctx.helpers.httpRequestWithAuthentication.call(ctx, "priventApi", {
+      method: "GET",
+      baseURL: baseUrl,
+      url: "/v1/custom-patterns/active",
+      json: true
+    });
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(rows)) return [];
+  const detectors = compileCustomDetectors(rows);
+  _customDetectorCache.set(keyHash, {
+    detectors,
+    expiresAt: nowSec + CUSTOM_DETECTOR_TTL_SEC
+  });
+  return detectors;
+}
 function httpErrorStatus(err) {
   const e = err;
   const raw = e.httpCode ?? e.statusCode ?? e.response?.status;
@@ -1948,9 +2002,18 @@ async function handleSession(ctx, i, baseUrl, vaultBackend) {
 
 // nodes/Privent/operations/tokenize.ts
 var import_n8n_workflow3 = require("n8n-workflow");
-var SOURCE_RANK = { model: 0, hint: 1, regex: 2 };
+var SOURCE_RANK = { custom: -1, model: 0, hint: 1, regex: 2 };
 function removeOverlaps(spans) {
-  const sorted = [...spans].sort(
+  const authoritative = spans.filter((s) => s.authoritative);
+  let pool = spans;
+  if (authoritative.length > 0) {
+    pool = spans.filter(
+      (s) => s.authoritative || !authoritative.some(
+        (a) => s.index < a.index + a.length && s.index + s.length > a.index
+      )
+    );
+  }
+  const sorted = [...pool].sort(
     (a, b) => a.index - b.index || b.length - a.length || SOURCE_RANK[a.source] - SOURCE_RANK[b.source] || a.kind.localeCompare(b.kind) || a.value.localeCompare(b.value)
   );
   const kept = [];
@@ -1982,6 +2045,28 @@ function detectMatches(text, detectors, opts = {}) {
     }
   }
   return removeOverlaps(matches);
+}
+function detectCustomMatches(text, detectors) {
+  const spans = [];
+  for (const detector of detectors) {
+    for (const m of text.matchAll(detector.regex)) {
+      if (m.index == null) continue;
+      const raw = m[0];
+      if (raw.length === 0) continue;
+      spans.push({
+        kind: detector.kind,
+        value: raw,
+        index: m.index,
+        length: raw.length,
+        confidence: detector.confidence,
+        source: "custom",
+        authoritative: true,
+        category: detector.category,
+        sensitivity: detector.sensitivity
+      });
+    }
+  }
+  return spans;
 }
 async function handleTokenizeLocal(ctx, i) {
   const item = ctx.getInputData()[i];
@@ -2062,6 +2147,8 @@ async function handleTokenize(ctx, i, baseUrl, vaultBackend) {
   }
   const vault = getAuthMode(ctx) === "tokenless" ? new WorkflowStaticDataVault(ctx, sessionId) : new N8nHttpVault(ctx, sessionId, baseUrl);
   const localSpans = detectMatches(text, DEFAULT_DETECTORS);
+  const customDetectors = await fetchActiveCustomDetectors(ctx, baseUrl);
+  const customSpans = customDetectors.length > 0 ? detectCustomMatches(text, customDetectors) : [];
   let risk = null;
   let flaggedForReview = false;
   const backendSpans = [];
@@ -2095,7 +2182,7 @@ async function handleTokenize(ctx, i, baseUrl, vaultBackend) {
       }
     }
   }
-  const merged = removeOverlaps([...localSpans, ...backendSpans]).filter((s) => s.length > 0 && s.index >= 0 && s.index + s.length <= text.length).map((s) => ({ ...s, value: text.slice(s.index, s.index + s.length) }));
+  const merged = removeOverlaps([...localSpans, ...customSpans, ...backendSpans]).filter((s) => s.length > 0 && s.index >= 0 && s.index + s.length <= text.length).map((s) => ({ ...s, value: text.slice(s.index, s.index + s.length) }));
   let tokenizedText = text;
   const entities = [];
   if (merged.length > 0) {
@@ -2117,7 +2204,9 @@ async function handleTokenize(ctx, i, baseUrl, vaultBackend) {
         kind: s.kind,
         confidence: s.confidence,
         source: s.source,
-        span: [s.index, s.index + s.length]
+        span: [s.index, s.index + s.length],
+        ...s.category != null ? { category: s.category } : {},
+        ...s.sensitivity != null ? { sensitivity: s.sensitivity } : {}
       });
     }
     entities.sort((a, b) => a.span[0] - b.span[0]);
@@ -2153,7 +2242,9 @@ async function handleTokenize(ctx, i, baseUrl, vaultBackend) {
         token: e.token,
         kind: e.kind,
         confidence: e.confidence,
-        source: e.source
+        source: e.source,
+        ...e.category != null ? { category: e.category } : {},
+        ...e.sensitivity != null ? { sensitivity: e.sensitivity } : {}
       })),
       risk,
       flaggedForReview

@@ -33,8 +33,19 @@ export interface HttpExecOpts {
   mode?: string;
   baseUrl?: string;
   continueOnFail?: boolean;
+  /** priventApi credential apiKey. Default 'pv_live_test'. Give tests that hit
+   *  the custom-patterns cache a unique key so entries don't bleed across tests. */
+  apiKey?: string;
   /** priventApi credential vault backend (audit `vault_backend`). Default 'cloud'. */
   vaultBackend?: 'memory' | 'cloud';
+  /** Rows served by GET /v1/custom-patterns/active. Default [] (none). */
+  activePatterns?: Array<{
+    kind: string;
+    pattern: string;
+    flags: string;
+    category: string;
+    sensitivity: string;
+  }>;
   /** Custom find-or-create-batch response builder. */
   tokens?: (items: Array<{ kind: string; normalizedValue: string; originalValue: string }>) => VaultToken[];
   /** Custom retrieve-batch response builder. */
@@ -105,6 +116,9 @@ export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
         const items = (body.items as unknown[]) ?? [];
         return { results: items.map(() => opts.risk ?? defaultRisk) };
       }
+      if (url === '/v1/custom-patterns/active') {
+        return opts.activePatterns ?? [];
+      }
       // /v1/audit/events and anything else
       return {};
     },
@@ -115,7 +129,7 @@ export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
     getNodeParameter: (name: string, _i: number, fallback?: unknown) =>
       name in opts.params ? opts.params[name] : fallback,
     getCredentials: async () => ({
-      apiKey: 'pv_live_test',
+      apiKey: opts.apiKey ?? 'pv_live_test',
       baseUrl: opts.baseUrl ?? 'https://api.test.local',
       vaultBackend: opts.vaultBackend ?? 'cloud',
     }),
