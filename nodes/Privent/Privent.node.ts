@@ -47,7 +47,7 @@ export class Privent implements INodeType {
   description: INodeTypeDescription = {
     displayName: 'Privent',
     name: 'privent',
-    icon: 'file:privent.png',
+    icon: 'file:../privent.png',
     group: ['transform'],
     version: 1,
     usableAsTool: true,

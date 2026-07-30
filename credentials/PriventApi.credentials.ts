@@ -9,7 +9,7 @@ export class PriventApi implements ICredentialType {
   name = 'priventApi';
   displayName = 'Privent API';
   documentationUrl = 'https://www.privent.ai/docs';
-  icon: Icon = 'file:privent.png';
+  icon: Icon = 'file:../nodes/privent.png';
 
   properties: INodeProperties[] = [
     {
