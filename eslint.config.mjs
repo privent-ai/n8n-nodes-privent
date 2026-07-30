@@ -80,6 +80,28 @@ export default defineConfig(
       // continues to FAIL @n8n/scan-community-package until a real vector asset
       // exists — F-C stays open on exactly this one point.
       'n8n-nodes-base/node-class-description-icon-not-svg': 'warn',
+      // SECOND deliberate divergence, same shape: error -> warn, not off.
+      // The rule matches on `paramName.toLowerCase().includes('token')`
+      // (node-param-type-options-password-missing.js:32), so it fires on
+      // `promptTokens` and `completionTokens` — which hold a token COUNT
+      // expression (`={{$json.usage.prompt_tokens}}`), not a secret. n8n's own
+      // exception list already carries this exact class:
+      // FALSE_POSITIVE_NODE_SENSITIVE_PARAM_NAMES = ["maxTokens",
+      // "password_needs_reset"] (constants.js:125). Ours is maxTokens under a
+      // different name.
+      //
+      // Satisfying it would mask two operator-visible expression fields in the
+      // editor to please an instrument that matched a substring — the
+      // instrument corrupting what it measures, applied to the product. Renaming
+      // the parameters would break stored workflows, and inline disables are
+      // ignored by the scanner (allowInlineConfig: false), so a warning is the
+      // honest position. The real fix is upstream: these names belong in n8n's
+      // exception list, or the rule should match more narrowly than
+      // includes('token'). Recorded as F-J; no upstream issue filed yet.
+      //
+      // The scanner still counts these as errors, so they add to the source-leg
+      // failure alongside the icon.
+      'n8n-nodes-base/node-param-type-options-password-missing': 'warn',
     },
   },
   // JSON (notably package.json) needs the TS parser: the package.json-based
