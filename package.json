@@ -16,8 +16,8 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint dist/**/*.js package.json",
-    "lint:fix": "eslint dist/**/*.js package.json --fix",
+    "lint": "eslint 'dist/**/*.js' package.json",
+    "lint:fix": "eslint 'dist/**/*.js' package.json --fix",
     "loadability": "node scripts/check-loadability.mjs",
     "gen:detectors": "node scripts/gen-local-detectors.mjs"
   },

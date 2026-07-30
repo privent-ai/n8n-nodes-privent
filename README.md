@@ -206,6 +206,8 @@ npm install n8n-nodes-privent
 ```
 Restart n8n. The Privent node appears in the node panel.
 
+> **Install from npm only — git URLs are not supported.** Installing this package from a git URL (`npm install github:privent-ai/n8n-nodes-privent`) yields a package with no `dist/`, because the build output is not committed and community-node rules forbid the lifecycle script that would build it on install — see `@n8n/community-nodes/no-forbidden-lifecycle-scripts`. Use the npm registry.
+
 ## Requirements
 
 | Component | Minimum |
