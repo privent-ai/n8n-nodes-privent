@@ -79,6 +79,59 @@ describe('PriventDetokenize sink trust matrix', () => {
     expect(out[0]![0]!.json).toMatchObject({ privent: { detokenized: false } });
   });
 
+  // An empty Trusted Sinks list used to be read as "everything is trusted", so
+  // Strict Mode was a no-op for anyone who switched it on without filling the
+  // list in. No test covered that decision: the two other tests that pass an
+  // empty list only assert sink_id / sink_url_host derivation, which the block
+  // path emits too, so they stayed green through the whole defect. These two
+  // lock the decision itself — item AND audit, because the original finding was
+  // that the audit recorded sink_trusted: true while the data flowed.
+  it('strict + EMPTY trusted list → blocked, sink_trusted=false, distinct reason', async () => {
+    const { exec, auditEvents } = detokExec(
+      {
+        sessionId: '123e4567-e89b-42d3-a456-426614174006',
+        targetField: '*',
+        strict: true,
+        sinkUrl: 'https://anywhere.invalid/x',
+        trustedSinks: '',
+      },
+      [{ json: { body: 'reach [EMAIL_001] now' } }],
+    );
+
+    const out = await new Privent().execute.call(exec);
+    await flushPromises();
+
+    const json = out[0]![0]!.json as { body: string; privent: Record<string, unknown> };
+    expect(json.body).toBe('reach [EMAIL_001] now');
+    expect(json.privent.detokenized).toBe(false);
+    expect(String(json.privent.reason)).toContain('no Trusted Sinks are configured');
+
+    const meta = firstMeta(auditEvents());
+    expect(meta.sink_trusted).toBe(false);
+    expect(meta.reason).toBe('strict-mode-no-trusted-sinks');
+    expect(meta.tokens_redeemed).toBe(0);
+  });
+
+  it('strict + WHITESPACE-only trusted list → same block, same reason', async () => {
+    const { exec, auditEvents } = detokExec(
+      {
+        sessionId: '123e4567-e89b-42d3-a456-426614174007',
+        targetField: '*',
+        strict: true,
+        sinkUrl: 'https://anywhere.invalid/x',
+        trustedSinks: '   ',
+      },
+      [{ json: { body: 'reach [EMAIL_001] now' } }],
+    );
+
+    await new Privent().execute.call(exec);
+    await flushPromises();
+
+    const meta = firstMeta(auditEvents());
+    expect(meta.sink_trusted).toBe(false);
+    expect(meta.reason).toBe('strict-mode-no-trusted-sinks');
+  });
+
   it('non-strict + sinkUrl absent → sink_id=null, sink_trusted=true', async () => {
     const { exec, auditEvents } = detokExec(
       { sessionId: '123e4567-e89b-42d3-a456-426614174005', targetField: '*', strict: false },

@@ -18,10 +18,15 @@ import {
 
 /**
  * Returns true if `url` starts with any of the given prefixes.
- * Used for trusted-sink enforcement in strict mode.
+ * Used for trusted-sink enforcement in strict mode — reached ONLY from the
+ * `if (strict)` branch below, so a non-strict run never consults it.
+ *
+ * An empty list means nothing is trusted, not everything. Reading an empty
+ * configuration as permission is what made Strict Mode a no-op for anyone who
+ * turned it on without filling the list in.
  */
 function matchesTrustedSink(url: string, trusted: string[]): boolean {
-  if (trusted.length === 0) return true;
+  if (trusted.length === 0) return false;
   return trusted.some((prefix) => url.startsWith(prefix.trim()));
 }
 
@@ -84,10 +89,12 @@ export async function handleDetokenize(
 
   let sinkUrl = '';
   let isTrusted = true;
+  let noTrustedSinks = false;
   if (strict) {
     sinkUrl = ctx.getNodeParameter('sinkUrl', i) as string;
     const trustedRaw = ctx.getNodeParameter('trustedSinks', i) as string;
     const trusted = trustedRaw.split(',').map((s) => s.trim()).filter(Boolean);
+    noTrustedSinks = trusted.length === 0;
     isTrusted = matchesTrustedSink(sinkUrl, trusted);
   }
 
@@ -118,7 +125,7 @@ export async function handleDetokenize(
         sink_trusted: false,
         strict: true,
         tokens_redeemed: 0,
-        reason: 'strict-mode-block',
+        reason: noTrustedSinks ? 'strict-mode-no-trusted-sinks' : 'strict-mode-block',
         ...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
       }),
     };
@@ -129,7 +136,9 @@ export async function handleDetokenize(
       privent: {
         sessionId,
         detokenized: false,
-        reason: 'strict-mode: destination URL not in trusted sinks list',
+        reason: noTrustedSinks
+          ? 'Strict Mode is on but no Trusted Sinks are configured, so the original values were not restored — add the destination URL to Trusted Sinks, or turn Strict Mode off.'
+          : 'Strict Mode blocked restoring the original values because the destination URL is not in Trusted Sinks — add it to the list, or turn Strict Mode off.',
       },
     };
   }
