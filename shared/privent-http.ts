@@ -11,8 +11,8 @@
  * server-side: tokens in the Privent Cloud vault, correlation context carried
  * on the n8n item between nodes.
  */
-import type { IDataObject, IExecuteFunctions, IHttpRequestMethods } from 'n8n-workflow';
-import { NodeOperationError } from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, IHttpRequestMethods, JsonObject } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import type {
   AuditEvent,
   EntityKind,
@@ -138,6 +138,19 @@ function serializeForWire(event: AuditEvent): AuditEventV1 {
     ...(event.hopDepth != null ? { hop_depth: event.hopDepth } : {}),
   };
   return Contracts.v1.AuditEventV1Schema.parse(wire);
+}
+
+/**
+ * Re-throw helper. n8n surfaces `NodeApiError`/`NodeOperationError` with their
+ * HTTP context; a raw error loses it. Every HTTP failure in the operations is
+ * already wrapped at the call site, so this must NOT wrap twice — an
+ * already-wrapped error is passed through untouched, and only a genuinely raw
+ * one (a bug, a core throw) gets wrapped. Measured: the operator-visible
+ * message for a backend 400 is unchanged by this helper.
+ */
+export function wrapNodeError(ctx: IExecuteFunctions, err: unknown): Error {
+  if (err instanceof NodeApiError || err instanceof NodeOperationError) return err;
+  return new NodeApiError(ctx.getNode(), err as JsonObject);
 }
 
 const DEFAULT_TTL_MS = 60 * 60 * 1000; // 60 minutes — mirrors CloudTokenVault.
@@ -428,7 +441,7 @@ export async function priventVisitorRequest<T>(
   try {
     return await send(visitorId);
   } catch (err) {
-    if (httpErrorStatus(err) !== 401) throw err;
+    if (httpErrorStatus(err) !== 401) throw wrapNodeError(ctx, err);
     // Stale visitor id — drop the cache entry, mint fresh, retry exactly once.
     const cache = (ctx.getWorkflowStaticData('global').priventVisitor ?? {}) as Record<
       string,
@@ -878,7 +891,17 @@ export function safeFrameworkVersion(): string | undefined {
   if (_fwRead) return _fwVersion;
   _fwRead = true;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // Dynamic require, not a static import: `n8n-workflow` is a PEER the host
+    // supplies at runtime, and its `package.json` is not in that package's
+    // `exports` map, so a static import cannot resolve it. The try/catch is
+    // the contract — an unresolvable peer leaves the version undefined.
+    //
+    // The eslint-disable that used to sit here named
+    // `@typescript-eslint/no-require-imports`, a rule this config does not
+    // register: a directive protecting against nothing, which ESLint itself
+    // reported as an error once shared/ entered lint scope. If that plugin is
+    // ever registered, this line needs a real answer — recorded as F-G, not
+    // left as a TODO in the code.
     const pkg = require('n8n-workflow/package.json') as { version?: unknown };
     if (typeof pkg.version === 'string' && pkg.version.length > 0) _fwVersion = pkg.version;
   } catch {

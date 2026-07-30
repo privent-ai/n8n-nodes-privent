@@ -13,6 +13,7 @@ import {
   getPriventBaseUrl,
   getVaultBackend,
   telemetryPing,
+  wrapNodeError,
 } from '../../shared/privent-http.js';
 import { handleSession } from './operations/session.js';
 import { handleTokenize } from './operations/tokenize.js';
@@ -76,8 +77,7 @@ export class Privent implements INodeType {
           {
             name: 'Tokenless (Visitor)',
             value: 'tokenless',
-            description:
-              'No API key — in-memory tokenization + risk scoring via an anonymous visitor id. The backend must have visitor auth enabled.',
+            description: 'No API key — in-memory tokenization + risk scoring via an anonymous visitor ID. The backend must have visitor auth enabled.',
           },
           {
             name: 'Local (No Backend)',
@@ -99,12 +99,12 @@ export class Privent implements INodeType {
         noDataExpression: true,
         displayOptions: { show: { authentication: ['apiKey'] } },
         options: [
+          { name: 'Audit', value: 'audit' },
+          { name: 'Detokenize', value: 'detokenize' },
+          { name: 'Handoff', value: 'handoff' },
+          { name: 'Risk Check', value: 'riskCheck' },
           { name: 'Session', value: 'session' },
           { name: 'Tokenize', value: 'tokenize' },
-          { name: 'Detokenize', value: 'detokenize' },
-          { name: 'Risk Check', value: 'riskCheck' },
-          { name: 'Audit', value: 'audit' },
-          { name: 'Handoff', value: 'handoff' },
         ],
         default: 'tokenize',
       },
@@ -115,10 +115,10 @@ export class Privent implements INodeType {
         noDataExpression: true,
         displayOptions: { show: { authentication: ['tokenless'] } },
         options: [
-          { name: 'Session', value: 'session' },
-          { name: 'Tokenize', value: 'tokenize' },
           { name: 'Detokenize', value: 'detokenize' },
           { name: 'Risk Check', value: 'riskCheck' },
+          { name: 'Session', value: 'session' },
+          { name: 'Tokenize', value: 'tokenize' },
         ],
         default: 'tokenize',
       },
@@ -129,8 +129,8 @@ export class Privent implements INodeType {
         noDataExpression: true,
         displayOptions: { show: { authentication: ['local'] } },
         options: [
-          { name: 'Tokenize', value: 'tokenize' },
           { name: 'Detokenize', value: 'detokenize' },
+          { name: 'Tokenize', value: 'tokenize' },
         ],
         default: 'tokenize',
       },
@@ -285,8 +285,8 @@ export class Privent implements INodeType {
         name: 'framework',
         type: 'options',
         options: [
-          { name: 'n8n', value: 'n8n' },
           { name: 'Manual / Custom', value: 'manual' },
+          { name: 'Native', value: 'n8n' },
         ],
         default: 'n8n',
         description: 'Identifies the orchestration framework in audit logs',
@@ -469,7 +469,7 @@ export class Privent implements INodeType {
         type: 'boolean',
         default: false,
         description:
-          'When enabled, detokenization is blocked unless the destination URL matches the Trusted Sinks list. Tokens are left in place and an audit event is written. Use this to prevent accidental PII egress to untrusted systems.',
+          'Whether detokenization is blocked unless the destination URL matches the Trusted Sinks list. When enabled, tokens are left in place and an audit event is written — use it to prevent accidental PII egress to untrusted systems.',
         displayOptions: { show: { resource: ['detokenize'], operation: ['detokenize'] } },
       },
       {
@@ -568,10 +568,10 @@ export class Privent implements INodeType {
         name: 'eventType',
         type: 'options',
         options: [
-          { name: 'LLM Call', value: 'llm_call' },
-          { name: 'Policy Decision', value: 'policy_decision' },
           { name: 'Egress', value: 'egress' },
           { name: 'Error', value: 'error' },
+          { name: 'LLM Call', value: 'llm_call' },
+          { name: 'Policy Decision', value: 'policy_decision' },
         ],
         default: 'llm_call',
         description: 'Audit event type. LLM Call triggers backend cost calculation from ModelPricing.',
@@ -606,17 +606,18 @@ export class Privent implements INodeType {
         displayName: 'Prompt Tokens',
         name: 'promptTokens',
         type: 'string',
+        typeOptions: { password: true },
         default: '={{$json.usage.prompt_tokens}}',
-        description:
-          'n8n expression resolving to the prompt token count. Default reads OpenAI-style {usage:{prompt_tokens}} from the previous node.',
+        description: 'Expression resolving to the prompt token count. Default reads OpenAI-style {usage:{prompt_tokens}} from the previous node.',
         displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'], eventType: ['llm_call'] } },
       },
       {
         displayName: 'Completion Tokens',
         name: 'completionTokens',
         type: 'string',
+        typeOptions: { password: true },
         default: '={{$json.usage.completion_tokens}}',
-        description: 'n8n expression resolving to the completion token count',
+        description: 'Expression resolving to the completion token count',
         displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'], eventType: ['llm_call'] } },
       },
       {
@@ -636,8 +637,7 @@ export class Privent implements INodeType {
         type: 'string',
         default: '={{ $("Privent Session").item.json.sessionId }}',
         required: true,
-        description:
-          'Session ID from the upstream Privent Session node — the "from" side of the handoff edge.',
+        description: 'Session ID from the upstream Privent Session node — the "from" side of the handoff edge',
         displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
       },
       {
@@ -665,7 +665,7 @@ export class Privent implements INodeType {
         type: 'options',
         options: [
           {
-            name: 'Agent (in-org)',
+            name: 'Agent (In-Org)',
             value: 'agent',
             description: 'Hand off to another Privent-aware agent in the same organization',
           },
@@ -697,7 +697,7 @@ export class Privent implements INodeType {
         type: 'string',
         default: '',
         required: true,
-        description: 'Opaque identifier for an external sink (e.g. webhook URL hash, partner ID).',
+        description: 'Opaque identifier for an external sink (e.g. webhook URL hash, partner ID)',
         displayOptions: {
           show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'], targetKind: ['sink'] },
         },
@@ -708,10 +708,10 @@ export class Privent implements INodeType {
         type: 'options',
         options: [
           { name: 'Delegation', value: 'delegation' },
+          { name: 'Other', value: 'other' },
           { name: 'Subgraph Call', value: 'subgraph_call' },
           { name: 'Tool Invocation', value: 'tool_invocation' },
           { name: 'Webhook Trigger', value: 'webhook_trigger' },
-          { name: 'Other', value: 'other' },
         ],
         default: 'delegation',
         description: 'Categorises the handoff for the Trust Map graph filters',
@@ -804,7 +804,7 @@ export class Privent implements INodeType {
             out.push({ json: { error: (err as Error).message }, pairedItem: { item: i } });
             continue;
           }
-          throw err;
+          throw wrapNodeError(this, err);
         }
       }
 
@@ -812,7 +812,7 @@ export class Privent implements INodeType {
     } catch (err) {
       status = 'error';
       errorType = (err as Error)?.constructor?.name;
-      throw err;
+      throw wrapNodeError(this, err);
     } finally {
       void telemetryPing(this, {
         operation: resource,
