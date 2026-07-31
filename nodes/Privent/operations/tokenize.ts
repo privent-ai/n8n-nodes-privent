@@ -153,6 +153,18 @@ function detectCustomMatches(text: string, detectors: readonly CustomDetector[])
 }
 
 /**
+ * Text immediately preceding a match, on its own line, capped at 40 characters.
+ *
+ * Line-scoped and prefix-only on purpose: the rules that consume it ask what
+ * came BEFORE the value. A whole-window context would let a `#` or `;` anywhere
+ * nearby satisfy the comment rule and suppress a real match.
+ */
+function precedingContext(text: string, index: number): string {
+  const lineStart = text.lastIndexOf('\n', Math.max(0, index - 1)) + 1;
+  return text.slice(Math.max(lineStart, index - 40), index);
+}
+
+/**
  * `tokenize` in `local` (no-backend) mode: regex-only detection over the
  * Detection-Level-gated detector set, an in-memory vault, and ZERO network
  * (no riskScore, no audit). Session id is optional — auto-generated and emitted
@@ -181,7 +193,12 @@ async function handleTokenizeLocal(ctx: IExecuteFunctions, i: number): Promise<I
   const detectors = buildLocalDetectors(level);
   const spans = removeOverlaps(
     detectMatches(text, detectors, { preserveFlags: true }).filter(
-      (s) => !isLocalFalsePositive(s.value, s.kind),
+      // The third argument is the text preceding the match on its own line, capped
+      // at 40 chars. It was never passed before — every call site handed the empty
+      // string — so every context-aware rule ("preceded by `port:`", "preceded by a
+      // currency word", "inside a comment") was inert while the value-aware ones
+      // fired everywhere. See NP-T.
+      (s) => !isLocalFalsePositive(s.value, s.kind, precedingContext(text, s.index)),
     ),
   )
     .filter((s) => s.length > 0 && s.index >= 0 && s.index + s.length <= text.length)
