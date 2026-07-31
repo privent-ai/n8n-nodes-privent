@@ -43,6 +43,24 @@ export const NODE_VERSION = (() => {
 })();
 
 /**
+ * The `@priventai/core` version bundled INTO this artifact, replaced by
+ * `tsup define` at build time (see tsup.config.ts).
+ *
+ * NP-O: `noExternal` copies core into the published files, so the declared range
+ * resolves nothing at runtime and the lockfile is a statement about a build
+ * machine, not about an artifact. Measured, the bundle could not be fingerprinted
+ * by version at all — tree-shaking removes exactly the distinguishing bytes. This
+ * constant is the artifact saying what it carries, rather than a reader inferring
+ * it. Same `typeof` guard as `NODE_VERSION`: un-bundled unit runs report
+ * `'unknown'` rather than throwing, and nothing touches `globalThis`.
+ */
+declare const __CORE_VERSION__: string;
+export const CORE_VERSION = (() => {
+  const v: unknown = typeof __CORE_VERSION__ !== 'undefined' ? __CORE_VERSION__ : undefined;
+  return typeof v === 'string' && v.length > 0 ? v : 'unknown';
+})();
+
+/**
  * Inlined from `@priventai/core` `cloud/audit-wire.ts` — `serializeForWire` is
  * not part of the published 0.8.0 surface, but its `Contracts.v1.AuditEventV1Schema`
  * is. Byte-faithful copy so the v1 wire contract (camel→snake, ms→ISO,
@@ -1021,6 +1039,7 @@ export function buildAuditMetadata(
     node_name: node.name,
     framework: 'n8n',
     node_version: NODE_VERSION,
+    core_version: CORE_VERSION,
     ...(ctx.vaultBackend ? { vault_backend: ctx.vaultBackend } : {}),
     ...(extras ?? {}),
   };
