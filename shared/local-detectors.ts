@@ -721,8 +721,10 @@ interface LocalFalsePositiveRule {
   matcher: (value: any, context: any) => boolean;
 }
 
-// Value-based subset of openredaction's commonFalsePositives (MIT). Invoked with
-// no context, so context-only branches no-op and only value-based checks fire.
+// openredaction's commonFalsePositives (MIT), with one rule replaced — see the
+// generator. Every matcher takes (value, context); `context` used to be passed
+// as the empty string at every call site, which silently disabled every
+// context-aware rule and left only the value-aware ones firing, everywhere.
 const FALSE_POSITIVE_RULES: LocalFalsePositiveRule[] = [
   { patternType: ["PHONE","PHONE_UK","PHONE_US"], matcher: (value, context) => {
 			if (/\b(version|v|ver|release|build)\s*[:\s]*/i.test(context)) return true;
@@ -763,8 +765,12 @@ const FALSE_POSITIVE_RULES: LocalFalsePositiveRule[] = [
 			return /\d+(\.\d+)?\s*(percent|percentage|%)/i.test(fullContext);
 		} },
   { patternType: ["NAME","EMAIL"], matcher: (value, context) => {
-			if (/\b(foo|bar|baz|qux|example|test|demo|sample|placeholder|dummy|mock)\b/i.test(value.toLowerCase())) return true;
-			return /(\/\/|\/\*|\*|#|--|<!--|;)/.test(context);
+			const words = /\b(foo|bar|baz|qux|example|test|demo|sample|placeholder|dummy|mock)\b/i;
+			const raw = String(value);
+			const at = raw.lastIndexOf("@");
+			// EMAIL: judge the domain. Anything else: judge the whole value.
+			if (words.test(at === -1 ? raw.toLowerCase() : raw.slice(at + 1).toLowerCase())) return true;
+			return /(\/\/|\/\*|<!--)/.test(String(context ?? ""));
 		} },
   { patternType: ["EMAIL","NAME","PHONE","ADDRESS"], matcher: (value) => {
 			return [
@@ -895,11 +901,20 @@ const FALSE_POSITIVE_RULES: LocalFalsePositiveRule[] = [
 		} },
 ];
 
-/** True if `value` (matched as `type`) is a known value-based false positive. */
-export function isLocalFalsePositive(value: string, type: string): boolean {
+/**
+ * True if `value` (matched as `type`) is a known false positive.
+ *
+ * `context` is the text immediately PRECEDING the match on its own line. The
+ * rules that read it ask questions like "is this preceded by `port:`" or
+ * "is this inside a comment", which are questions about what came before —
+ * passing the whole surrounding window would let a stray `#` or `;` anywhere
+ * nearby suppress a real match. Callers that have no text to offer pass nothing,
+ * and the context-aware rules simply do not fire, exactly as before.
+ */
+export function isLocalFalsePositive(value: string, type: string, context = ''): boolean {
   for (const r of FALSE_POSITIVE_RULES) {
     if (!r.patternType.includes(type)) continue;
-    try { if (r.matcher(value, '')) return true; } catch { /* ignore */ }
+    try { if (r.matcher(value, context)) return true; } catch { /* ignore */ }
   }
   return false;
 }
