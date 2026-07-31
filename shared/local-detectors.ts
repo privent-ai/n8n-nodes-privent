@@ -767,11 +767,24 @@ const FALSE_POSITIVE_RULES: LocalFalsePositiveRule[] = [
 			return /\d+(\.\d+)?\s*(percent|percentage|%)/i.test(fullContext);
 		} },
   { patternType: ["NAME","EMAIL"], matcher: (value, context) => {
-			const words = /\b(foo|bar|baz|qux|example|test|demo|sample|placeholder|dummy|mock)\b/i;
 			const raw = String(value);
 			const at = raw.lastIndexOf("@");
-			// EMAIL: judge the domain. Anything else: judge the whole value.
-			if (words.test(at === -1 ? raw.toLowerCase() : raw.slice(at + 1).toLowerCase())) return true;
+			if (at === -1) {
+				// Not an address — NAME keeps the whole-value word check.
+				return /\b(foo|bar|baz|qux|example|test|demo|sample|placeholder|dummy|mock)\b/i.test(raw.toLowerCase());
+			}
+			// EMAIL: match RFC 2606 names EXACTLY, never as substrings or labels.
+			// A word-list applied to the domain suppressed `ayse@demo.acme.com`,
+			// `it@test.bank.co.uk` and `ops@sample.acme.io` — ordinary corporate
+			// subdomains, real customer mail, silently unmasked. RFC 2606 reserves
+			// exact names, so the check is exact.
+			const domain = raw.slice(at + 1).toLowerCase().replace(/[.>)\],;:]+$/, "");
+			const tld = domain.slice(domain.lastIndexOf(".") + 1);
+			// `invalid` is deliberately NOT here: RFC 2606 reserves it for names that
+			// are obviously non-existent, not for documentation, and this repository's
+			// own fixtures rely on it staying detectable (NP-L).
+			if (tld === "test" || tld === "example" || tld === "localhost") return true;
+			if (/(^|\.)example\.(com|net|org)$/.test(domain)) return true;
 			return /(\/\/|\/\*|<!--)/.test(String(context ?? ""));
 		} },
   { patternType: ["EMAIL","NAME","PHONE","ADDRESS"], matcher: (value) => {
