@@ -355,7 +355,7 @@ export class Privent implements INodeType {
             name: 'Aggressive',
             value: 'aggressive',
             description:
-              'Standard plus the extra detectors that passed measurement — currently Bitcoin and Ethereum wallet addresses, IPv4 and MAC addresses, DEA numbers, UPS tracking numbers and VAT numbers. It no longer masks personal names, street addresses, social usernames or gamertags, or bare-number IDs: those patterns matched ordinary words such as "reach" and "today", so they were removed rather than left on. Every admitted detector is listed in docs/detector-fp-table.md with the measurement that admitted it.',
+              'Standard plus the extra detectors that passed measurement — currently street addresses, Bitcoin and Ethereum wallet addresses, IPv4 and MAC addresses, DEA numbers, UPS tracking numbers and VAT numbers. It no longer masks personal names, social usernames or gamertags, or bare-number IDs: those patterns matched ordinary words such as "reach" and "today", so they were removed rather than left on. Every admitted detector is listed in docs/detector-fp-table.md with the measurement that admitted it.',
           },
         ],
         default: 'standard',

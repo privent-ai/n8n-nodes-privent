@@ -50,3 +50,6 @@ FEDEX_TRACKING | 961234567890 | Shipment 961234567890 was delivered to the wrong
 ISBN | 978-3-16-148410-0 | The training pack cites ISBN 978-3-16-148410-0 as required reading.
 BITCOIN_ADDRESS | 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa | The ransom note listed 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa as the destination.
 ETHEREUM_ADDRESS | 0x52908400098527886E0F7030069857D2E4169EE7 | Treasury moved the balance to 0x52908400098527886E0F7030069857D2E4169EE7 last night.
+ADDRESS_STREET | 742 Evergreen Terrace | The delivery was refused at 742 Evergreen Terrace and returned to the depot.
+ADDRESS_STREET | 18 Larkspur Lane | Please update the billing address to 18 Larkspur Lane before the next run.
+ADDRESS_STREET | 221B Baker Street | The site survey covers 221B Baker Street and the two adjacent units.
