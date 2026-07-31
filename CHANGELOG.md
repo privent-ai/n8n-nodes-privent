@@ -4,6 +4,97 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.0.0] - 2026-08-01
+
+**This is a major version because several changes alter what the node emits, and
+a stored workflow can depend on that.** A minor number here would have implied a
+safety this release does not have. Read the BREAKING section before upgrading.
+
+### BREAKING — output a stored workflow may branch on
+
+- **`privent.detokenized` now means "values came back", not "the operation ran".**
+  It used to be `true` unconditionally. It is now `true` only when every
+  placeholder found was resolved, and the item carries `privent.reason` when it
+  is not. An IF node branching on `privent.detokenized` will take a different
+  path for items whose tokens the vault could not resolve — which previously
+  reported success while leaving the text unchanged. The audit event also now
+  carries `tokens_found` alongside `tokens_redeemed`; the gap between the two
+  numbers is the signal that tokens were present and unresolvable.
+- **Detection Level "Aggressive" no longer masks names, social usernames,
+  gamertags, or bare-number IDs.** Those patterns matched ordinary English words —
+  `reach` was a gamertag, `today` an airport code — so a sentence containing an
+  email address came back with the email intact and four junk tokens around it.
+  Aggressive is now Standard plus a measured set: street addresses, Bitcoin and
+  Ethereum wallet addresses, IPv4 and MAC addresses, DEA numbers, UPS tracking
+  numbers and VAT numbers. Every one of them was measured against a
+  false-positive corpus before admission; the table ships in
+  `docs/detector-fp-table.md`. **If you selected Aggressive to mask personal
+  names, it no longer does, and it never did so reliably.**
+- **Private, loopback, link-local, multicast and documentation IP addresses are
+  no longer masked.** `10.0.0.5` and `0.0.0.0` come through as written. A private
+  address is not linkable to a person by a recipient outside the network, and
+  masking it made config snippets unusable to the agent downstream. Public
+  addresses are still masked.
+- **A stored node with no explicit Authentication now resolves by credential
+  presence.** If a Privent credential is attached, it runs as API Key exactly as
+  before. If none is attached, it runs as Local instead of failing with
+  "Node does not have any credentials set" — which is what an evaluation
+  install hit on its first execution. Where the mode is inferred, the item says
+  so in `privent.authWarning`.
+
+### Fixed — detection
+
+- **IBANs written the way they are printed are now detected.** `GB29 NWBK 6016
+  1331 9268 19` — groups of four, as it appears on an invoice or in an email —
+  used to come back as `GB29 NWBK [PHONE_001] 19`: the middle digits masked as a
+  phone number, the country and bank codes left in cleartext. Twelve written
+  forms were measured; two were detected before this release, twelve are now.
+  Hyphenated, non-breaking-space, lower-case and mixed-case forms are included.
+- **Addresses at `demo.`, `test.`, `sample.` and `staging.` subdomains are no
+  longer suppressed.** The false-positive filter matched those words as
+  substrings anywhere in the address, so `ayse@demo.acme.com` and
+  `it@test.bank.co.uk` — ordinary corporate mailboxes — were detected as
+  fixtures and left unmasked. RFC 2606 reserves exact names, so the check is now
+  exact: `example.com`/`.net`/`.org` and the reserved `.test`, `.example`,
+  `.localhost` TLDs.
+- **Addresses whose LOCAL PART contains `test`, `demo` or `sample` are no longer
+  suppressed** — `test.user@`, `demo.account@`, `sample.reports@` were all
+  invisible.
+- **Street addresses with an alphanumeric house number are detected.**
+  `221B Baker Street` was not an address; it is now.
+- **Context-aware false-positive rules actually run.** Every rule was invoked
+  with an empty context, so rules like "preceded by `port:`" or "inside a
+  comment" could never fire while value-based rules fired everywhere.
+
+### Fixed — honesty
+
+- **`auto` detection mode no longer swallows HTTP 402.** It still degrades to
+  regex-only when the ML backend is unreachable, but the item now carries
+  `privent.mlDegraded` and the audit event carries `ml_degraded` /
+  `ml_degraded_status`. Payment Required is a plan decision, not a blip, and
+  `cloud` fails the run on the same response.
+- **Strict Mode with an empty Trusted Sinks list now blocks instead of allowing.**
+  An empty list was read as "everything is trusted", so Strict Mode was a no-op
+  for anyone who switched it on without filling the list in.
+- **`framework_version` is absent rather than wrong when n8n's version cannot be
+  read.** It used to report this package's version, and after the core bump would
+  have reported core's — neither is n8n's.
+
+### Added
+
+- **`privent.nodeVersion` on every item, in all three auth modes**, with no
+  network. Version visibility is per channel: API Key reports in the audit event,
+  Tokenless in telemetry, Local on the item only — and Local stays offline, which
+  is the promise that mode exists for.
+- **The published bundle now states which `@priventai/core` it contains**, as a
+  literal readable from the tarball without executing it, and as `core_version`
+  in the audit event.
+
+### Changed
+
+- `@priventai/core` 0.8.0 → 0.10.2. Carries the widened token grammar (lower-case
+  tokens now detokenize) and the IBAN printed form upstream.
+
 ## [2.4.0] - 2026-07-20
 
 ### Added
