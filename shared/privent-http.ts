@@ -767,7 +767,21 @@ export function makeResolvedVault(
 interface CloudScoreResponse {
   risk_score: number;
   risk_level: string;
-  categories: Record<string, number>;
+  /**
+   * An ARRAY on the wire. This said `Record<string, number>` and was cast
+   * through, which matched core's DEVELOPER-facing `RiskScore` type
+   * (`Partial<Record<EntityKind, number>>`) and contradicted core's own PUBLISHED
+   * contract (`ScoreResponseSchema`, an array) and privent-backend's DTO
+   * (`string[]`). The divergence originates in core, which declares both shapes;
+   * the wire one is the contract, so it is the one this type states.
+   *
+   * Nothing in this package reads the value — measured, both shapes pass through
+   * to the item and the audit event untouched, no iteration, no key access — so
+   * the correction is a type correction with no behaviour change. What it fixes
+   * is the shape a customer is handed under a name that promised another. See
+   * NP-AC.
+   */
+  categories: string[];
   model: string;
   latency_ms: number;
   entities?: RiskScore['entities'];
@@ -797,7 +811,10 @@ export async function riskScore(
   return {
     risk_score: r.risk_score,
     risk_level: r.risk_level as RiskScore['risk_level'],
-    categories: r.categories as RiskScore['categories'],
+    // Crosses core's own disagreement between its wire schema (array) and its
+    // developer type (object). The value is passed through unchanged; the cast
+    // is named rather than silent. NP-AC.
+    categories: r.categories as unknown as RiskScore['categories'],
     model: r.model,
     latencyMs: Date.now() - start,
     entities: r.entities ?? null,
@@ -830,7 +847,10 @@ export async function riskScoreBatch(
   return res.results.map((r) => ({
     risk_score: r.risk_score,
     risk_level: r.risk_level as RiskScore['risk_level'],
-    categories: r.categories as RiskScore['categories'],
+    // Crosses core's own disagreement between its wire schema (array) and its
+    // developer type (object). The value is passed through unchanged; the cast
+    // is named rather than silent. NP-AC.
+    categories: r.categories as unknown as RiskScore['categories'],
     model: r.model,
     latencyMs: r.latency_ms ?? Date.now() - start,
     entities: r.entities ?? null,
