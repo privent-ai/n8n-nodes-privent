@@ -20,11 +20,12 @@ import { Privent } from '../nodes/Privent/Privent.node.js';
  * and the measurement that motivates it is recorded in NP-U.
  *
  * KNOWN RECALL GAPS, excluded on purpose and listed so the number is honest:
- * international phone (`+90 532 111 22 33`), street address, and IBAN — which is
- * detected as two `PHONE` fragments rather than one `IBAN`. Those are a
- * different axis (patterns that are missing or wrong, not filters that misfire)
- * and folding them in here would make it impossible to tell which change moved
- * which number.
+ * international phone (`+90 532 111 22 33`). Two of the three originally listed
+ * here have since been closed and have their own tests: the IBAN printed form
+ * (NP-Z, `iban-printed-form.test.ts`, 12 of 12 forms, PHONE no longer steals the
+ * span) and the alphanumeric house number (NP-Y, `221B`). They are a different
+ * axis from this file — patterns that are missing or wrong, not filters that
+ * misfire — which is why they were fixed separately rather than folded in here.
  *
  * Also measured and also excluded: the local detector masks non-routable and
  * wildcard IPs — `0.0.0.0` and `10.0.0.5` both become `[IP_ADDRESS_nnn]`.

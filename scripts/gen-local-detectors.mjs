@@ -123,6 +123,58 @@ for (const p of orx.allPatterns) {
   });
 }
 
+// ── Local override: alphanumeric house numbers ───────────────────────────────
+// The vendored ADDRESS_STREET pattern opens with `\d{1,5}\s+`, so `221B Baker
+// Street` is not an address and `742 Evergreen Terrace` is. Alphanumeric house
+// numbers are standard in the UK (`221B`, `14A`) and common elsewhere, so this
+// misses an entire national addressing convention rather than an odd string.
+// Surfaced by N4-7b's own positive corpus — the detector was admitted on two of
+// three cases, and the third failing was the measurement working. Recorded as
+// NP-Y, fixed here.
+//
+// The change is one quantifier: an optional single letter after the number.
+// Deliberately not wider — `\d{1,5}[A-Za-z]{0,2}` would start matching version
+// strings and part numbers, which is the false-positive class this level was
+// just cleaned of.
+for (const d of detectors) {
+  if (d.kind !== 'ADDRESS_STREET') continue;
+  d.source = d.source.replace('\\b\\d{1,5}\\s+', '\\b\\d{1,5}[A-Za-z]?\\s+');
+}
+
+// ── Local override: the IBAN printed form ────────────────────────────────────
+// `@priventai/core`'s IBAN detector is `\b[A-Z]{2}\d{2}[A-Z0-9]{4,30}\b` — no
+// separators, no `i` flag — so an IBAN written the way ISO 13616 defines for
+// PRINTING, which is how it appears on an invoice or in an email, is not
+// detected. Worse than a miss: the PHONE detector takes the digit run in the
+// middle, so `pay GB29 NWBK 6016 1331 9268 19 now` became
+// `pay GB29 NWBK [PHONE_001] 19 now` — a wrong kind, with the country and bank
+// codes left in cleartext. Measured 2 of 12 forms through this package's own
+// local path.
+//
+// The kind is deliberately `IBAN`, the same kind core emits: on the compact form
+// both detectors match the same span and `removeOverlaps` keeps one, and on the
+// printed forms this one is strictly longer, so it wins the span back from PHONE.
+//
+// The grammar lives in core and the fix belongs there too (SDK-H). This override
+// is what this repository can deliver on its own, and it is added AFTER the
+// CORE_KINDS filter on purpose — that filter exists to avoid duplicating core,
+// and here the duplication is the point.
+//
+// Measured before adding: 12/12 forms detected, and ZERO surviving false
+// positives across 72.6 MB (repo prose 0.16 MB, business prose 0.01 MB, and
+// 72.45 MB of node_modules text as a one-off scale check). 443 raw regex hits on
+// that 72.45 MB, all rejected by the MOD-97 + country-length validator, which
+// this package already carries as `validateIBAN`.
+detectors.push({
+  kind: 'IBAN',
+  source: '\\b[A-Z]{2}\\d{2}(?:[ \\u00A0.\\-]?[A-Z0-9]{4})+(?:[ \\u00A0.\\-]?[A-Z0-9]{1,3})?\\b',
+  flags: 'gi',
+  confidence: 0.97,
+  category: 'financial',
+  tier: 'high',
+  validatorName: 'validateIBAN',
+});
+
 // ── Admission: which contextual detectors may enter `aggressive` ──
 // The list is MEASURED, never judged. `scripts/measure-detector-fp.mjs` admits a
 // detector only when it produces zero false positives across both negative
