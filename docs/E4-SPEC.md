@@ -465,10 +465,21 @@ the one token it read back; and whether the org's custom patterns — which only
 this mode fetches — behaved, unless the rig creates one deliberately.
 
 **E4-b cannot see:** anything on the audit stream, because **tokenless emits no
-audit event at all** (an anonymous visitor has no org). Its operator-visible
-record is telemetry plus the item. A rig assertion of the form *"the block was
-visible to the operator"* must read the **item** here, or it will fail E4-b for a
-property that is by design.
+audit event at all** (an anonymous visitor has no org). Measured: a Strict-Mode
+block in tokenless emits **0 audit events and makes 0 HTTP calls** — the only
+record is `privent.detokenized: false` with a `reason`, on the item.
+
+The telemetry ping tokenless *does* send cannot substitute: its allowlist is
+`install_id`, `operation`, `auth_mode`, `node_version`, `n8n_version`,
+`item_count`, `status`, `error_type`, `timestamp` — execution-level facts, with
+entity kinds and counts deliberately excluded.
+
+**This is a product finding, not a rig caveat — NP-AE.** The closure condition's
+second half, *every block is visible to the operator*, has no mechanism in this
+mode. **E4-b can therefore pass containment and fail visibility, and the rig must
+report those as two verdicts rather than one.** A rig asserting *"the block was
+visible to the operator"* would be correct about the closure condition and wrong
+about the product, which is what it looks like when the two disagree.
 
 **Both cannot see:** the vault contract. NP-K's contract check covers 3 of 9
 endpoints and the three vault endpoints are **not** among them — the only part of
@@ -489,10 +500,17 @@ again on 2026-08-01 and all still holding:
   default `GITHUB_TOKEN` cannot check it out;
 - the only secret this repository holds is `NPM_TOKEN`.
 
-**So E4-a and E4-b are Linux-box cells, not CI cells** — the same class as E1,
-E2, E3 and E5, and unlike E4-c, which is the single exception because it needs no
-backend at all. That asymmetry is the argument for running E4-c in CI now and
-costing E4-a/E4-b on the box privent-n8n already sizes.
+**So E4-a and E4-b cannot run in THIS repository's CI** — and that is a limit of
+this instrument, not of the subject. `privent-n8n`'s rig brings up a full product
+stack including a backend (`e2e/rig.sh:233`, `cmd_up_full`), so **E4-a and E4-b
+are rig cells, owned by privent-n8n and costed after E5. They are not blocked.**
+
+The earlier phrasing here said they "cannot run", which reported an instrument's
+limit as the subject's limit — the scope-in-result rule inverted. Corrected.
+
+E4-c remains the single sub-cell that needs no backend at all, which is why it is
+the one that runs in this repository's CI, and the asymmetry is the argument for
+running it there now rather than waiting for the rig.
 
 The cheap green — a private-repo read credential in a public repository's CI —
 stays refused, for the reason it was refused before: that identity would be
