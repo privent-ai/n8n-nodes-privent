@@ -233,3 +233,69 @@ designing around it. The constraint set it enforces is usually narrower than the
 one being reasoned from, and the option it leaves is the one that survives
 review.
 
+---
+
+## 8. A requirement added after a budget is agreed re-opens the budget
+
+A budget is agreed against a scope. Adding a requirement after that point changes
+the scope, so the budget it was derived from no longer describes the work. The
+person who adds the requirement owns the re-derivation — not the person who
+implements it, and certainly not the number, which cannot re-derive itself.
+
+**Instances.** NP-K's data/instrument budget went 25 → 43 after two output
+conditions were added at approval time, and **24 of the 43 lines are those two
+conditions** — the printed coverage fraction and the printed exclusion statement.
+The same day, privent-backend's R-0 logic budget went 60 → 92 after a custom
+member and a reason enum were added at approval.
+
+**Rule.** When scope is added after a budget is agreed, restate the budget in the
+same message that adds the scope. When implementing under a budget that has been
+overtaken this way, **report the number rather than absorbing it** — an overrun
+that is reported is a scope record; an overrun that is absorbed is a number
+nobody can audit later.
+
+---
+
+## 9. A simulation with no comparator teaches whatever it says
+
+A mock is the world, as far as every test that uses it is concerned. If nothing
+compares it to the thing it stands for, it does not merely fail to catch a
+divergence — it **manufactures** one, and then certifies it on every run.
+
+**Instance — NP-AC, found by the comparator on its first execution.** The test
+harness answered `/v1/risk/score` with `categories` as an object. The published
+contract, privent-backend's DTO and core's own wire schema all say array. Every
+test in the suite had been taught the object shape, the production type matched
+the mock rather than the contract, and the suite was green throughout. The defect
+survived because **there was no comparator** — not because it was subtle.
+
+Validating the harness against the published contract found it in the first run
+of the first test written to do so.
+
+**Rule.** Every simulation needs something outside itself to be checked against —
+a published schema, a recorded transcript, a live peer. Where no comparator
+exists, say so in the run's own output and treat the simulation's agreement as
+evidence about the simulation. **The general case:** an unverified simulation is
+not a weaker version of the real thing, it is a *different* thing that has been
+given the real thing's name.
+
+---
+
+## 10. An instrument's output can become an interface
+
+Once another repository parses an instrument's output, the wording is a contract
+and changing it breaks a consumer that does not appear in this repository's
+tests, dependency graph, or CI.
+
+**Instance — `scripts/verify-artifact.mjs`.** privent-sdk measured that sharing
+the script was not possible: their repository is private, the script needed four
+edits to run there, and an edited vendor copy cannot be diff-checked against
+upstream. So they wrote a **second implementation against this script's output
+contract** (cited at `d9349162`) rather than forking the code. The script stays
+here, unforked; what travelled between the repositories was the output format.
+
+**Rule.** Treat an instrument's printed lines as versioned once anything outside
+the repository reads them, and say what changed when they change. **Corollary:**
+this is an argument for putting scope and exclusions *in the output* rather than
+in a README — the part that travels is the part that is printed.
+

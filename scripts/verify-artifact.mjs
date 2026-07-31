@@ -15,6 +15,14 @@
 // The second is the reproducibility check. It answers "can we rebuild what we
 // shipped" with bytes rather than with reasoning, and it is the check that was
 // missing when the question was asked.
+//
+// THE PRINTED OUTPUT IS AN INTERFACE. privent-sdk measured that sharing this
+// script was not possible — their repository is private, it needed four edits to
+// run there, and an edited vendor copy cannot be diff-checked against upstream —
+// so they wrote a second implementation against THIS SCRIPT'S OUTPUT (cited at
+// d9349162). The format below is therefore consumed outside this repository by
+// something that appears in none of its tests. Change the lines if they are
+// wrong; say what changed when you do. METHOD §10.
 
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
