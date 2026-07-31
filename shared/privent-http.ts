@@ -37,7 +37,7 @@ type AuditEventV1 = Contracts.v1.AuditEventV1;
  * allowlist happy — no `globalThis`/`process` access.
  */
 declare const __SDK_VERSION__: string;
-const NODE_VERSION = (() => {
+export const NODE_VERSION = (() => {
   const v: unknown = typeof __SDK_VERSION__ !== 'undefined' ? __SDK_VERSION__ : undefined;
   return typeof v === 'string' && v.length > 0 ? v : 'unknown';
 })();
