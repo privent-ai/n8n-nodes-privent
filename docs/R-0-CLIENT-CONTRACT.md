@@ -283,7 +283,189 @@ same argument as `detectors_applied ⊆ detectors_expected`.
 | `detected_not_masked_by` | kind-aware gating (N-12) is impossible without per-kind provenance | `detected_not_masked` itself |
 | `detection_complete` **present, not optional-absent** | absence and false are indistinguishable across backend versions | `origin/main` is 210 commits behind `origin/dev` |
 | R-0.5 as a stated contract rule | the correct paragraph exists as a comment and did not prevent the defect it warns about | `tokens_found` / `tokens_redeemed`, N4-4 |
+| `X-Privent-Client-Contract: r0` request header | makes version cells ② and ③ distinguishable, and makes "present, not optional-absent" enforceable for declared clients without breaking undeclared ones | §7 |
+
+**Sizing, measured rather than estimated (§8).** `detectors_applied` /
+`detectors_skipped` project a structure the service already builds per request —
+`contributions`, carrying `degraded`, `callSucceeded`, `circuitBypassed` and
+`degradedReason` — and currently drops before the wire. `detectors_expected` is
+the genuinely new part, and it carries one hard requirement: **derive it from
+configuration and switch state only, never from an outcome.** Otherwise it repeats
+`semanticEnabled`'s collapse and the comparison in §3.1 degenerates into
+`applied ⊆ applied`.
 
 **The client half of all of this costs about a dozen lines.** That is measured,
 not estimated: it is what `mlDegraded` cost, on the one path where the signal
 already exists.
+
+---
+
+## 7 · Version negotiation — four cells, not one
+
+Adding fields to `evaluate` is additive. The **behaviour** it enables is not: a
+client failing closed on partial detection only helps when both sides moved. And
+the sides do not move together — `origin/main` is 210 commits behind `origin/dev`
+in the repository that would ship the field, and interceptor versions already
+deployed know nothing about it.
+
+So R-0 has to answer four cells. Three of them are silent by default, which is
+the property that makes this section necessary rather than academic.
+
+| | new client | old client |
+|---|---|---|
+| **new backend** | ① the design case | ② field arrives, ignored — silent |
+| **old backend** | ③ field absent — **the deployment risk** | ④ today |
+
+### ① new backend → new client
+
+The design case. Nothing further required.
+
+### ② new backend → old client — silent, and the visibility must be SERVER-side
+
+An old client ignores an unknown field. Nothing on the client can make that
+visible, because the client is the thing that does not know. Any proposal that
+puts the visibility on the client side here is proposing that the unaware
+component report its own unawareness.
+
+**Therefore the visibility belongs to the backend, and it needs a signal to hang
+it on.** The client declares its contract level on the request:
+
+```
+X-Privent-Client-Contract: r0
+```
+
+With that, cell ② becomes a number the backend can count and an operator can
+look at: **responses carrying partial-detection provenance that were delivered to
+clients which did not declare `r0`.** A non-zero value there means protection is
+weaker than the dashboard suggests, for a reason nobody would otherwise see.
+
+Without the header the backend cannot distinguish ② from ①, and the silence is
+structural rather than an oversight.
+
+### ③ old backend → new client — the cell R-0's own optionality opens
+
+A new client asks for provenance and the response does not contain it. The two
+obvious answers are both wrong:
+
+- **fail closed** — every old backend breaks every new client. That is a
+  self-inflicted outage caused by a *deployment lag*, not by a risk decision, and
+  it would guarantee the field never ships.
+- **proceed** — the guarantee is silently off, which is the exact defect class
+  this proposal exists to remove. It would make R-0 a field that reads `undefined`
+  in production and reassures no one.
+
+**The resolution is that absence is a THIRD state and must be surfaced, never
+resolved silently.** Concretely:
+
+1. **Absence is `unknown`, not `false` and not `true`.** A client that declared
+   `r0` and received no provenance records
+   `detection_provenance: 'unavailable'` — on the item and in the audit event,
+   the same two channels `mlDegraded` already uses.
+2. **The action on `unknown` is configuration, with no silent default.** The
+   client exposes `onProvenanceUnavailable: 'proceed' | 'warn' | 'block'`.
+   This package would ship **`warn`**: proceed with the data path, mark the item
+   loudly. That is exactly the shape N4-6 already shipped for `auto` mode — *keep
+   degrading, stop pretending* — and it is the only option that neither breaks
+   deployments nor lies.
+3. **Once a client declares `r0`, absence stops being a version question.** A
+   backend that accepts the header and then omits the fields is in **protocol
+   violation**, and clients should treat it as `unavailable` and say so. This is
+   what makes §5's "present, not optional-absent" rule enforceable rather than
+   aspirational: presence is contractual **for declared clients only**, which is
+   also what keeps the field additive for everyone else.
+
+Note the asymmetry with `N4-3`, deliberately: this package fails **closed** when
+Strict Mode has no Trusted Sinks, because that is an operator's configuration
+failing to deliver protection the operator asked for. Version skew is not that —
+it is a peer being old — and treating a deployment lag with the same weapon as a
+misconfiguration is how a contract becomes something teams route around.
+
+### ④ old → old
+
+Today. The state being left, and the reason the header matters: it is what lets
+the programme measure how much of the fleet is still in it.
+
+---
+
+## 8 · `detectors_expected` — measured before it is designed on
+
+§3.1's whole argument is that the client's rule becomes a **comparison** rather
+than an inference. That rests on the backend knowing what it *should* have run. A
+pipeline can easily know what it **did** and have no declared expectation at all,
+in which case `detectors_expected` is not a field — it is a new capability, and
+the proposal would have quietly assumed it exists.
+
+Read at `privent-backend` `origin/dev` `d606ab9`. The answer is different for the
+two halves, and that difference is the item's real shape.
+
+### 8.1 · What the pipeline DID — exists, per request, already structured
+
+`src/tool-detection/types/tool-detection-result.types.ts:61` and the object built
+at `src/tool-detection/tool-detection.service.ts:140-165`:
+
+```ts
+contributions: {
+  regex:    { score, category, matchedPaths },
+  semantic: { …, callSucceeded: boolean, circuitBypassed: boolean, degradedReason: string | null },
+  ml:       { model: string, entityCount: number, degraded: boolean },
+  fusion:   { … },
+}
+```
+
+**Per-family provenance, with reasons, computed per request — and dropped before
+the wire.** `ToolExecEvaluateResponseV1` carries none of it. ML even has a
+`model: 'skipped'` sentinel on the fallback path
+(`tool-detection.service.ts:268`).
+
+So `detectors_applied` and `detectors_skipped` are a **projection of data the
+service already computes**, not a new capability. That is the cheap half, and it
+is cheaper than the proposal assumed.
+
+### 8.2 · What the pipeline SHOULD have run — exists only as scattered configuration
+
+There is **no declared per-request expectation**. The inputs to one exist, and
+they are in three different places:
+
+| family | what determines whether it *should* run | where |
+|---|---|---|
+| regex | always | — |
+| ml | `RISK_PATH_ENABLED` kill switch, plus circuit-breaker state | `src/risk/risk.service.ts:665`, `.env.example:148` |
+| semantic | `semanticEngineUrl` configured, plus bypass state | `src/detection/detection.service.ts:249` |
+| custom | org has active custom patterns | custom-pattern module |
+
+**Answer: the middle one — it exists, but only as static configuration and
+runtime switch state, never assembled into a declared value.**
+
+And the one place that already looks like the field we want is the defect in
+miniature:
+
+```ts
+semanticEnabled: Boolean(
+  semanticEngineUrl && text.length > 0 && semanticCallSucceeded && !semanticBypass,
+)
+```
+
+`semanticCallSucceeded` is an **outcome**, and it is being ANDed into something
+named `Enabled`. Expectation and result are already collapsed into one boolean,
+in the code that would be the natural place to compute `detectors_expected`. A
+field derived from that expression would be unable to express *"semantic was
+expected and did not run"* — which is the only sentence the field exists to say.
+
+### 8.3 · What this changes about the item's size
+
+- **`detectors_applied` / `detectors_skipped`** — projection of an existing
+  per-request structure onto the wire. Small.
+- **`detectors_expected`** — a **new computed value**, small in code and specific
+  in requirement: it must be derived from **configuration and switch state ONLY**,
+  and **no outcome may feed it**. If it is computed the way `semanticEnabled` is
+  computed, the comparison in §3.1 becomes `applied ⊆ applied` and the field is
+  decorative.
+- **`detected_not_masked_by`** — needs the detection layer to carry family
+  attribution per kind through to `detectedNotMasked`; the entities carry
+  `source` already on the scoring path (`score-response.dto.ts:10`), so the
+  ingredient exists, but the mapping into `detectedNotMasked` was not read and is
+  **not claimed here**.
+
+Stated plainly because this programme has a six-instance record of plans built on
+unmeasured mechanisms: **§8.1 and §8.2 were read; §8.3's third bullet was not,
+and is marked as unmeasured rather than assumed.**
