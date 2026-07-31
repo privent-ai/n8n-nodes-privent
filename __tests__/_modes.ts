@@ -27,6 +27,25 @@ import { join } from 'node:path';
 export type GrammarMode = 'CORE_PACKAGE' | 'INLINED_COPY';
 export type BackendMode = 'BACKEND_LIVE' | 'MOCK_ONLY';
 
+/**
+ * Endpoints this node calls, and whether `@priventai/core`'s published
+ * `Contracts.v1` carries a schema for them. Counted from the source, not
+ * estimated; the covered set is what `contract-conformance.test.ts` checks.
+ *
+ * The vault triple is the expensive gap and is named on every run rather than in
+ * a commit message: it is where tokens are born, and a contract check that
+ * silently skips it would read as a covered contract.
+ */
+export const CONTRACT_COVERED = ['/v1/risk/score', '/v1/risk/batch', '/v1/audit/events'] as const;
+export const CONTRACT_UNCOVERED = [
+  '/v1/vault/find-or-create-batch',
+  '/v1/vault/retrieve-batch',
+  '/v1/vault/destroy',
+  '/v1/custom-patterns/active',
+  '/v1/telemetry/events',
+  '/v1/visitor/credentials',
+] as const;
+
 /** The token grammar as this repo believes it to be, if core cannot be read. */
 export const INLINED_TOKEN_RE_SOURCE =
   '\\[([A-Z][A-Z0-9_]{1,31})_(\\d{1,10})(?:_[a-f0-9]{4,16})?\\]';
@@ -69,6 +88,11 @@ export function reportModes(): void {
           g.mode === 'CORE_PACKAGE' ? 'the installed core grammar' : 'a COPY of the grammar'
         } and ${b.mode === 'BACKEND_LIVE' ? 'a real backend' : 'a SIMULATION of the backend'}.`,
     'CI never reaches a real backend — see NP-K.',
+    `contract check: ${CONTRACT_COVERED.length}/${CONTRACT_COVERED.length + CONTRACT_UNCOVERED.length} endpoints validated against the PUBLISHED @priventai/core Contracts.v1`,
+    `  covered  : ${CONTRACT_COVERED.join(', ')}`,
+    `  NOT covered: ${CONTRACT_UNCOVERED.join(', ')} — the vault triple included, which is where tokens are born`,
+    '  EXCLUDES : "the node sends a shape the published contract rejects"',
+    '  does NOT EXCLUDE: "the backend sends a shape the contract rejects" — that needs a real backend, which CI cannot reach, and the cheap green for it was refused (NP-K)',
   ];
   // eslint-disable-next-line no-console
   console.log(`\n[privent-test-modes]\n  ${lines.join('\n  ')}\n`);

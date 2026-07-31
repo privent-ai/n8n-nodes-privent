@@ -123,12 +123,21 @@ export interface HttpExecOpts {
   evaluateExpression?: (expr: string, i: number) => unknown;
 }
 
+/**
+ * The `/v1/risk/score` body this harness serves. `categories` is an ARRAY because
+ * that is what `@priventai/core`'s published `ScoreResponseSchema` and
+ * privent-backend's own DTO both say; it used to be an object here, which taught
+ * the whole suite a shape the backend cannot send. Asserted in
+ * `contract-conformance.test.ts`.
+ */
 export interface HttpExecHandle {
   exec: IExecuteFunctions;
   calls: Array<{ url: string; body: Record<string, unknown> }>;
   httpRequestWithAuthentication: ReturnType<typeof vi.fn>;
   /** Wire-format audit events posted to /v1/audit/events, flattened. */
   auditEvents: () => Array<Record<string, unknown>>;
+  /** The `/v1/risk/score` body this harness will serve, for contract checks. */
+  defaultRiskResponse: Record<string, unknown>;
 }
 
 const DEFAULT_CREDENTIALS = { priventApi: { id: 'cred-default', name: 'Privent account' } };
@@ -147,6 +156,14 @@ export const DEFAULT_HTTP_NODE: FakeNode = {
 
 export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
   const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+  const riskResponse: Record<string, unknown> = opts.risk ?? {
+    risk_score: 0,
+    risk_level: 'LOW',
+    categories: [],
+    model: 'regex-only@0.1.0+local',
+    latency_ms: 1,
+    entities: [],
+  };
   const base = opts.node ?? DEFAULT_HTTP_NODE;
   // Every test here runs a backend-backed mode, so the node says it has the
   // credential this harness already answers with. `noCredentials` opts out.
@@ -190,14 +207,7 @@ export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
           : toks.map((t) => ({ token: t, kind: 'EMAIL', value: `restored:${t}` }));
         return { entries };
       }
-      const defaultRisk = {
-        risk_score: 0,
-        risk_level: 'LOW',
-        categories: {},
-        model: 'regex-only@0.1.0+local',
-        latency_ms: 1,
-        entities: [],
-      };
+      const defaultRisk = riskResponse;
       if (url === '/v1/risk/score') {
         return opts.risk ?? defaultRisk;
       }
@@ -237,5 +247,5 @@ export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
       .filter((c) => c.url === '/v1/audit/events')
       .flatMap((c) => (c.body.events as Array<Record<string, unknown>>) ?? []);
 
-  return { exec, calls, httpRequestWithAuthentication, auditEvents };
+  return { exec, calls, httpRequestWithAuthentication, auditEvents, defaultRiskResponse: riskResponse };
 }
