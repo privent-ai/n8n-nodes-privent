@@ -3,7 +3,7 @@ import type { IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-wor
 import { Privent } from '../nodes/Privent/Privent.node.js';
 
 const SESSION_ID = '123e4567-e89b-42d3-a456-426614174888';
-const EMAIL = 'jane@example.com';
+const EMAIL = 'jane.ex@fixture.invalid';
 
 /**
  * Tokenless round-trip: the vault lives in workflow static data, not the Privent

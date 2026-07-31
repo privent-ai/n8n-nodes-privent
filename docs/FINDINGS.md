@@ -12,6 +12,12 @@
 > that collision, recording that "F-C through F-F are not present in this
 > repository". An ID scheme that silently overlaps is the same class of defect as
 > a citation nothing verifies.
+>
+> ⏳ **Counterpart note PENDING in privent-backend.** That repository's
+> `docs/FINDINGS.md` needs the same header, and this session cannot write to it —
+> reference repositories are read-only here. Until it lands the scheme is adopted
+> on one side only; recorded so a half-adopted scheme is not mistaken for a
+> finished one.
 
 One line per finding. Findings scattered across commit messages and PR bodies is
 how a finding dies; this is the index that keeps them visible.
@@ -23,6 +29,7 @@ fixed, item scheduled or deliberately declined · `closed` — fixed and verifie
 
 | ID | Finding | Status |
 |---|---|---|
+| NP-L | **This product's own false-positive filter suppresses the standard synthetic-fixture domains.** `isLocalFalsePositive` drops any EMAIL whose value contains `example`, `test`, `demo`, `sample`, … (`shared/local-detectors.ts:765`), which is exactly the RFC 2606 reserved space — `example.com`, `.test`, `.example`. So a fixture chosen to be *safe* is invisible to the local detector, and a local-mode test written with one tests nothing. Measured while sweeping the corpus: moving fixtures to `example.invalid` turned a passing round-trip test red because the address stopped being detected at all. This repo's fixtures therefore use `@fixture.invalid` — reserved by RFC 2606 §2 and free of every suppressed word. Sharpens F-05. | open |
 | NP-K | **CI cannot reach a real backend, on any of three axes.** privent-backend publishes no image to a registry this repo's CI can pull — `release.yml` ships an image bundle to S3 over OIDC, with no ghcr/dockerhub push. `privent-backend` is private while `n8n-nodes-privent` is public, and this repo's `ci.yml` uses a plain `actions/checkout@v4` whose default `GITHUB_TOKEN` cannot read another private repository. The only secret this repo holds is `NPM_TOKEN`. So a green tick here has never meant a contract verified against a real backend. | open |
 
 ### NP-K — the shortcut that was available and declined

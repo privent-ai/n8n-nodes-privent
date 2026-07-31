@@ -3,7 +3,7 @@ import type { IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
 import { Privent } from '../nodes/Privent/Privent.node.js';
 
 const SESSION_ID = '123e4567-e89b-42d3-a456-426614174999';
-const EMAIL = 'john@example.com';
+const EMAIL = 'john@fixture.invalid';
 
 /**
  * Stateful in-test stand-in for the Privent Cloud vault, shared across all

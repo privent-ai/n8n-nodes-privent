@@ -28,7 +28,7 @@ import { applyTokenCase, type TokenCaseMode } from './_http-helpers.js';
  */
 
 const SESSION_ID = '123e4567-e89b-42d3-a456-4266141749aa';
-const EMAIL = 'ayse.kaya@kurumsal.tr';
+const EMAIL = 'ayse@fixture.invalid';
 
 /** Stateful vault stand-in whose minted case is a parameter, not an echo. */
 function makeCaseSkewedVault(tokenCase: TokenCaseMode) {

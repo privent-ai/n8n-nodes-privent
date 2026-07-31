@@ -33,7 +33,7 @@ describe('apiKey audit metadata enrichment', () => {
 
   it('reflects vault_backend=memory from the credential', async () => {
     const { exec, auditEvents } = makeHttpExecFn({
-      items: [{ json: { text: 'Reach me at alice@example.com' } }],
+      items: [{ json: { text: 'Reach me at alice@fixture.invalid' } }],
       params: { authentication: 'apiKey', resource: 'tokenize', operation: 'tokenize', sessionId: '123e4567-e89b-42d3-a456-426614174001', textField: 'text', detectionMode: 'local', reviewThreshold: 1 },
       executionId: EXEC_ID,
       vaultBackend: 'memory',
@@ -84,7 +84,7 @@ describe('tokenless/local emit no audit event (unaffected by enrichment)', () =>
     const httpRequest = vi.fn(async () => ({}));
     const exec = makeStaticExec(
       { authentication: 'tokenless', resource: 'tokenize', operation: 'tokenize', sessionId: '123e4567-e89b-42d3-a456-426614174002', textField: 'text', detectionMode: 'local', reviewThreshold: 1 },
-      [{ json: { text: 'email me at jane@northwind.com' } }],
+      [{ json: { text: 'email me at jane.nw@fixture.invalid' } }],
       httpAuth,
       httpRequest,
     );
@@ -102,7 +102,7 @@ describe('tokenless/local emit no audit event (unaffected by enrichment)', () =>
     });
     const exec = makeStaticExec(
       { authentication: 'local', resource: 'tokenize', operation: 'tokenize', sessionId: '', textField: 'text', detectionLevel: 'standard' },
-      [{ json: { text: 'email me at jane@northwind.com' } }],
+      [{ json: { text: 'email me at jane.nw@fixture.invalid' } }],
       throwOnHttp,
       throwOnHttp,
     );

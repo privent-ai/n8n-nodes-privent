@@ -5,7 +5,7 @@ import { Privent } from '../nodes/Privent/Privent.node.js';
 import { buildLocalDetectors } from '../shared/privent-http.js';
 import { LOCAL_DETECTORS } from '../shared/local-detectors.js';
 
-const EMAIL = 'j.miller@northwind.com';
+const EMAIL = 'j.miller@fixture.invalid';
 const SSN = '123-45-6789';
 const STREET = '742 Evergreen Terrace';
 

@@ -6,11 +6,11 @@ const SESSION_ID = '123e4567-e89b-42d3-a456-426614174abc';
 
 // A healthcare-style line: regex finds the email; only the backend ML pass can
 // find the person name, date of birth and street address.
-const TEXT = 'Jane Doe (DOB 1985-03-12) at 123 Main St, email jane@example.com';
+const TEXT = 'Jane Doe (DOB 1985-03-12) at 123 Main St, email jane.ex@fixture.invalid';
 const NAME = 'Jane Doe';
 const DOB = '1985-03-12';
 const ADDRESS = '123 Main St';
-const EMAIL = 'jane@example.com';
+const EMAIL = 'jane.ex@fixture.invalid';
 
 function span(value: string): [number, number] {
   const start = TEXT.indexOf(value);
