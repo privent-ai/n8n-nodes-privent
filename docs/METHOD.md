@@ -299,3 +299,35 @@ the repository reads them, and say what changed when they change. **Corollary:**
 this is an argument for putting scope and exclusions *in the output* rather than
 in a README — the part that travels is the part that is printed.
 
+---
+
+## 11. Containment and visibility are two verdicts and cannot be summed
+
+A protection claim with two halves needs two results. Collapsing them into one
+green loses which half held; collapsing them into one red loses that anything
+worked. Either way the report says less than the measurement did.
+
+**Instance — NP-AE, `tokenless` mode.** The closure condition requires that the
+value cannot reach an external sink untokenized **and** that every block is
+visible to the operator. Tokenless contains correctly and has **no mechanism for
+the second half**: measured, a Strict-Mode block emits zero audit events and
+makes zero HTTP calls, and the anonymous telemetry ping cannot carry detection
+facts without publishing them to an unauthenticated endpoint.
+
+So the mode **passes containment and fails visibility**, and both are true at
+once. The ruling was that the design is the answer — an anonymous visitor has no
+organisation for an audit row to belong to — which converts the finding into a
+**disclosure obligation** rather than a fix: the trade is now stated in the
+node's own README, not only in a register.
+
+**Rule.** Where a claim has independent halves, report a verdict per half and
+name them. **Corollary, and it is how this one was found:** when a test would be
+right about the condition and wrong about the product, one of the two is
+under-specified. Here it was the condition, and it now has a two-verdict form
+because a measurement forced it.
+
+**Declined, with the reason recorded so it is not re-proposed:** extending
+telemetry to carry entity kinds or counts, and adding an audit path to tokenless.
+The first leaks to close a visibility gap; the second invents an organisation for
+a mode whose whole premise is not having one.
+

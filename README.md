@@ -114,8 +114,10 @@ The default way to try Privent, and the recommended mode for single-workflow use
 |---|---|
 | Session, Tokenize, Detokenize (in-memory) | ✅ |
 | Risk Check | ✅ |
-| Audit, Handoff | ❌ (needs API key) |
+| Audit, Handoff | ❌ (needs API key) — see *No operator-visible blocking record* below |
 | Persistent / managed Privent Cloud vault | ❌ (needs API key) |
+
+**No operator-visible blocking record.** Tokenless gives you containment without an audit trail: when Strict Mode blocks a detokenize, or when values are masked, the only record is on the item itself — `privent.detokenized`, `privent.reason`, `privent.entities` — visible to a person watching that execution and nothing durable afterwards. This is what the mode *is* rather than a limitation to be fixed: an anonymous visitor has no organisation for an audit row to belong to, and the alternative — widening the anonymous telemetry ping to carry entity kinds and counts — would publish detection facts to an unauthenticated endpoint keyed to an install id. **If you need a durable, org-scoped record of what was masked and what was blocked, use API Key mode.**
 
 **In-memory vault.** In tokenless mode, tokens are stored in n8n workflow static data, keyed by `sessionId` — never in the Privent Cloud vault.
 
