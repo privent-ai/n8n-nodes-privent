@@ -247,10 +247,17 @@ interface ActiveCustomPattern {
 /**
  * A compiled custom (org) detector. `authoritative` marks it as always-wins in
  * overlap resolution; `category`/`sensitivity` are threaded onto the emitted
- * entity. Node-local type (core's bundled 0.8.0 `RegexDetector` predates these
- * fields), a superset of `RegexDetector` so it runs anywhere a detector does.
+ * entity. Node-local type, a superset of `RegexDetector` so it runs anywhere a
+ * detector does.
+ *
+ * `category`/`sensitivity` are OMITTED from the inherited shape on purpose.
+ * core 0.10.0 added them to `RegexDetector` and typed sensitivity as
+ * `EntitySensitivity | null` — a closed set of four strings. What this node
+ * actually receives is whatever `GET /v1/custom-patterns/active` returns for the
+ * org, an open string this package does not validate. Inheriting the narrower
+ * type would be claiming a guarantee nobody enforces on the wire.
  */
-export interface CustomDetector extends RegexDetector {
+export interface CustomDetector extends Omit<RegexDetector, 'category' | 'sensitivity'> {
   readonly authoritative: true;
   readonly category: string;
   readonly sensitivity: string;
