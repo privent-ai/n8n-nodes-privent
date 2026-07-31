@@ -25,6 +25,32 @@ E4-local is the highest-risk cell in the closure condition, and it is also the
 cheapest to run: **no backend, no ML, no vault, no Postgres.** A cell that is both
 the weakest and the cheapest to exercise should not be scheduled last.
 
+### The recommendation, stated plainly because it changes the schedule
+
+> **E4-c is the only part of the closure condition that can be demonstrated in CI
+> without solving the image problem first.**
+
+The "in CI" clause has been treated as blocked on one measurement — roughly 24 GB
+of images and ~22 minutes of uncached build — and that measurement is real. It is
+also **not a property of the clause**. It is a property of the cells that need the
+full stack. E4-c needs n8n and this package: no backend, no ML, no semantic
+engine, no Qdrant, no Postgres, no Redis, no document engine.
+
+So the clause is not all-or-nothing, and treating it as all-or-nothing has been
+costing the programme a cell it could already have.
+
+**Recommended, this week:** stand E4-c up in CI on its own, and state the coverage
+ratio in the same breath as the result, every time:
+
+> Closure condition, CI: **1 of 5 cells (E4-c) — `local` mode only, 1 of E4's 3
+> sub-cells.** The other four cells and E4's two backend-bound sub-cells are
+> demonstrated on Linux with the negative control, NOT in CI.
+
+The ratio is not a caveat bolted on afterwards. It is the sentence that stops a
+partial green being read as a finished one — which is this programme's own
+recurring failure mode, and the reason `NOT MEASURED` replaced `INERT` in this
+package's detector table.
+
 ---
 
 ## 1 · Choosing the synthetic value — measured, because a naive choice is invisible
