@@ -43,7 +43,7 @@ still has to score zero on the corpora that remain.
 | `INSTAGRAM_USERNAME` | A+B | 14163 | 0 | MEASURED — rejected (false positives) | notable |
 | `XBOX_GAMERTAG` | A+B | 11731 | 0 | MEASURED — rejected (false positives) | All notable  |
 | `TNT_TRACKING` | A+B | 1089 | 0 | MEASURED — rejected (false positives) |  Changelog |
-| `NAME` | A+B | 864 | 0 | MEASURED — rejected (false positives) | All notable changes to |
+| `NAME` | A+B | 959 | 0 | MEASURED — rejected (false positives) | All notable changes to |
 | `IATA_AIRPORT_CODE` | A+B | 161 | 0 | MEASURED — rejected (false positives) | to the |
 | `CARD_AUTH_CODE` | A+B | 107 | 0 | MEASURED — rejected (false positives) | authoritative |
 | `WORK_ORDER_NUMBER` | A+B | 93 | 0 | MEASURED — rejected (false positives) | workflow |

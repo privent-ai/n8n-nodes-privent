@@ -97,6 +97,25 @@ detector adds positive cases for the kinds it touches. A standing rule beats a
 heroic pass, because the heroic pass never happens and the standing rule
 compounds.
 
+**Instance — NP-V, one item after this rule was written.** Writing the
+non-routable-IP tests surfaced `DEA_NUMBER` masking `at 172.16.4.1` and
+`at 51.15.20.7` under `aggressive`. It had been admitted honestly: zero false
+positives, one positive hit — because **no corpus line had ever shown it that
+shape**. Adding the infrastructure lines to the negative corpus and a public-IP
+case to the positive corpus rejected it, 8 admitted → 7. The rule paid for itself
+on its first use, which is the argument for standing rules over heroic passes.
+
+**Instance — the same item, sharper.** The positive case proving `IPV4` alive was
+`203.0.113.42`, and the same item added TEST-NET-3 to the suppression list. **A
+positive corpus that proves a detector live using a value the product
+deliberately ignores proves nothing** — it certifies a detector against input the
+product will never let it see. The case moved to two routable addresses.
+
+**Corollary.** When a change alters what the product ignores, re-read the
+positive corpus for cases that the change just made meaningless. The corpus and
+the suppression list are two halves of one statement, and they can contradict
+each other silently.
+
 ---
 
 ## 4. The instrument must not live inside the corpus
