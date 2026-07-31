@@ -8,7 +8,7 @@ both negative corpora **and** fires on **at least one** positive case under the
 **right kind**. Capturing a real value under the wrong kind counts as a false
 positive, not as a hit.
 
-- negative corpus lines measured: **2714** (repository prose/source + hand-authored business prose)
+- negative corpus lines measured: **2743** (repository prose/source + hand-authored business prose)
 - positive cases measured: **30**
 - contextual detectors considered: **468**
 
@@ -39,20 +39,20 @@ still has to score zero on the corpora that remain.
 
 | kind | corpora | false positives | positive hits | verdict | sample |
 |---|---|---|---|---|---|
-| `PSN_ID` | A+B | 15156 | 0 | MEASURED — rejected (false positives) | All |
-| `INSTAGRAM_USERNAME` | A+B | 13949 | 0 | MEASURED — rejected (false positives) | notable |
-| `XBOX_GAMERTAG` | A+B | 11561 | 0 | MEASURED — rejected (false positives) | All notable  |
-| `TNT_TRACKING` | A+B | 1075 | 0 | MEASURED — rejected (false positives) |  Changelog |
-| `NAME` | A+B | 857 | 0 | MEASURED — rejected (false positives) | All notable changes to |
-| `IATA_AIRPORT_CODE` | A+B | 160 | 0 | MEASURED — rejected (false positives) | to the |
+| `PSN_ID` | A+B | 15355 | 0 | MEASURED — rejected (false positives) | All |
+| `INSTAGRAM_USERNAME` | A+B | 14118 | 0 | MEASURED — rejected (false positives) | notable |
+| `XBOX_GAMERTAG` | A+B | 11700 | 0 | MEASURED — rejected (false positives) | All notable  |
+| `TNT_TRACKING` | A+B | 1088 | 0 | MEASURED — rejected (false positives) |  Changelog |
+| `NAME` | A+B | 861 | 0 | MEASURED — rejected (false positives) | All notable changes to |
+| `IATA_AIRPORT_CODE` | A+B | 161 | 0 | MEASURED — rejected (false positives) | to the |
 | `CARD_AUTH_CODE` | A+B | 107 | 0 | MEASURED — rejected (false positives) | authoritative |
 | `WORK_ORDER_NUMBER` | A+B | 93 | 0 | MEASURED — rejected (false positives) | workflow |
 | `LICENSE_PLATE` | A+B | 83 | 0 | MEASURED — rejected (false positives) | regex |
 | `DISPATCHER_ID` | A+B | 62 | 0 | MEASURED — rejected (false positives) | displayName |
 | `HOTEL_RESERVATION` | A+B | 34 | 0 | MEASURED — rejected (false positives) | configured |
+| `TIKTOK_USERNAME` | A+B | 34 | 0 | MEASURED — rejected (false positives) | @privent.ai |
 | `BOOKING_NUMBER` | A+B | 33 | 0 | MEASURED — rejected (false positives) | resolution |
-| `TIKTOK_USERNAME` | A+B | 31 | 0 | MEASURED — rejected (false positives) | @privent.ai |
-| `SOCIAL_MEDIA_HANDLE` | A+B | 29 | 0 | MEASURED — rejected (false positives) | @privent |
+| `SOCIAL_MEDIA_HANDLE` | A+B | 32 | 0 | MEASURED — rejected (false positives) | @privent |
 | `EMERGENCY_MEDICAL_INCIDENT` | A+B | 19 | 0 | MEASURED — rejected (false positives) | migration |
 | `PE_LICENSE` | A+B | 17 | 0 | MEASURED — rejected (false positives) | persistent |
 | `CATALOG_NUMBER` | A+B | 14 | 0 | MEASURED — rejected (false positives) | categories |

@@ -1,0 +1,2678 @@
+All notable changes to `n8n-nodes-privent` are documented here.
+The format follows [Keep a Changelog](https://keepachangelog.com/), and this
+project adheres to [Semantic Versioning](https://semver.org/).
+## [2.4.0] - 2026-07-20
+- **Org custom patterns in Tokenize** — API Key mode now fetches the org's active custom regex patterns
+(`GET /v1/custom-patterns/active`, cached ~5 min per credential) and masks matching values to
+`[KIND_NNN]`, so org-defined masking applies in the local tokenizer path — including `local` detection
+and when the ML/risk pass is skipped or unreachable. Custom matches are **authoritative**: they win
+overlap resolution over any built-in or backend/ML span, and their `category`/`sensitivity` are surfaced
+on `privent.entities`. **Fail-open**: a patterns-fetch error never breaks tokenize (built-ins still run).
+Tokenless and Local (No Backend) modes are unaffected — the serve endpoint needs an API key, so they get
+built-ins only. No new runtime dependency (native `RegExp` + the existing authenticated HTTP helper).
+## [2.3.1] - 2026-07-04
+- API Key audit events now report per-op `latency_ms` (tokenize, detokenize, risk_check) at the top level,
+so backend latency analytics (avg/p95) populate instead of showing 0. No behavior change; tokenless/local
+unaffected (they emit no audit).
+## [2.3.0] - 2026-07-04
+- **Anonymous tokenless telemetry** — Tokenless mode now sends one fire-and-forget, anonymous event per
+node execution to the configured Tokenless Base URL (`POST /v1/telemetry/events`), so tokenless adoption
+and health are visible. The only identifier is a random per-install `install_id`; the payload is a fixed
+allowlist (`operation`, `auth_mode`, `node_version`, `n8n_version`, `item_count`, `status`, `error_type`
+class name, `timestamp`) — never raw text, tokens, entities, org, key, sink, IP, or workflow/node names.
+**API Key** mode sends nothing here (it already reports via the audit stream); **Local (No Backend)** mode
+sends nothing at all (its zero-network guarantee is unchanged). A telemetry failure never affects the
+workflow. See the README **Telemetry** section — there is no opt-out, so the exact fields are documented.
+## [2.2.2] - 2026-07-03
+- API Key audit events now carry two diagnostic fields in `metadata`: **`node_version`** (the build of
+`n8n-nodes-privent` that produced the event) and **`vault_backend`** (`memory` or `cloud`, from the
+Privent API credential). No new network call, no behavior change, no migration — the fields ride the
+existing audit event. Tokenless and Local mode are unaffected (they emit no audit events).
+## [2.2.1] - 2026-06-30
+- Newly-added Privent nodes now default to **Local (No Backend)** Authentication (zero-setup: no API key,
+no backend). Existing nodes — including pre-2.1.0 nodes that store no Authentication value — are
+unaffected and keep their current mode; API Key and Tokenless remain selectable from the dropdown.
+## [2.2.0] - 2026-06-30
+- **Local (No Backend) mode** — a third Authentication option alongside API Key and Tokenless. Tokenize
+and Detokenize run entirely inside n8n with local regex detection: **no API key, no backend, zero
+network — your data never leaves your n8n**. Adds 575 detectors (core structured PII plus a catalog
+vendored from [openredaction](https://github.com/sam247/openredaction), MIT — see `NOTICE`), tier-gated
+by a **Detection Level** toggle (Standard = high-precision structured PII; Aggressive = also names,
+addresses, bare-number IDs and crypto). Tokens live in an in-memory vault (n8n workflow static data) and
+the Privent **Session** node is optional (session id is auto-managed and rides on the item). Session,
+Risk Check, Audit and Handoff remain backend-only. API Key and Tokenless behavior is unchanged.
+## [2.1.1] - 2026-06-30
+- README: mark the package as verified + live on n8n Cloud (direct nodes-panel install); split
+Cloud vs self-hosted install steps. Docs-only; no code or API change.
+## [2.1.0] - 2026-06-30
+- **Tokenless (Visitor) mode** — use Privent with no API key. A new **Authentication** switch (API Key |
+Tokenless) on the node and a **Privent Tokenless** credential (base URL only). In tokenless mode the node
+mints an anonymous signed visitor id (`X-Visitor-Id`) and supports Session, Tokenize, Detokenize
+(in-memory vault in n8n workflow static data, keyed by `sessionId`) and Risk Check. Audit, Handoff and the
+managed cloud vault remain API-key only. Requires backend visitor auth (`VISITOR_AUTH_ENABLED=true`).
+apiKey behavior is unchanged.
+## [2.0.0] - 2026-06-27
+- **BREAKING — consolidated the 6 Privent nodes into a single `Privent` node** using the
+Resource → Operation pattern (Session, Tokenize, Detokenize, Risk Check, Audit, Handoff are now
+resources of one node). n8n Cloud verification allows one regular node per package. Field names,
+defaults, options, endpoints, request bodies, outputs and audit events are unchanged — only the
+node identity changed. **Migration:** re-add the **Privent** node in existing workflows and pick the
+Resource/Operation that matches the old node.
+- HTTP-origin failures (vault find-or-create/retrieve, risk score, risk batch) now surface as
+`NodeApiError` (HTTP status + response body reach the UI) instead of raw/uncaught errors;
+validation/logic failures remain `NodeOperationError`. Continue-On-Fail is honored everywhere,
+including the batched Risk Check. Audit emission stays fire-and-forget (never fails the node).
+- `usableAsTool: true` on the single node (tool gating is node-level in n8n). The Detokenize
+operation description now warns that it is agent-reachable — use Strict Mode + Trusted Sinks.
+## [1.1.4] - 2026-06-26
+- Update README demo image. Docs-only; no code or API change. Republished so the npm
+package page reflects the new image.
+## [1.1.3] - 2026-06-26
+- Add demo screenshot to README. Docs-only; no code or API change. Republished so the
+npm package page reflects the updated README.
+## [1.1.2] - 2026-06-26
+- Align source layout to n8n-nodes-starter (root `credentials/` + `nodes/` instead of
+under `src/`) for verified-node vetting. Build output paths under `dist/` are unchanged;
+no API change.
+## [1.1.1] - 2026-06-26
+### Packaging
+- Commit the built `dist/` to the repo so the n8n verified-node pre-check can find
+the credential file (`dist/credentials/PriventApi.credentials.js`) in the GitHub
+repo at the path declared in `package.json` → `n8n.credentials`. No functional or
+## [1.1.0] - 2026-06-25
+- **ML PII masking** in Privent Tokenize (`auto`/`cloud` modes): person names,
+dates of birth and street addresses are now detected via the backend ML pass
+(`/v1/risk/score` with `include_entities`) and tokenized alongside the existing
+regex-detected structured PII. Detection + risk now come from a single call on
+the original text; the external LLM still only ever receives tokenized text.
+- Explicit 200s request timeout so the backend's 180s ML budget (cold start)
+wins over n8n's default timeout, preventing a silent fall back to regex-only
+masking in `auto` mode.
+- `local` mode remains regex-only (no network, no risk); its description now
+states that names/DOB/address are not masked there — use `auto`/`cloud` for
+full PHI coverage.
+- Initial n8n Cloud-verified release: session-scoped tokenization, risk scoring,
+and safe detokenization for AI agent workflows.
+<div align="center">
+# n8n-nodes-privent
+**The DLP layer n8n's Guardrails doesn't have: reversible tokenization for AI workflows.**
+Guardrails masks PII and throws it away. Privent masks it, hands it to your LLM safely, and gives you the real value back exactly where you need it.
+[![npm version](https://img.shields.io/npm/v/n8n-nodes-privent.svg)](https://www.npmjs.com/package/n8n-nodes-privent)
+[![npm downloads](https://img.shields.io/npm/dw/n8n-nodes-privent.svg)](https://www.npmjs.com/package/n8n-nodes-privent)
+[![n8n Cloud Verified](https://img.shields.io/badge/n8n%20Cloud-Verified-brightgreen)](https://www.privent.ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/privent-ai/n8n-nodes-privent?style=social)](https://github.com/privent-ai/n8n-nodes-privent)
+<img width="1772" height="1080" alt="privent-black" src="https://github.com/user-attachments/assets/7ec6cf05-e87a-4b90-9f44-dad2f11c89ad" />
+[Webhook] → [Privent: Session] → [Privent: Tokenize] → [OpenAI Chat]
+→ [Privent: Detokenize] → [Respond]
+Privent ships as a single node with a Resource → Operation selector. Each box above is the same node configured to a different resource (Session, Tokenize, Detokenize, Risk Check, Audit, Handoff).
+If this is useful to you, **star the repo** — it helps other n8n builders find it.
+## ⚡ Quick start — 30 seconds, no API key
+npm install n8n-nodes-privent
+Restart n8n, add the **Privent** node, set **Authentication = Tokenless (Visitor)**. That's it — no signup, no waiting.
+[Privent: Session]   → opens a session (auto sessionId)
+[Privent: Tokenize]   → masks PII with [EMAIL_001], [PHONE_002], etc.
+[Privent: Detokenize] → restores the originals at your trusted output
+Raw values never leave your n8n instance in this mode. See [Tokenless mode](#tokenless-visitor-mode) for exactly what's included.
+Want a persistent vault, ML detection, or audit trail? See [Privent Cloud](#privent-cloud--when-youre-ready-for-more).
+LLM-powered workflows leak data. A naive `{{ $json.prompt }}` into ChatGPT sends customer emails, card numbers, and API keys straight to a third party.
+Privent sits in the middle: it replaces sensitive values with reversible placeholders (`[EMAIL_001]`, `[CREDIT_CARD_002]`) before the LLM call, then restores them only at sinks you trust.
+That reversibility is the whole point. Most guardrail tools redact — the data is gone the moment it's masked. Privent tokenizes — you get it back.
+## Privent vs. n8n Guardrails
+n8n's built-in Guardrails node is a good default for blocking jailbreaks and masking obvious PII. Privent isn't a replacement for it — it solves a different problem: getting the real value back after the LLM step.
+| | n8n Guardrails | Privent |
+|---|---|---|
+| Mask PII before an LLM call | ✅ | ✅ |
+| Jailbreak / prompt injection detection | ✅ | ❌ (not the focus) |
+| **Restore original value after the LLM call** | ❌ | ✅ |
+| Deterministic tokens (`[EMAIL_001]`) | ❌ | ✅ |
+| Works with zero setup, no API key | ✅ | ✅ (Tokenless mode) |
+| Audit trail per token / agent handoff | ❌ | ✅ (Cloud mode) |
+Use Guardrails when you only need to block or mask. Reach for Privent when you need the value back on the other side.
+## Benchmarks
+Independent PII/PHI detection benchmark comparing Privent against n8n Guardrails and Presidio (default config). Results below are for English (EN), detection-only lane.
+### Detection F2 by language
+Overall detection quality (F2 weights recall over precision). Privent Cloud leads; Privent Local trades recall for a fully offline round-trip.
+![Detection F2 by language, 95% bootstrap CI — privent_cloud leads, followed by presidio_default, guardrails, then privent_local](assets/benchmarks/detection-f2-by-language.jpeg)
+### Hard-negative false-alarm rate
+False-alarm rate on hard negatives (e.g. `organization_name` that looks like PII but isn't). **Lower is better.** Presidio over-flags organization names; Privent stays low.
+![Hard-negative flag rate by category, EN — presidio_default flags ~0.78, privent_cloud ~0.08, guardrails and privent_local near 0](assets/benchmarks/hard-negative-flag-rate-en.jpeg)
+### Recall by entity type
+Per-entity recall (relaxed matching). `n<min` marks cells with too few samples to score reliably.
+![Recall by entity type, EN (relaxed) heatmap across ACCOUNT_NUMBER, ADDRESS, DATE, EMAIL, LICENSE_NUMBER, NATIONAL_ID, PASSPORT, PERSON_NAME, PHONE, URL](assets/benchmarks/recall-by-entity-en.jpeg)
+## Tokenless (Visitor) mode
+The default way to try Privent, and the recommended mode for single-workflow use. Set **Authentication = Tokenless (Visitor)** on the node. It mints an anonymous, signed visitor ID against the backend (`POST /v1/visitor/credentials`) and sends it as `X-Visitor-Id` — no Bearer key, no account.
+| | Available |
+| Session, Tokenize, Detokenize (in-memory) | ✅ |
+| Risk Check | ✅ |
+| Audit, Handoff | ❌ (needs API key) |
+| Persistent / managed Privent Cloud vault | ❌ (needs API key) |
+**In-memory vault.** In tokenless mode, tokens are stored in n8n workflow static data, keyed by `sessionId` — never in the Privent Cloud vault.
+- Tokenize and Detokenize must run in the **same workflow** and share the same `sessionId`.
+- Raw values rest inside your own n8n and are never sent to Privent, *as long as Detection Mode is set to `Local (Regex)`*. (Risk Check and `Cloud` detection mode do send text to the backend for scoring — use `Local (Regex)` for a fully offline round-trip.)
+- On multi-worker n8n Cloud setups, token sharing relies on n8n persisting static data across workers.
+### Example — fully offline round-trip
+1. **Privent** node → `Tokenless`, Resource `Session`, Operation `Open`.
+2. **Privent** node → `Tokenless`, Resource `Tokenize` — same `sessionId`; **Detection Mode = `Local (Regex)`**.
+3. **Privent** node → `Tokenless`, Resource `Detokenize` — same `sessionId` — restores the original values at your trusted output.
+Nothing in this round-trip leaves your n8n instance.
+## Privent Cloud — when you're ready for more
+| | Tokenless (free) | Privent Cloud (API key) |
+|---|---|---|
+| Setup | `npm install`, 30 seconds | [Request access](#request-access) |
+| Vault | In-memory, n8n workflow static data | Server-side, persistent |
+| Cross-session detokenize | ❌ (same workflow only) | ✅ |
+| ML-based risk scoring | ❌ (regex only) | ✅ |
+| Audit trail / Handoff tracking | ❌ | ✅ |
+| Self-hosted backend option | — | ✅ |
+Create a `PriventApi` credential to switch a node to Cloud mode:
+| Field | Description | Default |
+|---|---|---|
+| API Key | Privent API key — [request access](#request-access). Encrypted at rest by n8n. | — |
+| Base URL | Privent backend endpoint (Cloud or self-hosted) | `https://api.privent.ai` |
+Point **Base URL** at your self-hosted deployment to keep all token/risk/audit traffic on-prem.
+### Request access
+[Request access](https://www.privent.ai/request-access) for a production API key. Most n8n usage doesn't need this — start with Tokenless mode above and request Cloud access only once you need persistent vault, audit trail, or ML detection.
+## Local (No Backend) mode
+Even more offline than Tokenless: **no API key, no backend, no network at all**. Set **Authentication = Local (No Backend)** on the node — Tokenize and Detokenize run entirely inside n8n with local regex detection, so **your data never leaves your n8n instance**.
+> **This is the default for newly-added nodes** — a fresh Privent node lands on Local → Tokenize with no credential needed. Switch the **Authentication** dropdown to Tokenless or API Key to opt in. (Existing nodes keep whatever mode they were saved with.)
+| | Available |
+| Tokenize, Detokenize (in-memory) | ✅ |
+| Session, Risk Check, Audit, Handoff | ❌ (need a backend) |
+- **No credential** — local mode requests neither the API key nor the visitor credential.
+- **575 detectors** — core structured PII plus a large catalog of regex patterns vendored from [openredaction](https://github.com/sam247/openredaction) (MIT — see [`NOTICE`](./NOTICE)).
+- **In-memory token map** — tokens live in n8n workflow static data, keyed by `sessionId`, same as Tokenless. Tokenize and Detokenize must run in the same workflow.
+- **Session optional** — no Privent Session node needed. Leave **Session ID** empty and a fresh id is generated and written to the item; a downstream local Detokenize reads it back automatically.
+**Detection Level** (Tokenize):
+| Level | Masks | Trade-off |
+|---|---|---|
+| **Standard** (recommended) | High-precision structured PII — emails, phones, financial, government IDs with checksums, secrets, API keys | Low false positives, safe to send downstream |
+| **Aggressive** | Also names, addresses, bare-number IDs, crypto addresses | Broader coverage, **more false positives — review the output first** |
+### Example — local round-trip, no key, no Session
+1. **Privent** node → `Local (No Backend)`, Resource `Tokenize` — set **Text Field**, leave **Session ID** empty, **Detection Level** = `Standard`. Sensitive values become `[KIND_NNN]` tokens.
+2. **Privent** node → `Local (No Backend)`, Resource `Detokenize` — leave **Session ID** empty (read from the item) — restores the originals at your trusted output.
+## ✅ Verified on n8n Cloud
+Available as a verified community node — installable directly on n8n Cloud, no self-hosting required. Zero runtime dependencies, free of restricted globals/filesystem/network primitives.
+## Installation
+**n8n Cloud (verified node):** open the nodes panel, search **Privent**, and add it directly — no community-node install step or instance-owner approval needed.
+**Self-hosted — in n8n:** Settings → Community Nodes → Install → enter `n8n-nodes-privent`.
+**Manual install (self-hosted):**
+npm install n8n-nodes-privent
+Restart n8n. The Privent node appears in the node panel.
+## Requirements
+| Component | Minimum |
+| n8n | 1.22.0 |
+| Node.js | 20 |
+| Privent backend | Only required for Cloud mode — reachable Base URL + API key |
+## Architecture: stateless nodes + optional server-side vault
+- Correlation context (`sessionId`, `traceId`, `agentName`) travels on the n8n item between nodes — the Session resource writes it; downstream resources read it via expression defaults.
+- Entity detection for tokenization runs in-node (regex); ML risk scoring is server-side (Cloud mode only).
+## `usableAsTool`
+Tool-callability in n8n is node-level (all-or-nothing) — it cannot be gated per operation. The Privent node sets `usableAsTool: true` so agents can call the safe operations (Tokenize, Risk Check, Audit). A side effect is that every operation — including Detokenize — becomes agent-reachable.
+| Operation | Agent-safe? | Why |
+|---|---|---|
+| Tokenize | ✅ | Masks PII before egress. |
+| Risk Check | ✅ | Read-only scoring. |
+| Audit | ✅ | Records an event; no data exposure. |
+| Session | ➖ | Lifecycle/setup, not a meaningful agent action. |
+| Handoff | ➖ | Trust-graph marker, not a meaningful agent action. |
+| Detokenize | ⚠️ | Restores raw PII. Agent-reachable — guard it with Strict Mode + Trusted Sinks so an agent cannot un-mask data to an untrusted destination. The Detokenize operation description carries this warning in the UI. |
+## The Privent node — resources & operations
+One node, selected by Resource then Operation:
+| Resource | Operation | Purpose |
+|---|---|---|
+| Session | Open | Opens a session; seeds correlation context. |
+| Tokenize | Tokenize | Masks PII/secrets with `[KIND_NNN]` tokens. |
+| Detokenize | Detokenize | Restores tokens at a trusted egress point. |
+| Risk Check | Score | Scores text for data-leak risk (sessionless). |
+| Audit | Emit | Emits an audit event (LLM cost, policy, egress, error). Cloud only. |
+| Handoff | Record | Marks an agent → agent / agent → sink handoff. Cloud only. |
+### Resource: Session
+Opens a Privent session. Place this first — downstream nodes consume its `sessionId`/`traceId`/`agentName`.
+**Output:** `sessionId` (UUID), `traceId`, `startedAt` (Unix ms), `executionId`, `agentName`.
+### Resource: Tokenize
+Detects PII and secrets in a text field (regex) and replaces them with `[KIND_NNN]` tokens.
+**Parameters:** Session ID, Trace ID, Agent Name (the last two default to the upstream Session via expressions), Text Field, Detection Mode (`auto`/`local`/`cloud` — gates whether server risk scoring runs), Flag for Review Above Risk Score.
+"text": "Hi [EMAIL_001], your number is [PHONE_002].",
+"privent": {
+"sessionId": "...",
+"entities": [
+{ "token": "[EMAIL_001]", "kind": "EMAIL", "confidence": 0.95 },
+{ "token": "[PHONE_002]", "kind": "PHONE", "confidence": 0.80 }
+"risk": { "risk_score": 0.87, "risk_level": "HIGH", "categories": { "pii": 0.95 }, "model": "...", "latencyMs": 43 },
+"flaggedForReview": true
+`risk` is `null` when Detection Mode is `local` (server risk scoring is skipped).
+### Resource: Detokenize
+Replaces tokens with their original values (one batched vault retrieve in Cloud mode; in-memory lookup in Tokenless mode). Use at trusted egress points after the LLM step. Agent-reachable as a tool — pair with Strict Mode + Trusted Sinks.
+### Resource: Risk Check
+Scores text for data-leak risk via the server ML pipeline. Sessionless — no Session required. **Cloud mode only.**
+**Parameters:** Text Field, Trace ID, Agent Name (optional, for audit correlation). Auto-batches all input items into a single call.
+{ "privent": { "risk_score": 0.92, "risk_level": "HIGH", "categories": { "pii": 0.95 }, "model": "...", "latencyMs": 43 } }
+### Resource: Audit
+Emits a Privent audit event for non-tokenization steps (LLM-call cost tracking, policy decisions, egress, errors). Cloud mode only. Place after an HTTP Request to an LLM provider to record provider/model/token usage; the backend computes USD cost from your org's ModelPricing table.
+**Parameters:** Session ID, Trace ID, Agent Name, Event Type (`llm_call`/`policy_decision`/`egress`/`error`), LLM Model (searchable picker, `llm_call` only), Prompt/Completion Tokens (`llm_call` only), Extra Metadata (JSON, merged into the event).
+### Resource: Handoff
+Marks an explicit agent → agent (or agent → external sink) handoff. Cloud mode only. The backend Trust Map aggregator turns each event into an `AgentInteraction` edge.
+**Parameters:** Session ID, Trace ID, From Agent Name (the "from" side, from the upstream Session), Target Kind (`agent`/`sink`), Target Agent Name or External Sink ID, Reason, Payload Token Count. Requires an upstream Session with an Agent Name set.
+## Example workflow (Cloud mode)
+[Webhook] → [Privent: Session] → [Privent: Tokenize]
+→ [OpenAI Chat] → [Privent: Detokenize] → [Respond to Webhook]
+Each Privent box is the same node with a different Resource selected.
+1. **Privent · Session** — generates a `sessionId`, seeds correlation context.
+2. **Privent · Tokenize** — masks every PII / secret in the prompt.
+3. **OpenAI Chat** — sees only tokens, never raw data.
+4. **Privent · Detokenize** — restores tokens in the LLM response at a trusted sink.
+## Token format
+`[KIND_NNN]`
+| Example | Meaning |
+| `[EMAIL_001]` | Email address |
+| `[PHONE_002]` | Phone number |
+| `[CREDIT_CARD_003]` | Credit card number |
+| `[SSN_004]` | Social Security Number |
+| `[API_KEY_005]` | API key |
+| `[JWT_006]` | JSON Web Token |
+Tokens are session-scoped: the same value maps to the same token within one session, but token IDs do not correlate across sessions.
+## Audit emission (Cloud mode)
+Every operation emits a typed audit event to the Privent backend after a successful run. Context populated by the Session resource (`agent_name`, `workflow_id`, `workflow_name`, `execution_id`) rides along on the item and attaches to every downstream event.
+| Resource | `event.type` |
+| Session | `session_open` |
+| Tokenize | `tokenize` |
+| Detokenize | `detokenize` |
+| Risk Check | `risk_check` |
+| Audit | `llm_call` / `policy_decision` / `egress` / `error` |
+| Handoff | `agent_handoff` |
+The Detokenize resource writes `sink_id`, `sink_url_host`, and `sink_trusted` into metadata on both the trusted-egress and strict-mode-block paths.
+Metadata never contains raw text, tokenized text, or token literals. Audit emission is best-effort — network/transport failures are swallowed and never break workflow execution. The audit wire contract requires UUID `session_id`/`trace_id`, which is why manual Session IDs must be UUIDs.
+## Error handling
+## Security properties
+- No vault or token state is serialized into n8n execution JSON — in Tokenless mode it lives in n8n's own workflow static data; in Cloud mode it lives server-side.
+- In Tokenless mode with `Detection Mode = Local (Regex)`, raw PII never leaves your n8n instance.
+- Tenancy is isolated by API key at the backend (Cloud mode).
+- Detokenization at egress is gated by Strict Mode + Trusted Sinks.
+- Audit emission is fail-open: backend unreachable never blocks the workflow.
+## Telemetry
+Tokenless mode sends **anonymous** usage telemetry so we can see how tokenless is adopted and whether it's healthy. There is no opt-out, so here is exactly what it does:
+- **When:** one fire-and-forget event per node execution, and **only in Tokenless mode**. **API Key** mode sends nothing here (it already reports through the audit stream); **Local (No Backend)** mode sends nothing at all — its zero-network guarantee is unchanged.
+- **Where:** `POST {baseUrl}/v1/telemetry/events` — the **same Tokenless Base URL you configured**. Self-hosters hit their own backend; nothing is ever sent to Privent unless you point the credential at Privent.
+- **Anonymous:** the only identifier is a random `install_id` (UUID) generated on first send and cached in n8n workflow static data. No organization, no API key, no IP, no account.
+- **Exact fields sent — nothing else:** `install_id`, `event` (`node_execution`), `operation` (the resource, e.g. `tokenize`), `auth_mode` (`tokenless`), `node_version`, `n8n_version`, `item_count`, `status` (`success`/`error`), `error_type` (the error **class name** only), `timestamp`.
+- **Never sent:** raw text, tokens, detected entity values or kinds, field/session/trace IDs, workflow or node names, organization, key, sink, or IP. A telemetry failure never affects the workflow.
+## Upgrading from 1.x
+1. Add the Privent node where the old node was.
+2. Pick the Resource matching the old node (e.g. old Privent Tokenize → Resource `Tokenize`), then its Operation.
+3. Re-enter the parameters (the field names and expression defaults are identical).
+4. Delete the old node.
+## Contributing
+- [n8n Setup Guide](https://www.privent.ai/docs)
+- [Request Cloud access](https://www.privent.ai/request-access) — only needed for persistent vault, audit trail, or ML detection
+- [Discord community](https://discord.gg/yZhFGqMS5Y)
+MIT © Privent AI
+Questions? Contact us at hello@privent.ai.
+<div align="center">
+If Privent saved you from writing this tokenization logic yourself, **a star helps other n8n builders find it too.** ⭐
+import type {
+ICredentialType,
+INodeProperties,
+ICredentialTestRequest,
+} from 'n8n-workflow';
+export class PriventApi implements ICredentialType {
+name = 'priventApi';
+displayName = 'Privent API';
+documentationUrl = 'https://www.privent.ai/docs';
+icon: Icon = 'file:../nodes/privent.png';
+properties: INodeProperties[] = [
+displayName: 'API Key',
+name: 'apiKey',
+type: 'string',
+typeOptions: { password: true },
+default: '',
+required: true,
+description:
+'Your Privent API key (starts with pv_live_…). Find it in the Privent dashboard under Settings → API Keys.',
+hint: 'This value is encrypted at rest by n8n and never written to workflow output or logs.',
+displayName: 'Base URL',
+name: 'baseUrl',
+type: 'string',
+default: 'https://api.privent.ai',
+description:
+'Privent Cloud API base URL. Override only for self-hosted Privent deployments.',
+displayName: 'Vault Backend',
+name: 'vaultBackend',
+type: 'options',
+name: 'In-Memory (Recommended for self-hosted n8n)',
+value: 'memory',
+description:
+'Tokens are stored in the worker process memory for the duration of the execution. Fast, zero-latency lookups.',
+name: 'Privent Cloud (Recommended for n8n Cloud)',
+value: 'cloud',
+description:
+'Tokens are stored in Privent Cloud. Required when executions span multiple worker processes.',
+default: 'memory',
+description:
+'Where session tokens are stored. Use Cloud backend on n8n Cloud or when running n8n with multiple queue workers.',
+// n8n uses this to attach the Authorization header automatically on any
+// node that declares `credentials: [{ name: 'priventApi', required: true }]`.
+authenticate = {
+type: 'generic' as const,
+properties: {
+Authorization: '=Bearer {{$credentials.apiKey}}',
+// n8n calls this endpoint to validate the credential in the UI.
+test: ICredentialTestRequest = {
+baseURL: '={{$credentials.baseUrl}}',
+url: '/v1/health',
+method: 'GET',
+import type {
+ICredentialType,
+INodeProperties,
+ICredentialTestRequest,
+} from 'n8n-workflow';
+* Tokenless (Visitor) credential. No API key: the node mints an anonymous
+* signed `X-Visitor-Id` against the backend and attaches it itself (Step 3).
+* Only the backend base URL is configurable here.
+export class PriventVisitorApi implements ICredentialType {
+name = 'priventVisitorApi';
+displayName = 'Privent Tokenless API';
+documentationUrl = 'https://www.privent.ai/docs';
+icon: Icon = 'file:../nodes/privent.png';
+properties: INodeProperties[] = [
+displayName: 'Base URL',
+name: 'baseUrl',
+type: 'string',
+default: 'https://api.privent.ai',
+description:
+'Privent backend base URL. Tokenless mode mints an anonymous visitor id against it — the backend must have visitor auth enabled.',
+// n8n calls this to validate the credential in the UI. 200 = tokenless
+// enabled; 404 = backend flag off (test fails — the correct signal). This
+// mints a throwaway visitor token per test; the endpoint is rate-limited.
+test: ICredentialTestRequest = {
+baseURL: '={{$credentials.baseUrl}}',
+url: '/v1/visitor/credentials',
+method: 'POST',
+import { defineConfig } from 'eslint/config';
+import { n8nCommunityNodesPlugin } from '@n8n/eslint-plugin-community-nodes';
+import tsParser from '@typescript-eslint/parser';
+import n8nNodesPlugin from 'eslint-plugin-n8n-nodes-base';
+// Mirrors `@n8n/scan-community-package@0.30.0`'s own `buildScanConfig()`
+// (scanner/scanner.mjs:229-291) rule for rule, so a green run here reproduces
+// the official scanner's finding set instead of a subset of it. Measured
+// 2026-07-31: the scanner reports 24 unique problems across 13 rules for this
+// package (it prints 25 because it lints package.json twice, once per leg);
+// this config reproduces those 24 exactly, and adds shared/ (below).
+// WHAT STILL DIFFERS FROM THE OFFICIAL SCANNER — none of it fixed here:
+//   · eslint 9.39.4 here vs the plugins' peer pin 9.29.0. A rule can behave
+//     differently across minors, so our green and the scanner's green are not
+//     the same measurement.
+//   · n8n-workflow 1.120.19 vs the plugins' `>=2` peer, carried by
+//     .npmrc legacy-peer-deps.
+//   · The scanner ALSO fetches the provenance-attested git source and lints
+//     that; --provenance is therefore an input to the audit, not only origin
+//     proof. We lint the working tree instead.
+//   · The scanner's SOURCE_FILE_PATTERNS (scanner.mjs:222) is
+//     ['package.json', '{nodes,credentials}/**/*.{js,ts,json}'] — it never sees
+//     shared/. We lint it anyway, so our gate is strictly WIDER than the
+//     scanner in that one direction. See F-F.
+// SURFACES, and why both: the .ts globs carry the n8n convention/API rules
+// (the scanner's own comment notes these no-op or false-positive on compiled
+// output). dist/**/*.js carries the Cloud-allowlist rules over the BUNDLED
+// @priventai/core code, which no source glob can see — measured: injecting
+// `process.env` + `console.log` into the bundle fires no-restricted-globals
+// and no-console only via the dist glob. So N4-1's "dist is the surface"
+// conclusion is REFINED, not reversed: n8n scans both and weights the source.
+// The globs must stay QUOTED in package.json: npm runs scripts through `sh`,
+// which has no globstar, so an unquoted `**` collapses to one directory level.
+export default defineConfig(
+n8nCommunityNodesPlugin.configs.recommended,
+{ rules: { 'no-console': 'error' } },
+{ plugins: { 'n8n-nodes-base': n8nNodesPlugin } },
+files: ['package.json'],
+rules: { ...n8nNodesPlugin.configs.community.rules },
+files: ['**/credentials/**/*.ts'],
+...n8nNodesPlugin.configs.credentials.rules,
+// Not valid for community nodes.
+'n8n-nodes-base/cred-class-field-documentation-url-miscased': 'off',
+// @n8n/eslint-plugin-community-nodes' credential-password-field is more accurate.
+'n8n-nodes-base/cred-class-field-type-options-password-missing': 'off',
+files: ['**/nodes/**/*.ts'],
+...n8nNodesPlugin.configs.nodes.rules,
+// Inputs/outputs are enums here, not the string "main".
+'n8n-nodes-base/node-class-description-inputs-wrong-regular-node': 'off',
+'n8n-nodes-base/node-class-description-outputs-wrong': 'off',
+// A third-party API can legitimately have a maximum limit.
+'n8n-nodes-base/node-param-type-options-max-value-present': 'off',
+// tsup keeps source comments, so the line-scoped eslint-disable directives in
+// nodes/**/*.ts reappear inside the bundle — where the rules they name are
+// .ts-scoped and never run, making ESLint report every one of them as an
+// unused directive. The directives are meaningful at their source lines and
+// meaningless here, so the report is switched off for compiled output only.
+{ files: ['dist/**/*.js'], linterOptions: { reportUnusedDisableDirectives: 'off' } },
+// JSON (notably package.json) needs the TS parser: the package.json-based
+// rules walk a TSESTree ObjectExpression.
+{ files: ['**/*.json'], languageOptions: { parser: tsParser } },
+// The nodes/credentials rulesets walk a TSESTree AST too.
+{ files: ['**/*.ts'], languageOptions: { parser: tsParser } },
+* Public package entry (referenced by package.json "main").
+* n8n itself loads nodes/credentials from the paths in the package.json "n8n"
+* field, not from here.  This entry exists so `require('n8n-nodes-privent')`
+* resolves to the node + credential classes.
+export { Privent } from './nodes/Privent/Privent.node.js';
+export { PriventApi } from './credentials/PriventApi.credentials.js';
+import type {
+IDataObject,
+IExecuteFunctions,
+ILoadOptionsFunctions,
+INodeListSearchResult,
+INodeTypeDescription,
+INodeExecutionData,
+} from 'n8n-workflow';
+import { NodeConnectionTypes } from 'n8n-workflow';
+getAuthMode,
+getPriventBaseUrl,
+getVaultBackend,
+telemetryPing,
+wrapNodeError,
+} from '../../shared/privent-http.js';
+import { handleSession } from './operations/session.js';
+import { handleTokenize } from './operations/tokenize.js';
+import { handleDetokenize } from './operations/detokenize.js';
+import { executeRiskCheck } from './operations/riskCheck.js';
+import { handleAudit } from './operations/audit.js';
+import { handleHandoff } from './operations/handoff.js';
+type PerItemHandler = (
+ctx: IExecuteFunctions,
+baseUrl: string,
+vaultBackend?: 'memory' | 'cloud',
+) => Promise<IDataObject>;
+const PER_ITEM_HANDLERS: Record<string, PerItemHandler> = {
+session: handleSession,
+tokenize: handleTokenize,
+detokenize: handleDetokenize,
+audit: handleAudit,
+handoff: handleHandoff,
+* Single Privent node (resource → operation). Each resource is one of the
+* former standalone nodes (Session/Tokenize/Detokenize/Risk Check/Audit/Handoff);
+* the per-item logic lives in `./operations/<resource>.ts`. One regular node per
+* package is what n8n Cloud verification expects.
+export class Privent implements INodeType {
+description: INodeTypeDescription = {
+displayName: 'Privent',
+name: 'privent',
+// F-I: there is no vector brand asset anywhere in the product — this icon and
+// privent-frontend/public/og/privent-main-logo.png are byte-identical, the
+// frontend's own logo component renders a PNG (components/custom/logo.tsx:12),
+// and no light/dark variant of the mark has ever existed. Tracing the PNG was
+// measured and rejected: potrace output is one black path covering the full
+// canvas with the mark as negative space, monochrome from an RGB source — a
+// black square in the node list. Scoped to this line so a NEW node class still
+// errors on a PNG icon.
+// eslint-disable-next-line n8n-nodes-base/node-class-description-icon-not-svg
+icon: 'file:../privent.png',
+group: ['transform'],
+usableAsTool: true,
+subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
+description:
+'Privent DLP: session-scoped tokenization, detokenization, risk scoring, audit events and agent handoffs for AI agent workflows.',
+defaults: { name: 'Privent' },
+inputs: [NodeConnectionTypes.Main],
+outputs: [NodeConnectionTypes.Main],
+credentials: [
+{ name: 'priventApi', required: true, displayOptions: { show: { authentication: ['apiKey'] } } },
+{ name: 'priventVisitorApi', required: true, displayOptions: { show: { authentication: ['tokenless'] } } },
+properties: [
+displayName: 'Authentication',
+name: 'authentication',
+type: 'options',
+noDataExpression: true,
+name: 'API Key',
+value: 'apiKey',
+description:
+'Full Privent: vault tokenization, audit, handoff and risk scoring. Requires a Privent API key.',
+name: 'Tokenless (Visitor)',
+value: 'tokenless',
+description: 'No API key — in-memory tokenization + risk scoring via an anonymous visitor ID. The backend must have visitor auth enabled.',
+name: 'Local (No Backend)',
+value: 'local',
+description:
+'No API key. Tokenize and Detokenize run entirely inside n8n with local regex detection — your data never leaves your n8n instance.',
+// Newly-added nodes default to Local (no key, no backend).
+// This default is a UI-only fact and does NOT decide what a stored node
+// runs as. n8n never persists a parameter equal to its default, so a
+// node left on this default stores no `authentication` key at all — and
+// neither does a pre-2.1.0 node, or a 2.1.0–2.2.0 node left on the
+// then-default 'apiKey'. All three are identical on disk at
+// typeVersion 1, because `version` was not bumped when this default
+// flipped in 2.2.1. `resolveAuthMode` settles it by credential presence
+// instead, and says so on the item when it had to infer. See NP-S.
+default: 'local',
+displayName: 'Resource',
+name: 'resource',
+type: 'options',
+noDataExpression: true,
+displayOptions: { show: { authentication: ['apiKey'] } },
+{ name: 'Audit', value: 'audit' },
+{ name: 'Detokenize', value: 'detokenize' },
+{ name: 'Handoff', value: 'handoff' },
+{ name: 'Risk Check', value: 'riskCheck' },
+{ name: 'Session', value: 'session' },
+{ name: 'Tokenize', value: 'tokenize' },
+default: 'tokenize',
+displayName: 'Resource',
+name: 'resource',
+type: 'options',
+noDataExpression: true,
+displayOptions: { show: { authentication: ['tokenless'] } },
+{ name: 'Detokenize', value: 'detokenize' },
+{ name: 'Risk Check', value: 'riskCheck' },
+{ name: 'Session', value: 'session' },
+{ name: 'Tokenize', value: 'tokenize' },
+default: 'tokenize',
+displayName: 'Resource',
+name: 'resource',
+type: 'options',
+noDataExpression: true,
+displayOptions: { show: { authentication: ['local'] } },
+{ name: 'Detokenize', value: 'detokenize' },
+{ name: 'Tokenize', value: 'tokenize' },
+default: 'tokenize',
+// ── Operations (one per resource) ───────────────────────────────────
+displayName: 'Operation',
+name: 'operation',
+type: 'options',
+noDataExpression: true,
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'] } },
+name: 'Open',
+value: 'open',
+action: 'Open a session',
+description:
+'Opens a Privent session vault at the start of your workflow. Place this node before any Tokenize operations. The sessionId output must be passed to all downstream Privent nodes.',
+default: 'open',
+displayName: 'Operation',
+name: 'operation',
+type: 'options',
+noDataExpression: true,
+displayOptions: { show: { resource: ['tokenize'] } },
+name: 'Tokenize',
+value: 'tokenize',
+action: 'Tokenize sensitive text',
+description:
+'Replaces sensitive values with reversible [KIND_NNN] placeholders before the text reaches an LLM or external service',
+default: 'tokenize',
+displayName: 'Operation',
+name: 'operation',
+type: 'options',
+noDataExpression: true,
+displayOptions: { show: { resource: ['detokenize'] } },
+name: 'Detokenize',
+value: 'detokenize',
+action: 'Detokenize text',
+description:
+'⚠ Agent-reachable as a tool: an agent could un-mask data with this operation. Use Strict Mode + Trusted Sinks to control egress. Resolves [KIND_NNN] placeholders back to their original values before data leaves the workflow.',
+default: 'detokenize',
+displayName: 'Operation',
+name: 'operation',
+type: 'options',
+noDataExpression: true,
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['riskCheck'] } },
+name: 'Score',
+value: 'score',
+action: 'Score text risk',
+description:
+'Scores text for data-leak risk using Privent ML. Returns risk_score (0–1), risk_level, and per-category probabilities.',
+default: 'score',
+displayName: 'Operation',
+name: 'operation',
+type: 'options',
+noDataExpression: true,
+displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'] } },
+name: 'Emit',
+value: 'emit',
+action: 'Emit an audit event',
+description:
+'Emits a Privent audit event for non-tokenization steps (LLM call cost tracking, policy decisions, egress, errors)',
+default: 'emit',
+displayName: 'Operation',
+name: 'operation',
+type: 'options',
+noDataExpression: true,
+displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'] } },
+name: 'Record',
+value: 'record',
+action: 'Record an agent handoff',
+description:
+'Marks an explicit agent → agent (or agent → external sink) handoff for the Trust Map',
+default: 'record',
+// ── session ─────────────────────────────────────────────────────────
+displayName: 'Session ID Mode',
+name: 'sessionIdMode',
+type: 'options',
+name: 'Auto-Generate (Recommended)',
+value: 'auto',
+description: 'A new UUID is generated for each workflow execution',
+name: 'Manual',
+value: 'manual',
+description: 'Supply your own session ID (useful for resuming a session)',
+default: 'auto',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'] } },
+displayName: 'Session ID',
+name: 'sessionId',
+type: 'string',
+default: '',
+required: true,
+description: 'A stable string that identifies this session',
+displayOptions: {
+show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'], sessionIdMode: ['manual'] },
+displayName: 'Agent Name',
+name: 'agentName',
+type: 'string',
+default: '',
+description:
+'Logical agent identifier written to the output item and forwarded to downstream Privent nodes (via their Agent Name expression default). Appears in every audit event as metadata.agent_name.',
+hint: 'Optional. Example: "support-bot", "billing-agent". Leave empty if not modeling distinct agents.',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'] } },
+displayName: 'Framework',
+name: 'framework',
+type: 'options',
+{ name: 'Manual / Custom', value: 'manual' },
+{ name: 'Native', value: 'n8n' },
+default: 'n8n',
+description: 'Identifies the orchestration framework in audit logs',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'] } },
+displayName: 'Webhook Node Name',
+name: 'webhookNodeName',
+type: 'string',
+default: 'Webhook',
+description:
+'Optional. Name of an upstream Webhook trigger node. When set, the SDK auto-extracts client IP and User-Agent from its headers and writes them to agent_sessions (trigger_principal_ip, trigger_principal_user_agent).',
+hint: 'Leave default if your workflow does not start with a Webhook trigger; parse failures are silent.',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'] } },
+// ── tokenize ────────────────────────────────────────────────────────
+displayName: 'Session ID',
+name: 'sessionId',
+type: 'string',
+default: '={{$("Privent Session").item.json.sessionId}}',
+required: true,
+description:
+'Session ID from the Privent Session node upstream in this workflow. Tokens are scoped to this session — Detokenize must use the same ID.',
+hint: 'Add a Privent Session node at the start of your workflow to generate this value.',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['tokenize'], operation: ['tokenize'] } },
+displayName: 'Session ID',
+name: 'sessionId',
+type: 'string',
+default: '',
+description:
+'Optional. Scopes tokens so Detokenize can reverse them. In local mode no Privent Session node is needed.',
+hint: 'Leave empty to auto-manage the session — a fresh ID is generated and written to the output item.',
+displayOptions: { show: { authentication: ['local'], resource: ['tokenize'], operation: ['tokenize'] } },
+displayName: 'Detection Level',
+name: 'detectionLevel',
+type: 'options',
+name: 'Standard (Recommended)',
+value: 'standard',
+description:
+'Structured PII with high precision: emails, phones, financial, government IDs with checksums, secrets, crypto. Low false positives.',
+name: 'Aggressive',
+value: 'aggressive',
+description:
+default: 'standard',
+description:
+'How broadly local regex detection masks values. Local mode runs entirely inside n8n — no network. Every detector in Aggressive was measured against a false-positive corpus before being admitted.',
+displayOptions: { show: { authentication: ['local'], resource: ['tokenize'], operation: ['tokenize'] } },
+displayName: 'Trace ID',
+name: 'traceId',
+type: 'string',
+default: '={{ $("Privent Session").item.json.traceId }}',
+description:
+'Correlation ID from the upstream Privent Session node. Links this event to the session trace. Leave as-is; a fresh ID is generated if no Session is upstream.',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['tokenize'], operation: ['tokenize'] } },
+displayName: 'Agent Name',
+name: 'agentName',
+type: 'string',
+default: '={{ $("Privent Session").item.json.agentName }}',
+description:
+'Logical agent identifier from the upstream Privent Session node, recorded on the audit event. Optional.',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['tokenize'], operation: ['tokenize'] } },
+displayName: 'Text Field',
+name: 'textField',
+type: 'string',
+default: 'text',
+required: true,
+description: 'Name of the input item property that contains the text to tokenize',
+displayOptions: { show: { resource: ['tokenize'], operation: ['tokenize'] } },
+displayName: 'Detection Mode',
+name: 'detectionMode',
+type: 'options',
+name: 'Auto (Regex + ML Fallback)',
+value: 'auto',
+description:
+'Uses local regex patterns + Privent Cloud ML when available. Falls back to regex-only if cloud is unreachable.',
+name: 'Local Only (Regex)',
+value: 'local',
+description:
+'Regex-only detection (structured PII: emails, phones, SSN, cards, …). No network calls, no risk scoring — deterministic and fast. Does NOT mask names, dates of birth or addresses; use Auto or Cloud for full PHI coverage.',
+name: 'Cloud (Regex + ML)',
+value: 'cloud',
+description: 'Forces the ML extraction pass. Fails if Privent Cloud is unreachable.',
+default: 'auto',
+description: 'Controls entity extraction strategy and whether to call Privent Cloud ML',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['tokenize'], operation: ['tokenize'] } },
+displayName: 'Flag for Review Above Risk Score',
+name: 'reviewThreshold',
+type: 'number',
+typeOptions: { minValue: 0, maxValue: 1, numberPrecision: 2 },
+default: 0.9,
+description:
+'When Privent Cloud returns a risk score at or above this value, the item is flagged with privent.flaggedForReview = true. The workflow continues — use an IF or Switch node to route flagged items.',
+displayOptions: {
+show: { authentication: ['apiKey', 'tokenless'], resource: ['tokenize'], operation: ['tokenize'] },
+hide: { detectionMode: ['local'] },
+// ── detokenize ──────────────────────────────────────────────────────
+displayName: 'Session ID',
+name: 'sessionId',
+type: 'string',
+default: '={{$("Privent Session").item.json.sessionId}}',
+required: true,
+description: 'Must match the session ID used by the Privent Tokenize node upstream',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['detokenize'], operation: ['detokenize'] } },
+displayName: 'Session ID',
+name: 'sessionId',
+type: 'string',
+default: '',
+description:
+'Optional. Must match the session used by the upstream local Tokenize. Leave empty to read it from the item the Tokenize node produced.',
+hint: 'Leave empty when the local Tokenize node is directly upstream — its session ID rides on the item.',
+displayOptions: { show: { authentication: ['local'], resource: ['detokenize'], operation: ['detokenize'] } },
+displayName: 'Trace ID',
+name: 'traceId',
+type: 'string',
+default: '={{ $("Privent Session").item.json.traceId }}',
+description:
+'Correlation ID from the upstream Privent Session node. Links this event to the session trace. Leave as-is; a fresh ID is generated if no Session is upstream.',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['detokenize'], operation: ['detokenize'] } },
+displayName: 'Agent Name',
+name: 'agentName',
+type: 'string',
+default: '={{ $("Privent Session").item.json.agentName }}',
+description:
+'Logical agent identifier from the upstream Privent Session node, recorded on the audit event. Optional.',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['detokenize'], operation: ['detokenize'] } },
+displayName: 'Target Field',
+name: 'targetField',
+type: 'string',
+default: '*',
+description:
+'Field to detokenize. Use * (default) to deep-walk and resolve tokens in the entire item JSON. Or specify a single field name (e.g. "body").',
+hint: 'The * wildcard scans every nested string in the item for tokens.',
+displayOptions: { show: { resource: ['detokenize'], operation: ['detokenize'] } },
+displayName: 'Strict Mode',
+name: 'strict',
+type: 'boolean',
+default: false,
+description:
+'Whether detokenization is blocked unless the destination URL matches the Trusted Sinks list. When enabled, tokens are left in place and an audit event is written — use it to prevent accidental PII egress to untrusted systems.',
+displayOptions: { show: { resource: ['detokenize'], operation: ['detokenize'] } },
+displayName: 'Destination URL',
+name: 'sinkUrl',
+type: 'string',
+default: '',
+description:
+'URL of the downstream sink (e.g. the HTTP Request node URL). Used to enforce the trusted sinks list in strict mode.',
+displayOptions: {
+show: { resource: ['detokenize'], operation: ['detokenize'], strict: [true] },
+hint: 'Supports URL prefixes — e.g. https://api.internal.corp/',
+displayName: 'Trusted Sinks',
+name: 'trustedSinks',
+type: 'string',
+default: '',
+description:
+'Comma-separated list of URL prefixes allowed to receive detokenized data (e.g. https://api.internal.corp/,https://db.internal/). Only evaluated in strict mode.',
+displayOptions: {
+show: { resource: ['detokenize'], operation: ['detokenize'], strict: [true] },
+displayName: 'Target Agent Name (Trust Map)',
+name: 'targetAgentName',
+type: 'string',
+default: '',
+description:
+hint: 'Use only when the destination URL belongs to another Privent-aware agent in the same organization.',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['detokenize'], operation: ['detokenize'] } },
+// ── riskCheck ───────────────────────────────────────────────────────
+displayName: 'Text Field',
+name: 'textField',
+type: 'string',
+default: 'text',
+required: true,
+description: 'Name of the input item property containing the text to score',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['riskCheck'], operation: ['score'] } },
+displayName: 'Trace ID',
+name: 'traceId',
+type: 'string',
+default: '={{ $("Privent Session").item.json.traceId }}',
+description:
+'Correlation ID from the upstream Privent Session node. Links this risk check to the session trace. Leave as-is; a fresh ID is generated if no Session is upstream.',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['riskCheck'], operation: ['score'] } },
+displayName: 'Agent Name',
+name: 'agentName',
+type: 'string',
+default: '={{ $("Privent Session").item.json.agentName }}',
+description:
+'Logical agent identifier from the upstream Privent Session node, recorded on the audit event. Optional.',
+displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['riskCheck'], operation: ['score'] } },
+// ── audit ───────────────────────────────────────────────────────────
+displayName: 'Session ID',
+name: 'sessionId',
+type: 'string',
+default: '={{$("Privent Session").item.json.sessionId}}',
+required: true,
+description: 'Session ID from the upstream Privent Session node',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'] } },
+displayName: 'Trace ID',
+name: 'traceId',
+type: 'string',
+default: '={{ $("Privent Session").item.json.traceId }}',
+description:
+'Correlation ID from the upstream Privent Session node. Links this event to the session trace. Leave as-is; a fresh ID is generated if no Session is upstream.',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'] } },
+displayName: 'Agent Name',
+name: 'agentName',
+type: 'string',
+default: '={{ $("Privent Session").item.json.agentName }}',
+description:
+'Logical agent identifier from the upstream Privent Session node, recorded on the audit event. Optional.',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'] } },
+displayName: 'Event Type',
+name: 'eventType',
+type: 'options',
+{ name: 'Egress', value: 'egress' },
+{ name: 'Error', value: 'error' },
+{ name: 'LLM Call', value: 'llm_call' },
+{ name: 'Policy Decision', value: 'policy_decision' },
+default: 'llm_call',
+description: 'Audit event type. LLM Call triggers backend cost calculation from ModelPricing.',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'] } },
+displayName: 'LLM Model',
+name: 'model',
+type: 'resourceLocator',
+default: { mode: 'list', value: '' },
+required: true,
+description:
+'Model used for this LLM call. Pick from your org\'s priced models (popular first) or enter a custom one as provider|model. The provider is taken from the selection.',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'], eventType: ['llm_call'] } },
+displayName: 'From List',
+name: 'list',
+type: 'list',
+typeOptions: { searchListMethod: 'searchModels', searchable: true },
+displayName: 'By ID',
+type: 'string',
+placeholder: 'openai|gpt-4o-mini',
+hint: 'Format: provider|model',
+displayName: 'Prompt Tokens',
+name: 'promptTokens',
+// F-J: the rule matches on paramName.toLowerCase().includes('token')
+// (node-param-type-options-password-missing.js:32). This holds a token COUNT
+// expression, not a secret, and n8n's own exception list already carries the
+// class — FALSE_POSITIVE_NODE_SENSITIVE_PARAM_NAMES = ['maxTokens',
+// 'password_needs_reset'] (constants.js:125). Scoped to this line so a
+// genuinely secret parameter named '…token…' added later still errors.
+// eslint-disable-next-line n8n-nodes-base/node-param-type-options-password-missing
+type: 'string',
+default: '={{$json.usage.prompt_tokens}}',
+description: 'Expression resolving to the prompt token count. Default reads OpenAI-style {usage:{prompt_tokens}} from the previous node.',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'], eventType: ['llm_call'] } },
+displayName: 'Completion Tokens',
+name: 'completionTokens',
+// F-J: the rule matches on paramName.toLowerCase().includes('token')
+// (node-param-type-options-password-missing.js:32). This holds a token COUNT
+// expression, not a secret, and n8n's own exception list already carries the
+// class — FALSE_POSITIVE_NODE_SENSITIVE_PARAM_NAMES = ['maxTokens',
+// 'password_needs_reset'] (constants.js:125). Scoped to this line so a
+// genuinely secret parameter named '…token…' added later still errors.
+// eslint-disable-next-line n8n-nodes-base/node-param-type-options-password-missing
+type: 'string',
+default: '={{$json.usage.completion_tokens}}',
+description: 'Expression resolving to the completion token count',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'], eventType: ['llm_call'] } },
+displayName: 'Extra Metadata (JSON)',
+name: 'extraMetadata',
+type: 'json',
+default: '{}',
+description:
+'Optional. Merged into the audit event metadata. For event types other than LLM Call, use this to attach event-specific fields (e.g. policy decision rationale).',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['audit'], operation: ['emit'] } },
+// ── handoff ─────────────────────────────────────────────────────────
+displayName: 'Session ID',
+name: 'sessionId',
+type: 'string',
+default: '={{ $("Privent Session").item.json.sessionId }}',
+required: true,
+description: 'Session ID from the upstream Privent Session node — the "from" side of the handoff edge',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
+displayName: 'Trace ID',
+name: 'traceId',
+type: 'string',
+default: '={{ $("Privent Session").item.json.traceId }}',
+description:
+'Correlation ID from the upstream Privent Session node. Leave as-is; a fresh ID is generated if no Session is upstream.',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
+displayName: 'From Agent Name',
+name: 'agentName',
+type: 'string',
+default: '={{ $("Privent Session").item.json.agentName }}',
+required: true,
+description:
+'Canonical name of the source agent, from the upstream Privent Session node. Required — identifies the "from" side of the handoff edge.',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
+displayName: 'Target Kind',
+name: 'targetKind',
+type: 'options',
+name: 'Agent (In-Org)',
+value: 'agent',
+description: 'Hand off to another Privent-aware agent in the same organization',
+name: 'External Sink',
+value: 'sink',
+description: 'Hand off to an external destination outside the in-org agent fleet',
+default: 'agent',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
+displayName: 'Target Agent Name',
+name: 'toAgentName',
+type: 'string',
+default: '',
+required: true,
+description:
+'Canonical agent name of the downstream agent. Must match the agentName the downstream PriventSession will emit.',
+hint: 'Example: "Translator", "billing-agent". Resolves to Agent.id post-ingest.',
+displayOptions: {
+show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'], targetKind: ['agent'] },
+displayName: 'External Sink ID',
+name: 'toSinkId',
+type: 'string',
+default: '',
+required: true,
+description: 'Opaque identifier for an external sink (e.g. webhook URL hash, partner ID)',
+displayOptions: {
+show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'], targetKind: ['sink'] },
+displayName: 'Reason',
+name: 'reason',
+type: 'options',
+{ name: 'Delegation', value: 'delegation' },
+{ name: 'Other', value: 'other' },
+{ name: 'Subgraph Call', value: 'subgraph_call' },
+{ name: 'Tool Invocation', value: 'tool_invocation' },
+{ name: 'Webhook Trigger', value: 'webhook_trigger' },
+default: 'delegation',
+description: 'Categorises the handoff for the Trust Map graph filters',
+displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
+displayName: 'Payload Token Count',
+name: 'payloadTokenCount',
+type: 'number',
+description:
+'Optional. Token volume hint for blast-radius math in the Trust Map (set 0 to omit).',
+typeOptions: { minValue: 0 },
+displayOptions: { show: { authentication: ['apiKey'], resource: ['handoff'], operation: ['record'] } },
+listSearch: {
+// Powers the searchable model combobox. Hits the same backend + Bearer key
+// as audit ingest; degrades to manual `By ID` entry if the call fails.
+async searchModels(
+this: ILoadOptionsFunctions,
+filter?: string,
+): Promise<INodeListSearchResult> {
+const { baseUrl } = await this.getCredentials('priventApi');
+const resp = (await this.helpers.httpRequestWithAuthentication.call(
+'priventApi',
+method: 'GET',
+baseURL: baseUrl as string,
+url: '/v1/pricing/models',
+qs: { search: filter ?? '' },
+)) as { models?: Array<{ provider: string; model: string }> };
+const results = (resp.models ?? []).map((m) => ({
+name: `${m.model} (${m.provider})`,
+value: `${m.provider}|${m.model}`,
+return { results };
+return { results: [] };
+async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+const resource = this.getNodeParameter('resource', 0) as string;
+// Read items up front so item_count is available for every path (incl. the
+// batched riskCheck early return) in the central telemetry ping below.
+const items = this.getInputData();
+// One anonymous telemetry ping per execution (tokenless only — the helper
+// self-guards; apiKey/local emit nothing). Fire-and-forget in `finally`, so
+// it neither swallows the thrown error nor changes the return value.
+let status: 'success' | 'error' = 'success';
+let errorType: string | undefined;
+// Risk Check is batched (one /v1/risk/batch call for all items) — it owns
+// its own loop and error handling, so branch before the per-item dispatch.
+// `return await` so a rejection is caught here (marks status='error').
+if (resource === 'riskCheck') {
+return await executeRiskCheck(this);
+const handler = PER_ITEM_HANDLERS[resource];
+if (!handler) {
+// Unknown resource should be unreachable (options-only param).
+return [[]];
+// Local mode has no credential — never read one. Tokenize/Detokenize local
+// paths ignore baseUrl entirely.
+const baseUrl = getAuthMode(this) === 'local' ? '' : await getPriventBaseUrl(this);
+// Vault backend (audit metadata) is apiKey-only; read once per execution.
+const vaultBackend = getAuthMode(this) === 'apiKey' ? await getVaultBackend(this) : undefined;
+const out: INodeExecutionData[] = [];
+for (let i = 0; i < items.length; i++) {
+const json = await handler(this, i, baseUrl, vaultBackend);
+out.push({ json, pairedItem: { item: i } });
+} catch (err) {
+if (this.continueOnFail()) {
+out.push({ json: { error: (err as Error).message }, pairedItem: { item: i } });
+throw wrapNodeError(this, err);
+return [out];
+} catch (err) {
+status = 'error';
+errorType = (err as Error)?.constructor?.name;
+throw wrapNodeError(this, err);
+void telemetryPing(this, {
+operation: resource,
+item_count: items.length,
+error_type: errorType,
+timestamp: new Date().toISOString(),
+import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
+import type { AuditEvent, AuditEventType } from '@priventai/core';
+NODE_VERSION,
+buildAuditMetadata,
+resolveContext,
+safeFrameworkVersion,
+safeTriggerMode,
+} from '../../../shared/privent-http.js';
+/** `audit` resource → `emit` operation. Migrated from PriventAuditEvent. */
+export async function handleAudit(
+ctx: IExecuteFunctions,
+baseUrl: string,
+vaultBackend?: 'memory' | 'cloud',
+): Promise<IDataObject> {
+const item = ctx.getInputData()[i]!;
+const triggerMode = safeTriggerMode(ctx);
+const frameworkVersion = safeFrameworkVersion();
+const sessionId = (ctx.getNodeParameter('sessionId', i) as string).trim();
+if (!sessionId) {
+throw new NodeOperationError(ctx.getNode(), 'Session ID is required', { itemIndex: i });
+const traceIdParam = ctx.getNodeParameter('traceId', i, '') as string;
+const agentNameParam = ctx.getNodeParameter('agentName', i, '') as string;
+const eventType = ctx.getNodeParameter('eventType', i) as AuditEventType;
+const extraRaw = ctx.getNodeParameter('extraMetadata', i, '{}') as
+| Record<string, unknown>;
+// n8n's "json" param can resolve to either a string (raw JSON expression)
+// or an already-parsed object depending on whether the expression engine
+// ran first. Accept both; ignore invalid JSON silently to keep the
+// workflow alive (the audit event still gets emitted with the base
+let extraMetadata: Record<string, unknown> = {};
+if (typeof extraRaw === 'string') {
+const parsed = JSON.parse(extraRaw || '{}');
+if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+extraMetadata = parsed as Record<string, unknown>;
+// invalid JSON — ignore
+} else if (extraRaw && typeof extraRaw === 'object' && !Array.isArray(extraRaw)) {
+extraMetadata = extraRaw;
+const metadata: Record<string, unknown> = { ...extraMetadata };
+if (eventType === 'llm_call') {
+// resourceLocator value is "provider|model" from the picker, or a raw
+// string in manual mode. Split on the first "|"; a bare value is taken
+// as the model with provider omitted (backend logs a pricing miss).
+const selected = (
+ctx.getNodeParameter('model', i, '', { extractValue: true }) as string
+const sep = selected.indexOf('|');
+const provider = sep >= 0 ? selected.slice(0, sep).trim().toLowerCase() : '';
+const model = sep >= 0 ? selected.slice(sep + 1).trim() : selected;
+const promptTokensRaw = ctx.getNodeParameter('promptTokens', i);
+const completionTokensRaw = ctx.getNodeParameter('completionTokens', i);
+const promptTokens = Number(promptTokensRaw);
+const completionTokens = Number(completionTokensRaw);
+if (provider) metadata.provider = provider;
+if (model) metadata.model = model;
+metadata.prompt_tokens =
+Number.isFinite(promptTokens) && promptTokens > 0 ? Math.trunc(promptTokens) : 0;
+metadata.completion_tokens =
+Number.isFinite(completionTokens) && completionTokens > 0
+? Math.trunc(completionTokens)
+const auditCtx = resolveContext(ctx, sessionId, traceIdParam, agentNameParam, vaultBackend);
+const node = ctx.getNode();
+if (triggerMode !== undefined) metadata.trigger_mode = triggerMode;
+if (frameworkVersion !== undefined) metadata.framework_version = frameworkVersion;
+const event: AuditEvent = {
+type: eventType,
+traceId: auditCtx.traceId,
+timestamp: Date.now(),
+framework: 'n8n',
+workflowId: auditCtx.workflowId,
+nodeId: node.id,
+metadata: buildAuditMetadata(auditCtx, node, metadata),
+void auditLog(ctx, event, baseUrl);
+...item.json,
+nodeVersion: NODE_VERSION,
+auditEventEmitted: true,
+import { createHash } from 'node:crypto';
+import type { IDataObject, IExecuteFunctions, JsonObject } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
+import type { AuditEvent } from '@priventai/core';
+import { scanForTokens, detokenizeDeep } from '@priventai/core';
+NODE_VERSION,
+N8nHttpVault,
+WorkflowStaticDataVault,
+buildAuditMetadata,
+authWarning,
+getAuthMode,
+makeResolvedVault,
+resolveContext,
+safeTriggerMode,
+sha256short,
+type SessionVault,
+} from '../../../shared/privent-http.js';
+* Returns true if `url` starts with any of the given prefixes.
+* Used for trusted-sink enforcement in strict mode — reached ONLY from the
+* `if (strict)` branch below, so a non-strict run never consults it.
+* An empty list means nothing is trusted, not everything. Reading an empty
+* configuration as permission is what made Strict Mode a no-op for anyone who
+* turned it on without filling the list in.
+function matchesTrustedSink(url: string, trusted: string[]): boolean {
+if (trusted.length === 0) return false;
+return trusted.some((prefix) => url.startsWith(prefix.trim()));
+* Opaque, path-sensitive fingerprint of the destination URL — first 16 hex
+* chars of SHA-256(sinkUrl).  Two calls to the same URL yield the same
+* fingerprint (groupable); two paths on the same host yield different
+* fingerprints (path-level visibility for the sink catalog).  Truncation is
+* safe: the value is a non-cryptographic group key, never an auth token.
+export function deriveSinkId(sinkUrl: string): string | null {
+if (!sinkUrl) return null;
+return createHash('sha256').update(sinkUrl).digest('hex').slice(0, 16);
+* Human-readable host of the destination URL (e.g. `api.salesforce.com`),
+* intended for display in the sink catalog.  Falls back to a 64-char
+* truncation so malformed URLs still surface something renderable.
+export function deriveSinkUrlHost(sinkUrl: string): string | null {
+if (!sinkUrl) return null;
+return new URL(sinkUrl).host;
+return sinkUrl.slice(0, 64);
+/** `detokenize` resource → `detokenize` operation. Migrated from PriventDetokenize. */
+export async function handleDetokenize(
+ctx: IExecuteFunctions,
+baseUrl: string,
+vaultBackend?: 'memory' | 'cloud',
+): Promise<IDataObject> {
+const t0 = Date.now(); // op wall-clock → audit latency_ms
+const item = ctx.getInputData()[i]!;
+const triggerMode = safeTriggerMode(ctx);
+const authMode = getAuthMode(ctx);
+let sessionId = (ctx.getNodeParameter('sessionId', i, '') as string).trim();
+if (authMode === 'local' && !sessionId) {
+// Session is optional in local mode: fall back to the id the upstream local
+// Tokenize emitted on the item.
+const upstream = (item.json as { privent?: { sessionId?: unknown } }).privent;
+sessionId = typeof upstream?.sessionId === 'string' ? upstream.sessionId : '';
+if (!sessionId) {
+throw new NodeOperationError(
+ctx.getNode(),
+'No session id — add a Privent Tokenize node upstream, or set Session ID.',
+{ itemIndex: i },
+const targetField = ctx.getNodeParameter('targetField', i) as string;
+const strict = ctx.getNodeParameter('strict', i) as boolean;
+const traceIdParam = ctx.getNodeParameter('traceId', i, '') as string;
+const agentNameParam = ctx.getNodeParameter('agentName', i, '') as string;
+let sinkUrl = '';
+let isTrusted = true;
+let noTrustedSinks = false;
+if (strict) {
+sinkUrl = ctx.getNodeParameter('sinkUrl', i) as string;
+const trustedRaw = ctx.getNodeParameter('trustedSinks', i) as string;
+const trusted = trustedRaw.split(',').map((s) => s.trim()).filter(Boolean);
+noTrustedSinks = trusted.length === 0;
+isTrusted = matchesTrustedSink(sinkUrl, trusted);
+const sinkId = deriveSinkId(sinkUrl);
+const sinkUrlHost = deriveSinkUrlHost(sinkUrl);
+const targetAgentName = (
+(ctx.getNodeParameter('targetAgentName', i, '') as string) ?? ''
+const ctxAudit = resolveContext(ctx, sessionId, traceIdParam, agentNameParam, vaultBackend);
+const node = ctx.getNode();
+if (!isTrusted) {
+// Strict mode: sink not trusted — pass the item through unchanged and
+// mark it so the caller knows detokenization was skipped.
+const blockedEvent: AuditEvent = {
+type: 'detokenize',
+traceId: ctxAudit.traceId,
+timestamp: Date.now(),
+framework: 'n8n',
+workflowId: ctxAudit.workflowId,
+nodeId: node.id,
+latencyMs: Date.now() - t0,
+...(targetAgentName ? { targetAgentName } : {}),
+metadata: buildAuditMetadata(ctxAudit, node, {
+sink_id: sinkId,
+sink_url_host: sinkUrlHost,
+sink_trusted: false,
+strict: true,
+tokens_redeemed: 0,
+reason: noTrustedSinks ? 'strict-mode-no-trusted-sinks' : 'strict-mode-block',
+...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
+void auditLog(ctx, blockedEvent, baseUrl);
+...item.json,
+nodeVersion: NODE_VERSION,
+...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
+detokenized: false,
+reason: noTrustedSinks
+? 'Strict Mode is on but no Trusted Sinks are configured, so the original values were not restored — add the destination URL to Trusted Sinks, or turn Strict Mode off.'
+: 'Strict Mode blocked restoring the original values because the destination URL is not in Trusted Sinks — add it to the list, or turn Strict Mode off.',
+const vault: SessionVault =
+authMode !== 'apiKey'
+? new WorkflowStaticDataVault(ctx, sessionId)
+: new N8nHttpVault(ctx, sessionId, baseUrl);
+const scanTarget =
+targetField === '*' ? item.json : (item.json as Record<string, unknown>)[targetField];
+const placeholders = [...scanForTokens(scanTarget)];
+// Placeholder fingerprint: hashes the token placeholder strings (e.g.
+// "[EMAIL_001]|[PHONE_002]"), NOT the underlying PII values. Raw values
+// never enter the hash input — `vault.retrieve` is intentionally not
+// called for fingerprinting. See plan §B for the security rationale.
+const uniqPlaceholders = [...new Set(placeholders)].sort();
+const valueFingerprint =
+uniqPlaceholders.length > 0 ? await sha256short(uniqPlaceholders.join(' ')) : null;
+const valueFingerprints = await Promise.all(uniqPlaceholders.map((p) => sha256short(p)));
+// One batch retrieve for all scanned tokens, then resolve locally so the
+// deep-walk costs zero extra round-trips.
+let entries;
+entries = await vault.retrieveBatch([...new Set(placeholders)]);
+} catch (err) {
+throw new NodeApiError(ctx.getNode(), err as JsonObject, { itemIndex: i });
+const resolvedVault = makeResolvedVault(sessionId, entries);
+// Tokens FOUND and tokens REDEEMED are two different numbers, and this node
+// used to report the first one under the second one's name. A placeholder the
+// scanner can see but the vault cannot resolve — expired, minted in another
+// session, or minted in a case this grammar refuses (see NP-M) — left the text
+// unchanged while `detokenized: true` and a non-zero `tokens_redeemed` said
+// otherwise. The gap between the two numbers IS the signal that tokens were
+// present and unresolvable, so both are reported and success is derived from
+// the second, never the first.
+const tokensRedeemed = new Set(entries.map((e) => e.token)).size;
+const detokenized = uniqPlaceholders.length > 0 && tokensRedeemed === uniqPlaceholders.length;
+const reason =
+uniqPlaceholders.length === 0
+? 'No Privent tokens were found, so nothing was restored — check that Target Field points at the text that holds the [KIND_NNN] placeholders.'
+: `Only ${tokensRedeemed} of the ${uniqPlaceholders.length} Privent tokens found could be restored — the rest are unknown to the vault under this Session ID, so their placeholders were left in place.`;
+let json: IDataObject;
+if (targetField === '*') {
+json = (await detokenizeDeep(item.json, resolvedVault)) as IDataObject;
+const fieldValue = (item.json as Record<string, unknown>)[targetField];
+const resolved = await detokenizeDeep(fieldValue, resolvedVault);
+json = { ...item.json, [targetField]: resolved } as IDataObject;
+const event: AuditEvent = {
+type: 'detokenize',
+traceId: ctxAudit.traceId,
+timestamp: Date.now(),
+framework: 'n8n',
+workflowId: ctxAudit.workflowId,
+nodeId: node.id,
+latencyMs: Date.now() - t0,
+...(targetAgentName ? { targetAgentName } : {}),
+metadata: buildAuditMetadata(ctxAudit, node, {
+sink_id: sinkId,
+sink_url_host: sinkUrlHost,
+sink_trusted: isTrusted,
+tokens_found: uniqPlaceholders.length,
+tokens_redeemed: tokensRedeemed,
+detokenized,
+value_fingerprint: valueFingerprint,
+value_fingerprints: valueFingerprints,
+...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
+void auditLog(ctx, event, baseUrl);
+nodeVersion: NODE_VERSION,
+...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
+detokenized,
+...(detokenized ? {} : { reason }),
+import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
+import type { AuditEvent, HandoffReason } from '@priventai/core';
+NODE_VERSION,
+buildAuditMetadata,
+resolveContext,
+safeTriggerMode,
+} from '../../../shared/privent-http.js';
+/** `handoff` resource → `record` operation. Migrated from PriventHandoff. */
+export async function handleHandoff(
+ctx: IExecuteFunctions,
+baseUrl: string,
+vaultBackend?: 'memory' | 'cloud',
+): Promise<IDataObject> {
+const item = ctx.getInputData()[i]!;
+const triggerMode = safeTriggerMode(ctx);
+const targetKind = ctx.getNodeParameter('targetKind', i, 'agent') as 'agent' | 'sink';
+const reason = ctx.getNodeParameter('reason', i, 'delegation') as HandoffReason;
+const payloadTokenCount = Number(ctx.getNodeParameter('payloadTokenCount', i, 0) ?? 0);
+const sessionIdParam = (ctx.getNodeParameter('sessionId', i, '') as string).trim();
+const traceIdParam = ctx.getNodeParameter('traceId', i, '') as string;
+const agentNameParam = ctx.getNodeParameter('agentName', i, '') as string;
+const ctxAudit = resolveContext(ctx, sessionIdParam, traceIdParam, agentNameParam, vaultBackend);
+const node = ctx.getNode();
+if (!ctxAudit.sessionId) {
+throw new NodeOperationError(
+ctx.getNode(),
+'Privent Handoff requires an upstream Privent Session node — sessionId is missing.',
+{ itemIndex: i },
+if (!ctxAudit.agentName) {
+throw new NodeOperationError(
+ctx.getNode(),
+'Privent Handoff requires the upstream Privent Session to have an Agent Name set.',
+{ itemIndex: i },
+let toAgentName: string | undefined;
+let toSinkId: string | undefined;
+if (targetKind === 'agent') {
+toAgentName = (ctx.getNodeParameter('toAgentName', i, '') as string).trim();
+if (!toAgentName) {
+throw new NodeOperationError(
+ctx.getNode(),
+'Target Agent Name is required when Target Kind = Agent',
+{ itemIndex: i },
+toSinkId = (ctx.getNodeParameter('toSinkId', i, '') as string).trim();
+if (!toSinkId) {
+throw new NodeOperationError(
+ctx.getNode(),
+'External Sink ID is required when Target Kind = External Sink',
+{ itemIndex: i },
+// Build the same `agent_handoff` event shape that core's
+// `client.handoff()` produced, then emit via the stateless audit path.
+// fail-open per SDK convention — auditLog swallows transport errors.
+const handoffEvent: AuditEvent = {
+type: 'agent_handoff',
+traceId: ctxAudit.traceId,
+sessionId: ctxAudit.sessionId,
+timestamp: Date.now(),
+framework: 'n8n',
+workflowId: ctxAudit.workflowId,
+nodeId: node.id,
+nodeName: node.name,
+fromAgentName: ctxAudit.agentName,
+...(toAgentName != null ? { targetAgentName: toAgentName } : {}),
+...(toSinkId != null ? { targetSinkId: toSinkId } : {}),
+...(Number.isFinite(payloadTokenCount) && payloadTokenCount > 0
+? { payloadTokenCount }
+// v1 (n8n linear flows) always 1. LangGraph/CrewAI adapters will fill
+// parent_event_id/branch_id/hop_depth for non-linear topologies.
+hopDepth: 1,
+metadata: buildAuditMetadata(ctxAudit, node, {
+...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
+void auditLog(ctx, handoffEvent, baseUrl);
+...item.json,
+nodeVersion: NODE_VERSION,
+handoff: true,
+fromAgentName: ctxAudit.agentName,
+toAgentName: toAgentName ?? null,
+toSinkId: toSinkId ?? null,
+import type { IExecuteFunctions, INodeExecutionData, JsonObject } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
+import type { AuditEvent } from '@priventai/core';
+NODE_VERSION,
+buildAuditMetadata,
+getAuthMode,
+getPriventBaseUrl,
+getVaultBackend,
+resolveContext,
+riskScoreBatch,
+safeTriggerMode,
+wrapNodeError,
+} from '../../../shared/privent-http.js';
+/** The length-mismatch guard inside `riskScoreBatch` is a logical (not HTTP)
+*  failure — surfaced as a NodeOperationError rather than a NodeApiError. */
+function isBatchLengthMismatch(err: unknown): boolean {
+return err instanceof Error && err.message.startsWith('Privent risk batch length mismatch');
+* `riskCheck` resource → `score` operation. Migrated from PriventRiskCheck.
+* BATCHED: a single `riskScoreBatch` call for all valid items (not per-item HTTP).
+export async function executeRiskCheck(ctx: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+const items = ctx.getInputData();
+const baseUrl = await getPriventBaseUrl(ctx);
+// Vault backend (audit metadata) is apiKey-only; read once before the loop.
+const vaultBackend = getAuthMode(ctx) === 'apiKey' ? await getVaultBackend(ctx) : undefined;
+const triggerMode = safeTriggerMode(ctx);
+// Auto-batch: collect texts from all items and call riskScoreBatch() once.
+// This is more efficient than one score() call per item and avoids N
+// sequential round-trips to Privent Cloud.
+const texts: Array<{ text: string; itemIndex: number }> = [];
+const errors: Map<number, Error> = new Map();
+for (let i = 0; i < items.length; i++) {
+const item = items[i]!;
+const textField = ctx.getNodeParameter('textField', i) as string;
+const raw = (item.json as Record<string, unknown>)[textField];
+if (typeof raw !== 'string') {
+throw new NodeOperationError(
+ctx.getNode(),
+`Field "${textField}" is not a string. Got: ${typeof raw}`,
+itemIndex: i,
+description:
+'Check the "Text Field" parameter — it should match a string property in your input data.',
+texts.push({ text: raw, itemIndex: i });
+} catch (err) {
+if (ctx.continueOnFail()) {
+errors.set(i, err as Error);
+throw wrapNodeError(ctx, err);
+// Single batched call — handles up to 64 items per call. HTTP failure here is
+// surfaced as a NodeApiError (status + body); a length-mismatch (logical) as
+// a NodeOperationError. When continuing, every batched item gets an error row.
+texts.length > 0 ? await riskScoreBatch(ctx, texts.map((t) => t.text), baseUrl) : [];
+} catch (err) {
+if (ctx.continueOnFail()) {
+const out: INodeExecutionData[] = [];
+for (let i = 0; i < items.length; i++) {
+const message = errors.has(i) ? errors.get(i)!.message : (err as Error).message;
+out.push({ json: { error: message }, pairedItem: { item: i } });
+return [out];
+if (isBatchLengthMismatch(err)) {
+throw new NodeOperationError(ctx.getNode(), err as Error);
+throw new NodeApiError(ctx.getNode(), err as JsonObject);
+const out: INodeExecutionData[] = [];
+const node = ctx.getNode();
+let scoreIdx = 0;
+for (let i = 0; i < items.length; i++) {
+const item = items[i]!;
+if (errors.has(i)) {
+out.push({ json: { error: errors.get(i)!.message }, pairedItem: { item: i } });
+const traceIdParam = ctx.getNodeParameter('traceId', i, '') as string;
+const agentNameParam = ctx.getNodeParameter('agentName', i, '') as string;
+// Sessionless node: the audit session_id is the (UUID) traceId.
+const auditCtx = resolveContext(ctx, '', traceIdParam, agentNameParam, vaultBackend);
+const risk = scores[scoreIdx++]!;
+const event: AuditEvent = {
+type: 'risk_check',
+traceId: auditCtx.traceId,
+sessionId: auditCtx.traceId,
+timestamp: Date.now(),
+framework: 'n8n',
+workflowId: auditCtx.workflowId,
+nodeId: node.id,
+latencyMs: risk.latencyMs,
+metadata: buildAuditMetadata(auditCtx, node, {
+risk_score: risk.risk_score,
+risk_level: risk.risk_level,
+categories: risk.categories ?? null,
+model: risk.model,
+latency_ms: risk.latencyMs,
+batch_size: texts.length,
+...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
+void auditLog(ctx, event, baseUrl);
+...item.json,
+nodeVersion: NODE_VERSION,
+risk_score: risk.risk_score,
+risk_level: risk.risk_level,
+categories: risk.categories,
+model: risk.model,
+latencyMs: risk.latencyMs,
+pairedItem: { item: i },
+return [out];
+import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
+import type { AuditEvent } from '@priventai/core';
+buildAuditMetadata,
+safeExecutionId,
+safeFrameworkVersion,
+safeTriggerMode,
+safeWorkflow,
+} from '../../../shared/privent-http.js';
+/** `session` resource → `open` operation. Migrated verbatim from PriventSession. */
+export async function handleSession(
+ctx: IExecuteFunctions,
+baseUrl: string,
+vaultBackend?: 'memory' | 'cloud',
+): Promise<IDataObject> {
+const item = ctx.getInputData()[i]!;
+const framework =
+(ctx.getNodeParameter('framework', i, 'n8n') as string) === 'manual' ? 'manual' : 'n8n';
+const triggerMode = safeTriggerMode(ctx);
+const { id: workflowId, name: workflowName } = safeWorkflow(ctx);
+const executionId = safeExecutionId(ctx);
+const mode = ctx.getNodeParameter('sessionIdMode', i) as 'auto' | 'manual';
+const sessionId =
+mode === 'manual'
+? (ctx.getNodeParameter('sessionId', i) as string).trim()
+: crypto.randomUUID();
+if (!sessionId) {
+throw new NodeOperationError(ctx.getNode(), 'Session ID cannot be empty in manual mode', {
+itemIndex: i,
+if (mode === 'manual' && !isUuid(sessionId)) {
+throw new NodeOperationError(
+ctx.getNode(),
+'Manual Session ID must be a UUID — auto mode generates one',
+{ itemIndex: i },
+const traceId = crypto.randomUUID();
+const agentNameParam = (ctx.getNodeParameter('agentName', i, '') as string).trim();
+const agentName = agentNameParam || workflowName || '';
+const startedAt = Date.now();
+// Cloud vault is lazy — no pre-warm needed. Correlation context travels
+// on the output item (below) instead of a process-global registry.
+// C-2: pull client IP / User-Agent from an upstream Webhook trigger.
+// Best-effort: missing node, missing headers, or expression errors all
+// collapse to undefined so the workflow never breaks on parse failure.
+let triggerPrincipalIp: string | undefined;
+let triggerPrincipalUserAgent: string | undefined;
+const webhookNodeName = (
+ctx.getNodeParameter('webhookNodeName', i, 'Webhook') as string
+if (webhookNodeName) {
+const headersExpr = `={{$("${webhookNodeName}").first().json.headers}}`;
+const headers = ctx.evaluateExpression(headersExpr, i) as
+| Record<string, unknown>
+| undefined;
+if (headers && typeof headers === 'object') {
+const lower: Record<string, string> = {};
+for (const [k, v] of Object.entries(headers)) {
+if (typeof v === 'string') lower[k.toLowerCase()] = v;
+// Fallback chain ordered from most to least specific. First
+// populated header wins — `x-forwarded-for` may carry a list
+// (proxy chain); the original client is the leftmost entry.
+const ipChain = ['x-forwarded-for', 'cf-connecting-ip', 'x-real-ip', 'x-client-ip'];
+for (const h of ipChain) {
+const raw = lower[h];
+const first = raw.split(',')[0]?.trim();
+if (first) {
+triggerPrincipalIp = first;
+if (lower['user-agent']) {
+triggerPrincipalUserAgent = lower['user-agent'].slice(0, 500);
+// No upstream Webhook node, or the expression failed — skip silently.
+const node = ctx.getNode();
+const auditCtx = {
+executionId,
+workflowName,
+vaultBackend,
+const sessionOpen: AuditEvent = {
+type: 'session_open',
+timestamp: startedAt,
+nodeId: node.id,
+metadata: buildAuditMetadata(auditCtx, node, {
+session_id_mode: mode,
+// `framework_version` means n8n's version. When the peer cannot be read it
+// is ABSENT, not guessed: the old fallback wrote core's TRACER_VERSION,
+// which is not n8n's version and never was — it read as `2.4.0` (this
+// package) while core bundled 0.8.0, and would have read `0.10.0` (core)
+// after the bump, because 0.10.0 bakes its own literal in place of the
+// `globalThis.__SDK_VERSION__` that tsup used to replace. Same lie, new
+// value. `privent-http.ts:32` already says not to use TRACER_VERSION; this
+// line did it through a fallback. See NP-Q. The backend stores the field
+// as null when the key is absent — measured, it does not reject the event.
+...(safeFrameworkVersion() ? { framework_version: safeFrameworkVersion() } : {}),
+...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
+...(triggerPrincipalIp !== undefined ? { trigger_principal_ip: triggerPrincipalIp } : {}),
+...(triggerPrincipalUserAgent !== undefined
+? { trigger_principal_user_agent: triggerPrincipalUserAgent }
+void auditLog(ctx, sessionOpen, baseUrl);
+...item.json,
+executionId,
+import type { IDataObject, IExecuteFunctions, JsonObject } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
+import type { AuditEvent, EntityKind, RegexDetector } from '@priventai/core';
+import { DEFAULT_DETECTORS } from '@priventai/core';
+NODE_VERSION,
+N8nHttpVault,
+WorkflowStaticDataVault,
+buildAuditMetadata,
+buildLocalDetectors,
+fetchActiveCustomDetectors,
+authWarning,
+getAuthMode,
+resolveContext,
+safeTriggerMode,
+type CustomDetector,
+type SessionVault,
+} from '../../../shared/privent-http.js';
+import { isLocalFalsePositive } from '../../../shared/local-detectors.js';
+/** A detected span in the source text (regex or backend ML), detection order. */
+interface Span {
+kind: EntityKind;
+value: string;
+index: number;
+length: number;
+confidence: number;
+source: 'regex' | 'model' | 'hint' | 'custom';
+/** Org custom-pattern spans are authoritative: they win overlap resolution
+*  over any built-in or ML span. Undefined for built-in/ML spans. */
+authoritative?: boolean;
+/** Org classification carried onto the emitted entity (custom spans only). */
+category?: string;
+sensitivity?: string;
+// On an exact-span tie, the more-specific source wins (custom over ML over a
+// generic hint over a regex). For regex-only (local) detection all sources are
+// 'regex', so this rank is a no-op and ordering matches the previous behavior
+// exactly. `custom` also wins via the authoritative pre-filter in removeOverlaps.
+const SOURCE_RANK: Record<Span['source'], number> = { custom: -1, model: 0, hint: 1, regex: 2 };
+* Longest span wins on overlap; total ordering for determinism. Mirrors core's
+* `removeOverlaps` (tokenizer/hybrid.ts) so the regex pass stays byte-identical;
+* also used to merge regex + backend-ML spans into one non-overlapping set.
+* Authoritative (custom) spans always survive: any non-authoritative span
+* overlapping one is dropped before the greedy sweep — a longer built-in or an
+* ML span can never evict a custom match. A no-op when there are no custom
+* patterns (mirrors core's removeOverlaps pre-filter).
+function removeOverlaps(spans: Span[]): Span[] {
+const authoritative = spans.filter((s) => s.authoritative);
+let pool = spans;
+if (authoritative.length > 0) {
+pool = spans.filter(
+s.authoritative ||
+!authoritative.some(
+(a) => s.index < a.index + a.length && s.index + s.length > a.index,
+const sorted = [...pool].sort(
+a.index - b.index ||
+b.length - a.length ||
+SOURCE_RANK[a.source] - SOURCE_RANK[b.source] ||
+a.kind.localeCompare(b.kind) ||
+a.value.localeCompare(b.value),
+const kept: Span[] = [];
+let lastEnd = -1;
+for (const s of sorted) {
+if (s.index >= lastEnd) {
+kept.push(s);
+lastEnd = s.index + s.length;
+return kept;
+* Pure regex detection — mirrors the regex pass in core's `HybridTokenizer`
+* (tokenizer/hybrid.ts). Reimplemented here (rather than importing the class)
+* because `hybrid.ts` statically pulls the ML extractor + http client, which
+* would drag `process`/fetch into this Cloud-verified bundle.
+* NOTE: regex only finds structured PII (email/phone/SSN/card/…). Person names,
+* dates of birth and street addresses are NOT detectable by regex — those come
+* from the backend ML pass (auto/cloud modes only).
+function detectMatches(
+text: string,
+detectors: readonly RegexDetector[],
+opts: { preserveFlags?: boolean } = {},
+const matches: Span[] = [];
+for (const detector of detectors) {
+// Default: rebuild with `g` only (drops other flags) — keeps the apiKey/
+// tokenless core path byte-identical. Local passes preserveFlags so the
+// pre-built global regex (with its original i/s/m flags) is reused as-is;
+// matchAll clones it internally, so sharing the object across calls is safe.
+const re = opts.preserveFlags ? detector.regex : new RegExp(detector.regex.source, 'g');
+for (const m of text.matchAll(re)) {
+if (m.index == null) continue;
+const raw = m[0];
+if (detector.validate && !detector.validate(raw)) continue;
+matches.push({
+kind: detector.kind,
+index: m.index,
+length: raw.length,
+confidence: detector.confidence,
+source: 'regex',
+return removeOverlaps(matches);
+* Run org custom detectors → authoritative custom spans carrying the org
+* classification. Kept separate from `detectMatches` so the built-in path stays
+* byte-identical and custom flags (i/m/s) are preserved (each regex is already
+* global from `withGlobal`; `matchAll` clones it, so reuse across items is safe).
+* Zero-width matches are skipped so a degenerate pattern can't evict real spans.
+function detectCustomMatches(text: string, detectors: readonly CustomDetector[]): Span[] {
+const spans: Span[] = [];
+for (const detector of detectors) {
+for (const m of text.matchAll(detector.regex)) {
+if (m.index == null) continue;
+const raw = m[0];
+if (raw.length === 0) continue;
+spans.push({
+kind: detector.kind,
+index: m.index,
+length: raw.length,
+confidence: detector.confidence,
+source: 'custom',
+authoritative: true,
+category: detector.category,
+sensitivity: detector.sensitivity,
+return spans;
+* Text immediately preceding a match, on its own line, capped at 40 characters.
+* Line-scoped and prefix-only on purpose: the rules that consume it ask what
+* came BEFORE the value. A whole-window context would let a `#` or `;` anywhere
+* nearby satisfy the comment rule and suppress a real match.
+function precedingContext(text: string, index: number): string {
+const lineStart = text.lastIndexOf('\n', Math.max(0, index - 1)) + 1;
+return text.slice(Math.max(lineStart, index - 40), index);
+* `tokenize` in `local` (no-backend) mode: regex-only detection over the
+* Detection-Level-gated detector set, an in-memory vault, and ZERO network
+* (no riskScore, no audit). Session id is optional — auto-generated and emitted
+* on the item so a downstream local Detokenize can pick it up.
+async function handleTokenizeLocal(ctx: IExecuteFunctions, i: number): Promise<IDataObject> {
+const item = ctx.getInputData()[i]!;
+const textField = ctx.getNodeParameter('textField', i) as string;
+const level = ctx.getNodeParameter('detectionLevel', i, 'standard') as 'standard' | 'aggressive';
+const sessionIdParam = (ctx.getNodeParameter('sessionId', i, '') as string).trim();
+const sessionId = sessionIdParam || crypto.randomUUID();
+const text = (item.json as Record<string, unknown>)[textField];
+if (typeof text !== 'string') {
+throw new NodeOperationError(
+ctx.getNode(),
+`Field "${textField}" is not a string. Got: ${typeof text}`,
+itemIndex: i,
+description:
+'Check the "Text Field" parameter — it should match the property name in your input data.',
+const detectors = buildLocalDetectors(level);
+const spans = removeOverlaps(
+detectMatches(text, detectors, { preserveFlags: true }).filter(
+// The third argument is the text preceding the match on its own line, capped
+// at 40 chars. It was never passed before — every call site handed the empty
+// string — so every context-aware rule ("preceded by `port:`", "preceded by a
+// currency word", "inside a comment") was inert while the value-aware ones
+// fired everywhere. See NP-T.
+(s) => !isLocalFalsePositive(s.value, s.kind, precedingContext(text, s.index)),
+.filter((s) => s.length > 0 && s.index >= 0 && s.index + s.length <= text.length)
+.map((s) => ({ ...s, value: text.slice(s.index, s.index + s.length) }));
+const vault = new WorkflowStaticDataVault(ctx, sessionId);
+let tokenizedText = text;
+const entities: Array<{
+token: string;
+kind: EntityKind;
+confidence: number;
+source: Span['source'];
+if (spans.length > 0) {
+const batched = await vault.findOrCreateBatch(spans.map((s) => ({ kind: s.kind, value: s.value })));
+const withTokens = spans.map((s, idx) => ({ ...s, token: batched[idx]?.token }));
+for (const s of [...withTokens].sort((a, b) => b.index - a.index)) {
+if (s.token == null) continue;
+tokenizedText =
+tokenizedText.slice(0, s.index) + s.token + tokenizedText.slice(s.index + s.length);
+for (const s of withTokens) {
+if (s.token == null) continue;
+entities.push({ token: s.token, kind: s.kind, confidence: s.confidence, source: s.source });
+entities.sort((a, b) => a.token.localeCompare(b.token));
+...item.json,
+[textField]: tokenizedText,
+nodeVersion: NODE_VERSION,
+...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
+entities: entities.map((e) => ({
+token: e.token,
+kind: e.kind,
+confidence: e.confidence,
+source: e.source,
+flaggedForReview: false,
+/** `tokenize` resource → `tokenize` operation. Migrated from PriventTokenize. */
+export async function handleTokenize(
+ctx: IExecuteFunctions,
+baseUrl: string,
+vaultBackend?: 'memory' | 'cloud',
+): Promise<IDataObject> {
+// Local (no-backend) mode runs an entirely separate regex-only path; the
+// apiKey/tokenless body below is left untouched.
+if (getAuthMode(ctx) === 'local') return handleTokenizeLocal(ctx, i);
+const t0 = Date.now(); // op wall-clock → audit latency_ms (detection + risk + vault)
+const item = ctx.getInputData()[i]!;
+const triggerMode = safeTriggerMode(ctx);
+const sessionId = ctx.getNodeParameter('sessionId', i) as string;
+const textField = ctx.getNodeParameter('textField', i) as string;
+const detectionMode = ctx.getNodeParameter('detectionMode', i) as 'auto' | 'local' | 'cloud';
+const reviewThreshold =
+detectionMode !== 'local' ? (ctx.getNodeParameter('reviewThreshold', i) as number) : 1;
+const traceIdParam = ctx.getNodeParameter('traceId', i, '') as string;
+const agentNameParam = ctx.getNodeParameter('agentName', i, '') as string;
+const text = (item.json as Record<string, unknown>)[textField];
+if (typeof text !== 'string') {
+throw new NodeOperationError(
+ctx.getNode(),
+`Field "${textField}" is not a string. Got: ${typeof text}`,
+itemIndex: i,
+description:
+'Check the "Text Field" parameter — it should match the property name in your input data.',
+const vault: SessionVault =
+getAuthMode(ctx) === 'tokenless'
+? new WorkflowStaticDataVault(ctx, sessionId)
+: new N8nHttpVault(ctx, sessionId, baseUrl);
+// 1. Local regex detection — structured PII only (no names/DOB/address).
+const localSpans = detectMatches(text, DEFAULT_DETECTORS);
+// 1b. Org custom patterns (authoritative). apiKey mode only, cached + fail-open
+//     (fetchActiveCustomDetectors returns [] for tokenless/local or any error),
+//     so custom masking applies even when ML/risk is skipped or unreachable.
+const customDetectors = await fetchActiveCustomDetectors(ctx, baseUrl);
+const customSpans =
+customDetectors.length > 0 ? detectCustomMatches(text, customDetectors) : [];
+// 2. auto/cloud: ONE /v1/risk/score on the ORIGINAL text — returns the
+//    ML entities (names/DOB/address + structured) AND the risk score in
+//    a single call. Privacy: the original text reaches Privent's TRUSTED
+//    detector only; the external LLM still receives just the tokenized
+//    text produced below, so raw PHI never reaches the untrusted model.
+let risk = null;
+let mlDegraded: { status: string | null; reason: string } | null = null;
+let flaggedForReview = false;
+const backendSpans: Span[] = [];
+if (detectionMode !== 'local') {
+const scored = await riskScore(ctx, text, baseUrl, {
+lang: 'auto',
+bootstrapEntities: localSpans.map((s) => ({
+kind: s.kind,
+value: s.value,
+span: [s.index, s.index + s.length] as [number, number],
+confidence: s.confidence,
+source: 'regex' as const,
+risk = scored;
+for (const e of scored.entities ?? []) {
+backendSpans.push({
+kind: e.kind,
+value: e.value,
+index: e.span[0],
+length: e.span[1] - e.span[0],
+confidence: e.confidence,
+source: e.source,
+if (risk.risk_score >= reviewThreshold) flaggedForReview = true;
+} catch (err) {
+// cloud: ML is required — surface the failure as a NodeApiError so the
+// HTTP status + response body reach the n8n UI. auto: degrade to
+// regex-only masking (risk stays null) so the data path never breaks.
+if (detectionMode === 'cloud') {
+throw new NodeApiError(ctx.getNode(), err as JsonObject, { itemIndex: i });
+// auto degrades, but it no longer degrades in silence. An item scored by
+// the backend and an item the backend never saw used to be indistinguishable
+// downstream, and the audit event recorded `detection_mode: auto` either way.
+// 402 is the case that made this indefensible: Payment Required is a plan
+// decision, not a blip, it will be there for every item in the run, and
+// `cloud` fails the run on the identical response. n8n wraps every transport
+// failure in NodeApiError, whose `httpCode` is a STRING.
+const status = (err as { httpCode?: string }).httpCode ?? null;
+mlDegraded = {
+status === '402'
+? 'ML scoring was skipped because the Privent backend answered 402 Payment Required — the plan or quota for ML scoring is exhausted, so this item was masked by local regex detection only and carries no risk score. Detection Mode "Cloud" would have failed the run instead.'
+: `ML scoring was skipped${status ? ` after HTTP ${status}` : ''} because the Privent backend could not be reached — this item was masked by local regex detection only and carries no risk score.`,
+// 3. Merge regex + ML spans → one ordered, non-overlapping set. Guard
+//    malformed spans; canonicalize the value to the exact substring so
+//    the vault stores what we replace (detokenize round-trip fidelity).
+//    Custom spans are authoritative — removeOverlaps drops any built-in/ML
+//    span overlapping them.
+const merged = removeOverlaps([...localSpans, ...customSpans, ...backendSpans])
+.filter((s) => s.length > 0 && s.index >= 0 && s.index + s.length <= text.length)
+.map((s) => ({ ...s, value: text.slice(s.index, s.index + s.length) }));
+// 4. One find-or-create-batch → right-to-left replace (indices stay valid).
+let tokenizedText = text;
+const entities: Array<{
+token: string;
+kind: EntityKind;
+confidence: number;
+source: Span['source'];
+span: [number, number];
+category?: string;
+sensitivity?: string;
+if (merged.length > 0) {
+let batched;
+batched = await vault.findOrCreateBatch(merged.map((s) => ({ kind: s.kind, value: s.value })));
+} catch (err) {
+throw new NodeApiError(ctx.getNode(), err as JsonObject, { itemIndex: i });
+const withTokens = merged.map((s, idx) => ({ ...s, token: batched[idx]?.token }));
+for (const s of [...withTokens].sort((a, b) => b.index - a.index)) {
+if (s.token == null) continue;
+tokenizedText =
+tokenizedText.slice(0, s.index) + s.token + tokenizedText.slice(s.index + s.length);
+for (const s of withTokens) {
+if (s.token == null) continue;
+entities.push({
+token: s.token,
+kind: s.kind,
+confidence: s.confidence,
+source: s.source,
+span: [s.index, s.index + s.length],
+...(s.category != null ? { category: s.category } : {}),
+...(s.sensitivity != null ? { sensitivity: s.sensitivity } : {}),
+entities.sort((a, b) => a.span[0] - b.span[0]);
+const ctxAudit = resolveContext(ctx, sessionId, traceIdParam, agentNameParam, vaultBackend);
+const node = ctx.getNode();
+const tokenizeEvent: AuditEvent = {
+type: 'tokenize',
+traceId: ctxAudit.traceId,
+timestamp: Date.now(),
+framework: 'n8n',
+workflowId: ctxAudit.workflowId,
+nodeId: node.id,
+latencyMs: Date.now() - t0,
+metadata: buildAuditMetadata(ctxAudit, node, {
+entity_kinds: [...new Set(entities.map((e) => e.kind))],
+entity_count: entities.length,
+risk_score: risk?.risk_score ?? null,
+risk_level: risk?.risk_level ?? null,
+flagged_for_review: flaggedForReview,
+detection_mode: detectionMode,
+...(mlDegraded ? { ml_degraded: true, ml_degraded_status: mlDegraded.status } : {}),
+...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
+void auditLog(ctx, tokenizeEvent, baseUrl);
+...item.json,
+[textField]: tokenizedText,
+nodeVersion: NODE_VERSION,
+...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
+entities: entities.map((e) => ({
+token: e.token,
+kind: e.kind,
+confidence: e.confidence,
+source: e.source,
+...(e.category != null ? { category: e.category } : {}),
+...(e.sensitivity != null ? { sensitivity: e.sensitivity } : {}),
+...(mlDegraded ? { mlDegraded } : {}),
+flaggedForReview,
+* Stateless, n8n-native data layer for the Cloud-verified vault triad.
+* Everything here routes through n8n's authenticated HTTP helper
+* (`httpRequestWithAuthentication`) and stays inside the n8n Cloud verified
+* allowlist: no `process`/env, no `fs`/`os`, no timers, no `globalThis`. The
+* `priventApi` credential injects `Authorization: Bearer <apiKey>`, so this
+* module never touches the key directly.
+* State that used to live in a process-global registry (Step-1) now lives
+* server-side: tokens in the Privent Cloud vault, correlation context carried
+* on the n8n item between nodes.
+import type { IDataObject, IExecuteFunctions, IHttpRequestMethods, JsonObject } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
+import type {
+RegexDetector,
+TokenVaultBatchItem,
+TokenVaultBatchResult,
+} from '@priventai/core';
+import { normalize, Contracts, DEFAULT_DETECTORS } from '@priventai/core';
+import { LOCAL_DETECTORS, runValidator } from './local-detectors.js';
+type AuditEventV1 = Contracts.v1.AuditEventV1;
+* This node package's own version, for audit `node_version`. `__SDK_VERSION__`
+* is replaced by the node's `tsup define` with `npm_package_version` at bundle
+* time (see tsup.config.ts). Do NOT use core's `TRACER_VERSION` — that resolves
+* to `@priventai/core`'s own version (0.8.0) in the bundle, not this package's.
+* `typeof` guard keeps un-bundled unit runs (`'unknown'`) and the n8n Cloud
+* allowlist happy — no `globalThis`/`process` access.
+declare const __SDK_VERSION__: string;
+export const NODE_VERSION = (() => {
+const v: unknown = typeof __SDK_VERSION__ !== 'undefined' ? __SDK_VERSION__ : undefined;
+return typeof v === 'string' && v.length > 0 ? v : 'unknown';
+* The `@priventai/core` version bundled INTO this artifact, replaced by
+* `tsup define` at build time (see tsup.config.ts).
+* NP-O: `noExternal` copies core into the published files, so the declared range
+* resolves nothing at runtime and the lockfile is a statement about a build
+* machine, not about an artifact. Measured, the bundle could not be fingerprinted
+* by version at all — tree-shaking removes exactly the distinguishing bytes. This
+* constant is the artifact saying what it carries, rather than a reader inferring
+* it. Same `typeof` guard as `NODE_VERSION`: un-bundled unit runs report
+* `'unknown'` rather than throwing, and nothing touches `globalThis`.
+declare const __CORE_VERSION__: string;
+export const CORE_VERSION = (() => {
+const v: unknown = typeof __CORE_VERSION__ !== 'undefined' ? __CORE_VERSION__ : undefined;
+return typeof v === 'string' && v.length > 0 ? v : 'unknown';
+* Inlined from `@priventai/core` `cloud/audit-wire.ts` — `serializeForWire` is
+* not part of the published 0.8.0 surface, but its `Contracts.v1.AuditEventV1Schema`
+* is. Byte-faithful copy so the v1 wire contract (camel→snake, ms→ISO,
+* `manual`→`sdk`, UUID-enforced `session_id`/`trace_id`) is preserved exactly.
+function frameworkForWire(framework: AuditEvent['framework']): string {
+if (framework === 'manual') return 'sdk';
+return framework;
+function serializeForWire(event: AuditEvent): AuditEventV1 {
+const wire: AuditEventV1 = {
+event_id: crypto.randomUUID(),
+type: event.type,
+trace_id: event.traceId,
+session_id: event.sessionId,
+timestamp: new Date(event.timestamp).toISOString(),
+framework: frameworkForWire(event.framework),
+...(event.workflowId != null ? { workflow_id: event.workflowId } : {}),
+...(event.nodeId != null ? { node_id: event.nodeId } : {}),
+metadata: event.metadata ?? {},
+...(event.latencyMs != null ? { latency_ms: event.latencyMs } : {}),
+...(event.errorType != null ? { error_type: event.errorType } : {}),
+...(event.nodeName != null ? { node_name: event.nodeName } : {}),
+...(event.httpStatus != null ? { http_status: event.httpStatus } : {}),
+...(event.webhookConfig != null
+webhook_config: {
+url: event.webhookConfig.url,
+...(event.webhookConfig.method != null ? { method: event.webhookConfig.method } : {}),
+...(event.webhookConfig.authScheme != null
+? { auth_scheme: event.webhookConfig.authScheme }
+...(event.webhookConfig.contentType != null
+? { content_type: event.webhookConfig.contentType }
+...(event.sinkConfig != null
+sink_config: {
+sink_key: event.sinkConfig.sinkKey,
+host: event.sinkConfig.host,
+...(event.sinkConfig.trusted != null ? { trusted: event.sinkConfig.trusted } : {}),
+...(event.sinkConfig.tlsVersion != null
+? { tls_version: event.sinkConfig.tlsVersion }
+...(event.sinkConfig.certFingerprint != null
+? { cert_fingerprint: event.sinkConfig.certFingerprint }
+...(event.sinkConfig.addedByUserId != null
+? { added_by_user_id: event.sinkConfig.addedByUserId }
+...(event.vaultConfig != null
+vault_config: {
+name: event.vaultConfig.name,
+...(event.vaultConfig.region != null ? { region: event.vaultConfig.region } : {}),
+...(event.vaultConfig.retentionDays != null
+? { retention_days: event.vaultConfig.retentionDays }
+...(event.vaultConfig.detectionMode != null
+? { detection_mode: event.vaultConfig.detectionMode }
+...(event.vaultConfig.detectionVersion != null
+? { detection_version: event.vaultConfig.detectionVersion }
+...(event.cronConfig != null
+cron_config: {
+cron_expression: event.cronConfig.cronExpression,
+...(event.cronConfig.timezone != null ? { timezone: event.cronConfig.timezone } : {}),
+...(event.fromAgentId != null ? { from_agent_id: event.fromAgentId } : {}),
+...(event.fromAgentName != null ? { from_agent_name: event.fromAgentName } : {}),
+...(event.targetAgentId != null ? { target_agent_id: event.targetAgentId } : {}),
+...(event.targetAgentName != null ? { target_agent_name: event.targetAgentName } : {}),
+...(event.targetSinkId != null ? { target_sink_id: event.targetSinkId } : {}),
+...(event.reason != null ? { reason: event.reason } : {}),
+...(event.payloadTokenCount != null ? { payload_token_count: event.payloadTokenCount } : {}),
+...(event.riskLevel != null ? { risk_level: event.riskLevel } : {}),
+...(event.parentEventId != null ? { parent_event_id: event.parentEventId } : {}),
+...(event.branchId != null ? { branch_id: event.branchId } : {}),
+...(event.hopDepth != null ? { hop_depth: event.hopDepth } : {}),
+return Contracts.v1.AuditEventV1Schema.parse(wire);
+* Re-throw helper. n8n surfaces `NodeApiError`/`NodeOperationError` with their
+* HTTP context; a raw error loses it. Every HTTP failure in the operations is
+* already wrapped at the call site, so this must NOT wrap twice — an
+* already-wrapped error is passed through untouched, and only a genuinely raw
+* one (a bug, a core throw) gets wrapped. Measured: the operator-visible
+* message for a backend 400 is unchanged by this helper.
+export function wrapNodeError(ctx: IExecuteFunctions, err: unknown): Error {
+if (err instanceof NodeApiError || err instanceof NodeOperationError) return err;
+return new NodeApiError(ctx.getNode(), err as JsonObject);
+const DEFAULT_TTL_MS = 60 * 60 * 1000; // 60 minutes — mirrors CloudTokenVault.
+async function priventRequest<T>(
+ctx: IExecuteFunctions,
+baseUrl: string,
+method: IHttpRequestMethods,
+url: string,
+body: IDataObject,
+): Promise<T> {
+return (await ctx.helpers.httpRequestWithAuthentication.call(ctx, 'priventApi', {
+baseURL: baseUrl,
+// Auto/cloud Tokenize scores the original text via /v1/risk/score, whose
+// backend ML budget is 180s (cold start). Must exceed n8n's ~120s default so
+// the backend wins — otherwise auto silently degrades to regex-only (PHI
+// leak) and cloud errors. Blanket is fine: vault/audit calls are fast.
+timeout: 200_000,
+/** Shown on the item when the mode was INFERRED rather than chosen. */
+export const AUTH_INFERRED_WARNING =
+'Authentication was never set explicitly on this node, and no Privent credential is attached, so the run fell back to Local (No Backend): detection is regex-only, and the cloud vault, ML scoring and audit trail are inactive. Pick a mode in the Authentication dropdown to make this deliberate.';
+* Node-level auth mode, plus whether it was CHOSEN or INFERRED.
+* A stored node with no `authentication` key is ambiguous by construction: n8n
+* does not persist a parameter equal to its default, and this package flipped
+* that default from `apiKey` to `local` in 2.2.1 without bumping `version`. So
+* pre-2.1.0 nodes, 2.1.0–2.2.0 nodes left on `apiKey`, and 2.2.1+ nodes left on
+* `local` are byte-identical on disk at `typeVersion: 1`. typeVersion cannot
+* separate them; credential PRESENCE can.
+* The presence probe is `getNode().credentials`, which is what n8n itself reads
+* (`node.credentials?.[type]`) and which `getNode()` returns intact. It is NOT
+* `getCredentials()`: that throws `Credentials not found` when displayOptions
+* hides the credential, so a try/catch around it would return the wrong answer
+* confidently — measured, not assumed.
+* `getNodeParameter(..., '')` distinguishes absent from set because n8n resolves
+* it as `get(node.parameters, name, fallback)` against the STORED parameters,
+* with no default-filling in the execution path.
+export function resolveAuthMode(ctx: IExecuteFunctions): {
+mode: 'apiKey' | 'tokenless' | 'local';
+inferred: boolean;
+const stored = ctx.getNodeParameter('authentication', 0, '') as string;
+if (stored === 'apiKey' || stored === 'tokenless' || stored === 'local') {
+return { mode: stored, inferred: false };
+const hasApiKeyCredential = Boolean(ctx.getNode().credentials?.priventApi);
+return { mode: hasApiKeyCredential ? 'apiKey' : 'local', inferred: true };
+/** Node-level auth mode. See `resolveAuthMode` for how an absent value resolves. */
+export function getAuthMode(ctx: IExecuteFunctions): 'apiKey' | 'tokenless' | 'local' {
+return resolveAuthMode(ctx).mode;
+/** The warning to surface when the mode was inferred as local, else undefined. */
+export function authWarning(ctx: IExecuteFunctions): string | undefined {
+const { mode, inferred } = resolveAuthMode(ctx);
+return inferred && mode === 'local' ? AUTH_INFERRED_WARNING : undefined;
+/** Reads the backend `baseUrl` for the active auth mode. apiKey →
+*  `priventApi.baseUrl` (unchanged); tokenless → `priventVisitorApi.baseUrl`. */
+export async function getPriventBaseUrl(ctx: IExecuteFunctions): Promise<string> {
+const credName = getAuthMode(ctx) === 'tokenless' ? 'priventVisitorApi' : 'priventApi';
+const creds = await ctx.getCredentials(credName);
+return creds.baseUrl as string;
+/** The apiKey credential's configured vault backend (audit `vault_backend`).
+*  Read once per execution — never in a per-item loop. apiKey mode only. */
+export async function getVaultBackend(ctx: IExecuteFunctions): Promise<'memory' | 'cloud'> {
+const creds = await ctx.getCredentials('priventApi');
+return creds.vaultBackend as 'memory' | 'cloud';
+/** Ensure a regex carries the global flag (required for `matchAll`), reusing the
+*  source + any original flags. */
+function withGlobal(re: RegExp): RegExp {
+return re.flags.includes('g') ? re : new RegExp(re.source, re.flags + 'g');
+const _localDetectorCache = new Map<string, RegexDetector[]>();
+* Detector set for `local` (no-backend) tokenization: core `DEFAULT_DETECTORS`
+* (the 10 structured-PII detectors) ∪ the generated `LOCAL_DETECTORS`, tier-gated
+* by the Detection Level. Every regex is pre-built with the global flag baked in
+* so `detectMatches({preserveFlags:true})` reuses them without recompiling 575
+* patterns per item. Memoized per level (the inputs are static). No network, no
+* openredaction at runtime.
+export function buildLocalDetectors(level: 'standard' | 'aggressive'): RegexDetector[] {
+const cached = _localDetectorCache.get(level);
+if (cached) return cached;
+const core: RegexDetector[] = DEFAULT_DETECTORS.map((d) => ({ ...d, regex: withGlobal(d.regex) }));
+// `standard` = high + medium. `aggressive` = those plus the `aggressive-only`
+// tier, which is the MEASURED admission list: zero false positives across both
+// negative corpora and at least one positive hit under the right kind
+// (docs/detector-fp-table.md, regenerated by `npm run measure:fp`).
+// `contextual` is now in NEITHER level. `aggressive` used to mean "all 468 of
+// these at once", with no context ever supplied to the false-positive filter,
+// which is how `reach` became a gamertag and an email address stopped being an
+// email address. A level that masks every word is not a sensitivity setting.
+const extra: RegexDetector[] = LOCAL_DETECTORS.filter((d) =>
+level === 'aggressive'
+? d.tier !== 'contextual'
+: d.tier !== 'contextual' && d.tier !== 'aggressive-only',
+).map((d) => {
+const validatorName = d.validatorName;
+kind: d.kind,
+regex: withGlobal(new RegExp(d.source, d.flags)),
+confidence: d.confidence,
+normalize: (v: string) => v,
+...(validatorName ? { validate: (raw: string) => runValidator(validatorName, raw) } : {}),
+const detectors = [...core, ...extra];
+_localDetectorCache.set(level, detectors);
+return detectors;
+/** One active org custom pattern as served by `GET /v1/custom-patterns/active`. */
+interface ActiveCustomPattern {
+kind: EntityKind;
+pattern: string;
+flags: string;
+category: string;
+sensitivity: string;
+* A compiled custom (org) detector. `authoritative` marks it as always-wins in
+* overlap resolution; `category`/`sensitivity` are threaded onto the emitted
+* entity. Node-local type, a superset of `RegexDetector` so it runs anywhere a
+* detector does.
+* `category`/`sensitivity` are OMITTED from the inherited shape on purpose.
+* core 0.10.0 added them to `RegexDetector` and typed sensitivity as
+* `EntitySensitivity | null` — a closed set of four strings. What this node
+* actually receives is whatever `GET /v1/custom-patterns/active` returns for the
+* org, an open string this package does not validate. Inheriting the narrower
+* type would be claiming a guarantee nobody enforces on the wire.
+export interface CustomDetector extends Omit<RegexDetector, 'category' | 'sensitivity'> {
+readonly authoritative: true;
+readonly category: string;
+readonly sensitivity: string;
+interface CustomDetectorCacheEntry {
+detectors: CustomDetector[];
+expiresAt: number; // unix seconds
+const _customDetectorCache = new Map<string, CustomDetectorCacheEntry>();
+const CUSTOM_DETECTOR_TTL_SEC = 300;
+function compileCustomDetectors(rows: ActiveCustomPattern[]): CustomDetector[] {
+const out: CustomDetector[] = [];
+for (const row of rows) {
+let regex: RegExp;
+// Native RegExp, flags preserved (i/m/s/u) + global for matchAll. Safe:
+// the backend gates ReDoS at save time (recheck) before serving.
+regex = withGlobal(new RegExp(row.pattern, row.flags ?? ''));
+continue; // skip an uncompilable stored pattern (save-time validation makes this rare)
+kind: row.kind,
+confidence: 1,
+normalize: (v: string) => v,
+authoritative: true,
+category: row.category,
+sensitivity: row.sensitivity,
+* Fetch the org's active custom patterns (`GET /v1/custom-patterns/active`,
+* AGENT_SDK-authed) and compile them to authoritative native-RegExp detectors,
+* so org custom masking applies in the local tokenizer path (auto/cloud/local
+* detection, even when ML is unreachable).
+* apiKey mode ONLY — the serve endpoint requires an AGENT_SDK key; tokenless
+* visitors and local mode have none, so they get built-ins only. FAIL-OPEN: any
+* error → `[]` (never break tokenize on a patterns-fetch failure). Cached per
+* credential (keyed by the apiKey hash — never the raw key) for
+* ${CUSTOM_DETECTOR_TTL_SEC}s; patterns change rarely and this isn't latency-critical.
+export async function fetchActiveCustomDetectors(
+ctx: IExecuteFunctions,
+baseUrl: string,
+): Promise<CustomDetector[]> {
+if (getAuthMode(ctx) !== 'apiKey') return [];
+let keyHash: string;
+const creds = await ctx.getCredentials('priventApi');
+keyHash = await sha256short(String(creds.apiKey ?? ''));
+const nowSec = Math.floor(Date.now() / 1000);
+const cached = _customDetectorCache.get(keyHash);
+if (cached && cached.expiresAt > nowSec) return cached.detectors;
+let rows: unknown;
+rows = await ctx.helpers.httpRequestWithAuthentication.call(ctx, 'priventApi', {
+method: 'GET',
+baseURL: baseUrl,
+url: '/v1/custom-patterns/active',
+return []; // fail-open
+if (!Array.isArray(rows)) return [];
+const detectors = compileCustomDetectors(rows as ActiveCustomPattern[]);
+_customDetectorCache.set(keyHash, {
+expiresAt: nowSec + CUSTOM_DETECTOR_TTL_SEC,
+return detectors;
+interface VisitorCacheEntry {
+visitorId: string;
+expiresAt: number; // unix seconds
+/** Pulls an HTTP status off whatever shape the n8n/axios helper threw. */
+function httpErrorStatus(err: unknown): number | undefined {
+const e = err as {
+httpCode?: unknown;
+statusCode?: unknown;
+response?: { status?: unknown };
+const raw = e.httpCode ?? e.statusCode ?? e.response?.status;
+const n = Number(raw);
+return Number.isFinite(n) ? n : undefined;
+* Mint (or reuse) an anonymous signed visitor id for the tokenless path.
+* Cached per-baseUrl in workflow static data; reused while >5 min from expiry.
+* Minting uses the UNauthenticated helper — `/v1/visitor/credentials` is public.
+export async function resolveVisitorId(ctx: IExecuteFunctions, baseUrl: string): Promise<string> {
+const staticData = ctx.getWorkflowStaticData('global');
+const cache = (staticData.priventVisitor ??= {}) as Record<string, VisitorCacheEntry>;
+const nowSec = Math.floor(Date.now() / 1000);
+const cached = cache[baseUrl];
+if (cached && cached.expiresAt - nowSec > 300) {
+return cached.visitorId;
+let res: { visitor_id?: unknown; expires_at?: unknown };
+res = (await ctx.helpers.httpRequest({
+method: 'POST',
+baseURL: baseUrl,
+url: '/v1/visitor/credentials',
+})) as { visitor_id?: unknown; expires_at?: unknown };
+} catch (err) {
+const status = httpErrorStatus(err);
+if (status === 404) {
+throw new NodeOperationError(
+ctx.getNode(),
+"Tokenless mode isn't enabled on this Privent backend — switch Authentication to API Key, or enable visitor auth on the backend.",
+if (status === 429) {
+throw new NodeOperationError(
+ctx.getNode(),
+'Rate limited minting a visitor credential; retry shortly.',
+throw new NodeOperationError(
+ctx.getNode(),
+`Failed to mint a Privent visitor credential${status != null ? ` (HTTP ${status})` : ''}: ${
+(err as Error).message
+const visitorId = res.visitor_id;
+const expiresAt = res.expires_at;
+if (typeof visitorId !== 'string' || typeof expiresAt !== 'number') {
+throw new NodeOperationError(
+ctx.getNode(),
+'Privent visitor credential response was malformed (missing visitor_id/expires_at).',
+cache[baseUrl] = { visitorId, expiresAt };
+return visitorId;
+* Tokenless request: attaches `X-Visitor-Id` (no Bearer, no credential auth).
+* On a 401 the cached id is treated as stale — clear it, re-mint once, retry once.
+export async function priventVisitorRequest<T>(
+ctx: IExecuteFunctions,
+baseUrl: string,
+method: IHttpRequestMethods,
+url: string,
+body: IDataObject,
+): Promise<T> {
+const send = async (visitorId: string): Promise<T> =>
+(await ctx.helpers.httpRequest({
+baseURL: baseUrl,
+timeout: 200_000,
+headers: { 'X-Visitor-Id': visitorId },
+const visitorId = await resolveVisitorId(ctx, baseUrl);
+return await send(visitorId);
+} catch (err) {
+if (httpErrorStatus(err) !== 401) throw wrapNodeError(ctx, err);
+// Stale visitor id — drop the cache entry, mint fresh, retry exactly once.
+const cache = (ctx.getWorkflowStaticData('global').priventVisitor ?? {}) as Record<
+VisitorCacheEntry
+delete cache[baseUrl];
+return send(await resolveVisitorId(ctx, baseUrl));
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** True when `value` is a canonical UUID string. The audit wire contract
+*  (`serializeForWire`) requires UUID `session_id`/`trace_id`. */
+export function isUuid(value: string): boolean {
+return UUID_RE.test(value);
+interface VaultEntryRow {
+token: string;
+kind: EntityKind;
+value: string;
+* Server-backed vault over n8n HTTP. Mirrors `CloudTokenVault`
+* (core/src/vault/cloud.ts) but uses the n8n authenticated request helper
+* instead of core's fetch client. Token state is shared across workers because
+* it lives in Privent Cloud, not in this process.
+export class N8nHttpVault implements TokenVault {
+constructor(
+private readonly ctx: IExecuteFunctions,
+readonly sessionId: string,
+private readonly baseUrl: string,
+private readonly defaultTtlMs: number = DEFAULT_TTL_MS,
+async findOrCreateBatch(
+items: TokenVaultBatchItem[],
+): Promise<TokenVaultBatchResult[]> {
+const payload = {
+sessionId: this.sessionId,
+items: items.map((it) => ({
+kind: it.kind,
+normalizedValue: normalize(it.kind, it.value),
+originalValue: it.value,
+ttlMs: it.ttlMs ?? this.defaultTtlMs,
+const res = await priventRequest<{ tokens: TokenVaultBatchResult[] }>(
+this.baseUrl,
+'/v1/vault/find-or-create-batch',
+return res.tokens;
+/** One round-trip for all tokens. Detokenize uses this; never per-token. */
+async retrieveBatch(tokens: string[]): Promise<VaultEntryRow[]> {
+if (tokens.length === 0) return [];
+const res = await priventRequest<{ entries: VaultEntryRow[] }>(
+this.baseUrl,
+'/v1/vault/retrieve-batch',
+{ sessionId: this.sessionId, tokens },
+return res.entries;
+async retrieve(token: string): Promise<TokenEntry | null> {
+const [row] = await this.retrieveBatch([token]);
+if (!row) return null;
+return { token: row.token, value: row.value, kind: row.kind, sessionId: this.sessionId, createdAt: Date.now() };
+async store(entry: TokenEntry): Promise<void> {
+await this.findOrCreateBatch([
+entry.ttlMs != null
+? { kind: entry.kind, value: entry.value, ttlMs: entry.ttlMs }
+: { kind: entry.kind, value: entry.value },
+async findByValue(value: string, kind: EntityKind): Promise<TokenEntry | null> {
+const [row] = await this.findOrCreateBatch([{ kind, value }]);
+if (!row) return null;
+return { token: row.token, value: row.value, kind: row.kind, sessionId: this.sessionId, createdAt: Date.now() };
+// Cloud vault has no list endpoint; tokenizer hot path never calls this.
+async listBySession(): Promise<TokenEntry[]> {
+// Server only supports session-wide destroy (retention cron handles expiry).
+async revoke(_token: string): Promise<void> {
+void _token;
+async nextCounter(_kind: EntityKind): Promise<number> {
+throw new Error(
+'N8nHttpVault.nextCounter: counter is server-allocated. Use findOrCreateBatch() instead.',
+async destroy(): Promise<void> {
+await priventRequest(this.ctx, this.baseUrl, 'POST', '/v1/vault/destroy', {
+sessionId: this.sessionId,
+// Best-effort: retention cron sweeps within the hour if this fails.
+* The vault surface the Tokenize/Detokenize operations actually use. Both
+* `N8nHttpVault` (cloud, apiKey) and `WorkflowStaticDataVault` (tokenless)
+* satisfy it, so the ops select between them by auth mode without caring which.
+export interface SessionVault {
+readonly sessionId: string;
+findOrCreateBatch(items: TokenVaultBatchItem[]): Promise<TokenVaultBatchResult[]>;
+retrieveBatch(tokens: string[]): Promise<VaultEntryRow[]>;
+destroy(): Promise<void>;
+interface VaultSessionState {
+byKey: Record<string, string>; // `${kind}|${normalized}` → token
+byToken: Record<string, { kind: EntityKind; value: string }>; // token → original
+counters: Record<string, number>; // kind → last per-kind counter
+interface VaultRoot {
+sessions: Record<string, VaultSessionState>;
+order: string[]; // sessionId insertion order, for bounded eviction
+const MAX_VAULT_SESSIONS = 50;
+* Tokenless vault: the token↔value map lives in n8n workflow static data
+* (`getWorkflowStaticData('global')`), keyed by sessionId — no backend, no API
+* key. Emits core-format `[KIND_NNN]` tokens (per-kind counter) so the round-trip
+* stays byte-compatible with `scanForTokens`/`detokenizeDeep`. State is bounded to
+* the most-recent ${MAX_VAULT_SESSIONS} sessions (oldest insertion evicted).
+export class WorkflowStaticDataVault implements SessionVault {
+constructor(
+private readonly ctx: IExecuteFunctions,
+readonly sessionId: string,
+private root(): VaultRoot {
+const sd = this.ctx.getWorkflowStaticData('global');
+return (sd.priventVault ??= { sessions: {}, order: [] }) as VaultRoot;
+private session(): VaultSessionState {
+const root = this.root();
+let s = root.sessions[this.sessionId];
+s = { byKey: {}, byToken: {}, counters: {} };
+root.sessions[this.sessionId] = s;
+root.order.push(this.sessionId);
+while (root.order.length > MAX_VAULT_SESSIONS) {
+const evicted = root.order.shift();
+if (evicted != null) delete root.sessions[evicted];
+async findOrCreateBatch(items: TokenVaultBatchItem[]): Promise<TokenVaultBatchResult[]> {
+const s = this.session();
+return items.map((it) => {
+const normalized = normalize(it.kind, it.value);
+const key = `${it.kind}|${normalized}`;
+let token = s.byKey[key];
+if (token == null) {
+const n = (s.counters[it.kind] = (s.counters[it.kind] ?? 0) + 1);
+token = `[${it.kind}_${String(n).padStart(3, '0')}]`;
+s.byKey[key] = token;
+s.byToken[token] = { kind: it.kind, value: it.value };
+return { kind: it.kind, value: normalized, token };
+async retrieveBatch(tokens: string[]): Promise<VaultEntryRow[]> {
+if (tokens.length === 0) return [];
+const s = this.session();
+const out: VaultEntryRow[] = [];
+for (const token of tokens) {
+const entry = s.byToken[token];
+if (entry) out.push({ token, kind: entry.kind, value: entry.value });
+async destroy(): Promise<void> {
+const root = this.root();
+delete root.sessions[this.sessionId];
+const idx = root.order.indexOf(this.sessionId);
+if (idx >= 0) root.order.splice(idx, 1);
+* Read-only vault seeded from a single `retrieveBatch` result, so the pure
+* `detokenizeDeep` deep-walk resolves tokens locally with zero extra
+* round-trips.
+export function makeResolvedVault(
+sessionId: string,
+entries: VaultEntryRow[],
+): TokenVault {
+const byToken = new Map(entries.map((e) => [e.token, e]));
+async retrieve(token: string): Promise<TokenEntry | null> {
+const row = byToken.get(token);
+if (!row) return null;
+return { token: row.token, value: row.value, kind: row.kind, sessionId, createdAt: Date.now() };
+async store() {},
+async findByValue() {
+return null;
+async listBySession() {
+async revoke() {},
+async nextCounter() {
+throw new Error('resolved vault is read-only');
+async destroy() {},
+interface CloudScoreResponse {
+risk_score: number;
+risk_level: string;
+categories: Record<string, number>;
+model: string;
+latency_ms: number;
+entities?: RiskScore['entities'];
+/** Entity rows returned by (or seeded into) `/v1/risk/score`. */
+type EntityItem = NonNullable<RiskScore['entities']>[number];
+/** `POST /v1/risk/score` → developer-facing `RiskScore`.
+*  `opts.lang` sets the detection language hint; `opts.bootstrapEntities`
+*  seeds the server with caller-side regex hits (capped at the schema's 256). */
+export async function riskScore(
+ctx: IExecuteFunctions,
+text: string,
+baseUrl: string,
+opts?: { lang?: string; bootstrapEntities?: EntityItem[] },
+): Promise<RiskScore> {
+const start = Date.now();
+const bootstrap = opts?.bootstrapEntities?.slice(0, 256);
+const send = getAuthMode(ctx) === 'tokenless' ? priventVisitorRequest : priventRequest;
+const r = await send<CloudScoreResponse>(ctx, baseUrl, 'POST', '/v1/risk/score', {
+include_entities: true,
+...(opts?.lang != null ? { lang: opts.lang } : {}),
+...(bootstrap != null && bootstrap.length > 0 ? { bootstrap_entities: bootstrap } : {}),
+risk_score: r.risk_score,
+risk_level: r.risk_level as RiskScore['risk_level'],
+categories: r.categories as RiskScore['categories'],
+model: r.model,
+latencyMs: Date.now() - start,
+entities: r.entities ?? null,
+/** `POST /v1/risk/batch` → developer-facing `RiskScore[]`, in input order. */
+export async function riskScoreBatch(
+ctx: IExecuteFunctions,
+texts: string[],
+baseUrl: string,
+): Promise<RiskScore[]> {
+if (texts.length === 0) return [];
+const start = Date.now();
+const send = getAuthMode(ctx) === 'tokenless' ? priventVisitorRequest : priventRequest;
+const res = await send<{ results: CloudScoreResponse[] }>(
+'/v1/risk/batch',
+{ items: texts.map((text) => ({ text, include_entities: true })) },
+if (!Array.isArray(res.results) || res.results.length !== texts.length) {
+throw new Error(
+`Privent risk batch length mismatch: sent ${texts.length}, got ${
+Array.isArray(res.results) ? res.results.length : 0
+return res.results.map((r) => ({
+risk_score: r.risk_score,
+risk_level: r.risk_level as RiskScore['risk_level'],
+categories: r.categories as RiskScore['categories'],
+model: r.model,
+latencyMs: r.latency_ms ?? Date.now() - start,
+entities: r.entities ?? null,
+/** Best-effort audit emission (fire-and-forget). */
+export async function auditLog(
+ctx: IExecuteFunctions,
+event: AuditEvent,
+baseUrl: string,
+): Promise<void> {
+// Audit is org-scoped and backend-bound — anonymous visitors have no org and
+// local mode has no backend at all, so skip entirely for any non-apiKey mode
+// (don't rely on the swallow / waste a round-trip).
+if (getAuthMode(ctx) !== 'apiKey') return;
+await priventRequest(ctx, baseUrl, 'POST', '/v1/audit/events', {
+events: [serializeForWire(event)],
+// Fire-and-forget: audit failures never break the data path.
+* Anonymous, always-on telemetry — **tokenless mode only**. apiKey already
+* reports via the audit stream (no double-report); local mode stays fully
+* offline (returns before any I/O). Fire-and-forget: a failure never breaks the
+* op. The only identifier is a random per-install UUID cached in workflow static
+* data (no org, no key, no PII) — mirrors the `resolveVisitorId` cache pattern.
+* Posts UNauthenticated (no Bearer, no `X-Visitor-Id`) to the tokenless backend.
+* PAYLOAD ALLOWLIST — send only the keys below. `error_type` is the error class
+* name only (never a message/stack). No raw text, tokens, entity kinds/values,
+* org, key, sink, ip, or workflow/node names.
+export async function telemetryPing(
+ctx: IExecuteFunctions,
+operation: string;
+item_count: number;
+status: 'success' | 'error';
+error_type?: string | undefined;
+timestamp: string;
+): Promise<void> {
+if (getAuthMode(ctx) !== 'tokenless') return; // apiKey audits; local silent
+const baseUrl = await getPriventBaseUrl(ctx);
+const store = (ctx.getWorkflowStaticData('global').priventTelemetry ??= {}) as {
+installId?: string;
+const installId = (store.installId ??= crypto.randomUUID());
+await ctx.helpers.httpRequest({
+method: 'POST',
+baseURL: baseUrl,
+url: '/v1/telemetry/events',
+timeout: 5000,
+install_id: installId,
+event: 'node_execution',
+operation: p.operation,
+auth_mode: 'tokenless',
+node_version: NODE_VERSION,
+n8n_version: safeFrameworkVersion() ?? undefined,
+item_count: p.item_count,
+status: p.status,
+...(p.error_type ? { error_type: p.error_type } : {}),
+timestamp: p.timestamp,
+// Fire-and-forget: telemetry failures never break the data path.
+/** Non-cryptographic 8-hex digest (placeholder fingerprints). Pure; uses the
+*  Web Crypto global (`crypto.subtle`), which is allowlisted. */
+export async function sha256short(value: string): Promise<string> {
+const encoded = new TextEncoder().encode(value);
+const buf = await crypto.subtle.digest('SHA-256', encoded);
+return Array.from(new Uint8Array(buf))
+.map((b) => b.toString(16).padStart(2, '0'))
+.slice(0, 8);
+/** Correlation context carried on the item from PriventSession. */
+export interface PriventContext {
+sessionId: string;
+traceId: string;
+executionId: string;
+agentName: string;
+workflowId: string;
+workflowName: string;
+/** apiKey vault backend, for audit `vault_backend`. Undefined for tokenless/local. */
+vaultBackend?: 'memory' | 'cloud' | undefined;
+/** Defensive read of n8n workflow identity (older versions may lack accessors). */
+export function safeWorkflow(ctx: IExecuteFunctions): { id: string; name: string } {
+const wf = ctx.getWorkflow?.();
+const id = typeof wf.id === 'string' && wf.id.length > 0 ? wf.id : 'unknown';
+const name = typeof wf.name === 'string' ? wf.name : '';
+return { id, name };
+/* fall through */
+return { id: 'unknown', name: '' };
+export function safeExecutionId(ctx: IExecuteFunctions): string {
+const id = ctx.getExecutionId?.();
+if (typeof id === 'string' && id.length > 0) return id;
+/* fall through */
+return crypto.randomUUID();
+let _fwVersion: string | undefined;
+let _fwRead = false;
+/** The host's installed `n8n-workflow` version (allowlisted package), memoized.
+*  Returns undefined when the peer dep is unresolvable. */
+export function safeFrameworkVersion(): string | undefined {
+if (_fwRead) return _fwVersion;
+_fwRead = true;
+// Dynamic require, not a static import: `n8n-workflow` is a PEER the host
+// supplies at runtime, and its `package.json` is not in that package's
+// `exports` map, so a static import cannot resolve it. The try/catch is
+// the contract — an unresolvable peer leaves the version undefined.
+// The eslint-disable that used to sit here named
+// `@typescript-eslint/no-require-imports`, a rule this config does not
+// register: a directive protecting against nothing, which ESLint itself
+// reported as an error once shared/ entered lint scope. If that plugin is
+// ever registered, this line needs a real answer — recorded as F-G, not
+// left as a TODO in the code.
+const pkg = require('n8n-workflow/package.json') as { version?: unknown };
+if (typeof pkg.version === 'string' && pkg.version.length > 0) _fwVersion = pkg.version;
+// peer dep missing — leave undefined
+return _fwVersion;
+/** Optional n8n trigger mode (manual/trigger/webhook…), capped. */
+export function safeTriggerMode(ctx: IExecuteFunctions): string | undefined {
+const m = ctx.getMode?.();
+if (typeof m === 'string' && m.length > 0) return m.slice(0, 16);
+/* ignore */
+return undefined;
+* Resolve correlation context for a downstream node from explicit params
+* (wired to `$("Privent Session").item.json.*`) with a graceful fallback so
+* audit events stay valid even without a Session directly upstream.
+export function resolveContext(
+ctx: IExecuteFunctions,
+sessionId: string,
+traceIdParam: string,
+agentNameParam: string,
+vaultBackend?: 'memory' | 'cloud',
+): PriventContext {
+const { id: workflowId, name: workflowName } = safeWorkflow(ctx);
+traceId: traceIdParam.trim() || crypto.randomUUID(),
+agentName: agentNameParam.trim(),
+executionId: safeExecutionId(ctx),
+workflowName,
+vaultBackend,
+* Build the AuditEvent.metadata payload (snake_case v1 wire keys). Adapters
+* pass counts/levels/kinds only — never raw sensitive values.
+export function buildAuditMetadata(
+ctx: PriventContext,
+node: { name: string },
+extras?: Record<string, unknown>,
+): Record<string, unknown> {
+agent_name: ctx.agentName,
+workflow_name: ctx.workflowName,
+execution_id: ctx.executionId,
+node_name: node.name,
+framework: 'n8n',
+node_version: NODE_VERSION,
+core_version: CORE_VERSION,
+...(ctx.vaultBackend ? { vault_backend: ctx.vaultBackend } : {}),
+...(extras ?? {}),
+import { readFileSync } from 'node:fs';
+import { defineConfig } from 'tsup';
+* n8n loads community nodes via require() from specific paths listed in the
+* package.json "n8n" field.  All node files must be CommonJS.
+* We compile WITH bundling (bundle: true) and inline @priventai/core's pure bits
+* so the published package ships ZERO runtime dependencies. Each node file is a
+* self-contained CJS bundle. n8n-workflow + zod stay external (n8n provides them
+* at runtime); @opentelemetry/api stays external (optional, guarded require in
+* core/otel.ts).
+* `__SDK_VERSION__` is defined two ways: the bare token (used by builds that
+* inline a define-aware core) and the `globalThis.__SDK_VERSION__` member form
+* that published @priventai/core@0.8.0's TRACER_VERSION reads — replacing the
+* latter at bundle time removes the only `globalThis` reference from the dist.
+const SDK_VERSION = JSON.stringify(process.env['npm_package_version'] ?? '1.0.0');
+* The version of `@priventai/core` this artifact CONTAINS, resolved at bundle
+* time from the installed package.
+* `noExternal` copies core into the published files, so the range in
+* package.json resolves nothing at runtime and the lockfile describes a build
+* machine rather than an artifact. Measured in NP-O: 0 of 4 blocks unique to
+* 0.8.0 and 0 of 12 unique to 0.9.0 survived into `dist/` — tree-shaking removes
+* exactly the bytes that would distinguish them, so the artifact could not say
+* what it carried. Baking the version in is the smallest thing that makes it
+* self-identifying, and it costs one string.
+const CORE_VERSION = JSON.stringify(
+readFileSync(new URL('./node_modules/@priventai/core/package.json', import.meta.url), 'utf8'),
+) as { version?: string }
+).version ?? 'unknown',
+export default defineConfig({
+'nodes/**/*.node.ts',
+'credentials/**/*.credentials.ts',
+format: ['cjs'],
+bundle: true,
+noExternal: ['@priventai/core'],
+external: ['n8n-workflow', '@opentelemetry/api', 'zod'],
+sourcemap: true,
+clean: true,
+target: 'node20',
+__SDK_VERSION__: SDK_VERSION,
+'globalThis.__SDK_VERSION__': SDK_VERSION,
+__CORE_VERSION__: CORE_VERSION,
+import { defineConfig } from 'vitest/config';
+* `globalSetup` runs once per suite run, so the mode block is printed whether
+* the run is green or red. Reporting it only on failure would defeat the point:
+* the reader who needs to know what a GREEN tick means is exactly the one who
+* never sees a failure message.
+export default defineConfig({
+include: ['__tests__/**/*.test.ts'],
+globalSetup: ['./__tests__/_global-setup.ts'],

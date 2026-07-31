@@ -23,7 +23,7 @@
 //   contains no correspondence, invoices, meeting notes or support threads.
 // Positives: __tests__/fixtures/positive-corpus-business.txt.
 
-import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,8 +35,23 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 // during this item. The remaining corpus is prose and product source only.
 const SKIP = new Set(['node_modules', 'dist', '.git', '__tests__', 'docs', 'scripts']);
 
-/** Corpus A — repository prose and source, minus the generated detector file. */
-function repoCorpus() {
+/**
+ * Corpus A — a FROZEN SNAPSHOT of this repository's prose and source.
+ *
+ * It used to be walked live, which made the admission list a function of
+ * whatever the repository happened to contain that minute: NP-W (a) — the walk
+ * included `scripts/`, so the measurement changed its own input — and the same
+ * sensitivity meant an ordinary documentation edit could move a verdict. A
+ * frozen snapshot removes the whole class: refreshing it is an explicit command
+ * and lands as a reviewable diff, so a corpus change can never arrive as a side
+ * effect of unrelated work.
+ *
+ * Refresh with `npm run measure:fp -- --refresh-corpus`, and expect to justify
+ * the admission diff that comes with it.
+ */
+const CORPUS_A_PATH = join(ROOT, '__tests__/fixtures/negative-corpus-repo-snapshot.txt');
+
+function walkRepoLines() {
   const files = [];
   (function walk(d) {
     for (const entry of readdirSync(d)) {
@@ -47,13 +62,34 @@ function repoCorpus() {
     }
   })(ROOT);
   const lines = [];
-  for (const f of files) {
+  for (const f of files.sort()) {
     for (const line of readFileSync(f, 'utf8').split('\n')) {
       const t = line.trim();
       if (t.length >= 12 && t.length <= 300) lines.push(t);
     }
   }
   return lines;
+}
+
+function repoCorpus() {
+  if (process.argv.includes('--refresh-corpus')) {
+    const lines = walkRepoLines();
+    writeFileSync(CORPUS_A_PATH, `${lines.join('\n')}\n`);
+    console.log(`corpus A refreshed: ${lines.length} lines written to ${CORPUS_A_PATH}`);
+    return lines;
+  }
+  if (!existsSync(CORPUS_A_PATH)) {
+    // Absent is a failure, not a reason to fall back to the live walk: falling
+    // back would silently restore the behaviour this snapshot exists to remove.
+    throw new Error(
+      `Corpus A snapshot missing at ${CORPUS_A_PATH}. ` +
+        'Create it with `npm run measure:fp -- --refresh-corpus` and review the diff.',
+    );
+  }
+  return readFileSync(CORPUS_A_PATH, 'utf8')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
 }
 
 /** Corpus B — hand-authored business prose; '#' lines are commentary. */
