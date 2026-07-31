@@ -19,12 +19,25 @@ import { applyTokenCase, type TokenCaseMode } from './_http-helpers.js';
  *   1. a round trip survives a backend that cases tokens differently;
  *   2. when nothing is redeemed, the node does not report success.
  *
- * BOTH ARE RED ON PURPOSE AND STAY RED UNTIL N4-4. `@priventai/core`'s
- * `TOKEN_RE` has no `i` flag (privent-sdk/packages/core/src/tokenizer/detokenize.ts:7),
- * so `scanForTokens` yields nothing, `detokenizeDeep` returns the text
- * unchanged, and `detokenize` reports `detokenized: true` having redeemed zero
- * tokens. N4-4 adds the `i` flag and a distinct zero-match outcome; these going
- * green is N4-4's acceptance evidence, not this item's.
+ * N4-4 CLOSED THE SECOND ONE. The first is still red and is SDK-A's to close.
+ *
+ * The two requirements were collapsed into one and had to be split:
+ *
+ *   HONESTY   — the node must not claim what it did not do. Delivered by N4-4,
+ *               in this repo: placeholders found and tokens actually redeemed
+ *               are two separate numbers, and success is derived from the
+ *               second. Test 3 is now green.
+ *   TOLERANCE — a token our own backend minted should SURVIVE a case
+ *               regression, not merely be reported honestly. Not deliverable
+ *               here: the grammar lives in `@priventai/core`, which tsup
+ *               bundles (`noExternal`), so nothing changes in this package
+ *               until a fixed core is published and this package rebuilds
+ *               against it. Test 2 stays red and is earned, not skipped.
+ *
+ * Adding `i` to `TOKEN_RE` does NOT deliver TOLERANCE — `scanForTokens` and
+ * `replaceIn` rebuild the regex as `new RegExp(TOKEN_RE.source, 'g')` and
+ * `.source` carries no flags. The change that works is the character class,
+ * which travels inside `.source`. See NP-M.
  */
 
 const SESSION_ID = '123e4567-e89b-42d3-a456-4266141749aa';
@@ -143,12 +156,12 @@ describe('token case disagreement between the node and the vault', () => {
     expect(faithful.tokenizedText).toContain('[EMAIL_001]');
   });
 
-  it('RED UNTIL N4-4 — a round trip survives a backend that cases tokens differently', async () => {
+  it('RED UNTIL SDK-A — a round trip survives a backend that cases tokens differently', async () => {
     const { restored } = await tokenizeThenDetokenize('lower');
     expect(restored.text).toBe(`reach ${EMAIL} now`);
   });
 
-  it('RED UNTIL N4-4 — redeeming nothing is not reported as success', async () => {
+  it('redeeming nothing is not reported as success — closed by N4-4', async () => {
     const { restored } = await tokenizeThenDetokenize('lower');
     expect(restored.privent.detokenized).not.toBe(true);
   });

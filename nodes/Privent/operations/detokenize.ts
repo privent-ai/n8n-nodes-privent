@@ -151,7 +151,6 @@ export async function handleDetokenize(
   const scanTarget =
     targetField === '*' ? item.json : (item.json as Record<string, unknown>)[targetField];
   const placeholders = [...scanForTokens(scanTarget)];
-  const tokensRedeemed = placeholders.length;
 
   // Placeholder fingerprint: hashes the token placeholder strings (e.g.
   // "[EMAIL_001]|[PHONE_002]"), NOT the underlying PII values. Raw values
@@ -171,6 +170,21 @@ export async function handleDetokenize(
     throw new NodeApiError(ctx.getNode(), err as JsonObject, { itemIndex: i });
   }
   const resolvedVault = makeResolvedVault(sessionId, entries);
+
+  // Tokens FOUND and tokens REDEEMED are two different numbers, and this node
+  // used to report the first one under the second one's name. A placeholder the
+  // scanner can see but the vault cannot resolve — expired, minted in another
+  // session, or minted in a case this grammar refuses (see NP-M) — left the text
+  // unchanged while `detokenized: true` and a non-zero `tokens_redeemed` said
+  // otherwise. The gap between the two numbers IS the signal that tokens were
+  // present and unresolvable, so both are reported and success is derived from
+  // the second, never the first.
+  const tokensRedeemed = new Set(entries.map((e) => e.token)).size;
+  const detokenized = uniqPlaceholders.length > 0 && tokensRedeemed === uniqPlaceholders.length;
+  const reason =
+    uniqPlaceholders.length === 0
+      ? 'No Privent tokens were found, so nothing was restored — check that Target Field points at the text that holds the [KIND_NNN] placeholders.'
+      : `Only ${tokensRedeemed} of the ${uniqPlaceholders.length} Privent tokens found could be restored — the rest are unknown to the vault under this Session ID, so their placeholders were left in place.`;
 
   let json: IDataObject;
   if (targetField === '*') {
@@ -196,7 +210,9 @@ export async function handleDetokenize(
       sink_url_host: sinkUrlHost,
       sink_trusted: isTrusted,
       strict,
+      tokens_found: uniqPlaceholders.length,
       tokens_redeemed: tokensRedeemed,
+      detokenized,
       value_fingerprint: valueFingerprint,
       value_fingerprints: valueFingerprints,
       ...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
@@ -206,6 +222,6 @@ export async function handleDetokenize(
 
   return {
     ...json,
-    privent: { sessionId, detokenized: true },
+    privent: { sessionId, detokenized, ...(detokenized ? {} : { reason }) },
   };
 }

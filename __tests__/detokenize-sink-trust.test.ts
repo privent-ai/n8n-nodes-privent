@@ -48,7 +48,14 @@ describe('PriventDetokenize sink trust matrix', () => {
       sink_url_host: 'api.internal.corp',
       strict: true,
     });
-    expect(out[0]![0]!.json).toMatchObject({ privent: { detokenized: true } });
+    // This item carries no placeholders at all, so nothing was restored. The
+    // assertion used to read `detokenized: true` — the old contract, where the
+    // flag meant "the operation ran" rather than "values came back". Its intent
+    // here is the sink-trust metadata above; the outcome field is updated to the
+    // truth rather than the test being loosened.
+    expect(out[0]![0]!.json).toMatchObject({
+      privent: { detokenized: false, reason: expect.stringContaining('No Privent tokens') },
+    });
   });
 
   it('strict + untrusted sink → blocked path with sink_trusted=false and reason', async () => {
