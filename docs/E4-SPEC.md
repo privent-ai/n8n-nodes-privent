@@ -303,10 +303,17 @@ never set explicitly and the run is regex-only.
 
 ## 7 · Published version to pin, and the transition that is this release's acceptance evidence
 
-**Pin `n8n-nodes-privent@3.0.0`** (published 2026-08-01, tarball sha256
-`8207c46e66a45a5c36f8f0fd83aee594ff20c29c60c51eef038fb1ac8789e771`, bundling
-`@priventai/core@0.10.2` — the bundle states that itself, readable from the
-tarball without executing it).
+**Pin `n8n-nodes-privent@3.0.1`** — published 2026-08-01, tarball sha256
+`ce16dc09a615f7c3970f2f20a14429d6a805e940e323156d22939be8ae69ca89`, bundling
+`@priventai/core@0.10.2`, which the bundle states itself and is readable from the
+tarball without executing it.
+
+3.0.1 differs from 3.0.0 in packaging only, and the difference matters for a rig:
+**`zod` is now bundled.** 3.0.0 required it at runtime and declared it nowhere, so
+it loaded inside n8n (which ships its own zod) and failed with `Cannot find module
+'zod'` anywhere else — including a rig that loads the node outside n8n. On 3.0.1
+no extra install is needed; verified in an environment where `require.resolve('zod')`
+throws. Detection behaviour is identical between the two.
 
 Measured from **two clean installs of the published packages**, not from source,
 with the same harness and E4-c's exact input:
@@ -315,7 +322,7 @@ with the same harness and E4-c's exact input:
 2.4.0   in : GB29 NWBK 6016 1331 9268 19
         out: GB29 NWBK [PHONE_001] 19          kinds: [PHONE]
 
-3.0.0   in : GB29 NWBK 6016 1331 9268 19
+3.0.1   in : GB29 NWBK 6016 1331 9268 19
         out: [IBAN_001]                        kinds: [IBAN]
 ```
 
@@ -326,16 +333,26 @@ measured on the artifact a customer installs.
 
 The rig's other canaries on the same two installs:
 
-| input | 2.4.0 | 3.0.0 |
+| input | 2.4.0 | 3.0.1 |
 |---|---|---|
 | `privent-rig-a1@fixture.invalid` | `[EMAIL_001]` | `[EMAIL_001]` |
 | `ayse@demo.acme.com` | **unmasked** | `[EMAIL_001]` |
-| `privent.nodeVersion` on the item | `undefined` | `3.0.0` |
+| `privent.nodeVersion` on the item | `undefined` | `3.0.1` |
 
 The second row is NP-L in the published package: an ordinary corporate subdomain,
 silently unmasked, in the version customers are running today.
 
-**One install-time caveat, recorded as NP-AA.** The published bundle requires
-`zod` at runtime and does not declare it; n8n ships zod itself
-(`n8nio/n8n:2.28.7`, 3.25.67), so it resolves inside n8n but not in a bare
-project. If the rig loads the node outside n8n, install `zod` alongside it.
+**The install-time caveat is gone as of 3.0.1** (NP-AA). 3.0.0 and earlier
+required `zod` at runtime without declaring it; it is now bundled, so the node
+loads in a bare project with nothing else installed. Nothing to add alongside it.
+
+**Scope of that verification, stated because a green line without limits reads as
+a stronger claim than it is:** it answers *artifact ↔ lockfile* and *artifact ↔
+npm*. It does **not** answer *artifact ↔ source tree* — run it on a clean checkout
+of the tag or the comparison is against a working copy. The check prints those
+limits itself, and it has been run red on all three of its failure modes: a
+mismatched `CORE_VERSION`, a single mutated byte, and an absent `dist/`.
+
+**Reproducibility.** `npm run verify:artifact --against 3.0.1` on a clean checkout
+of the tag reports the local build byte-identical to what npm serves — 342,920
+bytes. The rig can pin by version and, if it wants, verify the bytes it received.
