@@ -25,6 +25,29 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const BUNDLE = join(ROOT, 'dist/nodes/Privent/Privent.node.js');
 
+/**
+ * Every result states what it does NOT answer. A check whose scope lives only in
+ * a README gets quoted without its scope, and a green line with no limits reads
+ * as a stronger claim than it is.
+ */
+function scope(which) {
+  const lines =
+    which === 'lockfile'
+      ? [
+          '  ANSWERS      : the artifact bundles the @priventai/core the lockfile pins',
+          '  DOES NOT     : compare the artifact to this source tree — a local edit to',
+          '                 nodes/ or shared/ that is built in passes this check',
+          '  FOR THAT     : run with `--against <published version>` on a clean tag checkout',
+        ]
+      : [
+          '  ANSWERS      : this build reproduces the published artifact, byte for byte',
+          '  DOES NOT     : say the source tree is unmodified, only that what it produces',
+          '                 matches npm — run it on a clean checkout of the tag or the',
+          '                 comparison is against your working copy',
+        ];
+  for (const l of lines) console.log(`[verify-artifact]${l}`);
+}
+
 function fail(message) {
   console.error(`[verify-artifact] FAIL — ${message}`);
   process.exit(1);
@@ -56,6 +79,7 @@ if (baked[1] !== lockedCore) {
   );
 }
 console.log(`[verify-artifact] artifact ↔ lockfile: both @priventai/core ${lockedCore}`);
+scope('lockfile');
 
 // ── 2 · artifact ↔ what was published (opt-in) ───────────────────────────────
 
@@ -85,3 +109,4 @@ if (!built.equals(published)) {
 console.log(
   `[verify-artifact] artifact ↔ npm: byte-identical to ${pkg.name}@${version} (${built.length} bytes)`,
 );
+scope('npm');

@@ -174,3 +174,62 @@ itself first.**
 If the only way you can make the control red is to remove the product, the
 control is not measuring the product.
 
+---
+
+## 6. A marker shared by the alternatives cannot select between them
+
+An identification is a statement about what is **excluded**. A feature present in
+every candidate excludes nothing, and reading it as an identification produces a
+confident answer with no evidence behind it.
+
+**Instance — NP-AB.** The published `n8n-nodes-privent@2.4.0` bundle was read for
+`@priventai/core` version markers, and the markers cited were the uppercase-only
+`TOKEN_RE` and the compact-only IBAN regex. **Both are present in 0.8.0 and in
+0.9.0.** What the read established was *"not 0.10.x"*. What was reported, and
+then acted on, was *"is 0.9.0"* — and a directive was issued from it.
+
+**The contrast is the teaching.** The measurement that settled it did the same
+job correctly: `diff` the two candidate artifacts, find that they differ in
+**exactly three places**, and check all three. The published bundle carried
+0.8.0's shape at each — the `typeof v === "string"` guard 0.9.0 dropped was
+present, 0.9.0's baked version literal was absent, and core's custom-pattern
+code was absent. That fingerprint could name what it ruled out. The first one
+could not.
+
+**Rule.** Before using a feature to identify a version, a build, or a code path,
+check whether the alternatives also have it. State the identification as what it
+excludes: *"this is 0.8.0 and not 0.9.0, because 0.9.0 dropped the guard that is
+present here."*
+
+**Corollary.** A fingerprint that cannot name what it rules out is a
+**resemblance**. Resemblance is a reason to measure, never a result.
+
+**Third check, when the artifact allows it.** The strongest answer here was
+neither fingerprint: `git checkout v2.4.0 && npm ci && npm run build` produced a
+bundle byte-identical to the published one. Manifest, lockfile and markers can
+argue; a byte-identical rebuild ends the argument. Reach for it first when the
+artifact is reproducible.
+
+---
+
+## 7. A gate's refusal can carry the design
+
+A gate that rejects a design is usually read as an obstacle to route around. It
+is also a statement of the constraint set, and the remaining option is sometimes
+written inside the refusal.
+
+**Instance — NP-AA.** `zod` was required at runtime and declared nowhere. Two
+designs were derived from principle and written before either was run:
+`peerDependencies` (matching how `n8n-workflow` is declared, avoiding a second
+copy of something the host provides) and `dependencies` (always resolvable). The
+package's own gate rejected both — *"only `n8n-workflow` and `@n8n/ai-node-sdk`
+are permitted"*, then *"the `dependencies` field must be empty or absent in
+community node packages"*. The second refusal ends: **"or bundle them into your
+build artifact."** That was the answer, in the error message, before either
+design was written.
+
+**Rule.** When a gate refuses, read the refusal for its remainder before
+designing around it. The constraint set it enforces is usually narrower than the
+one being reasoned from, and the option it leaves is the one that survives
+review.
+
