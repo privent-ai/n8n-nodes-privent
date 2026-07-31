@@ -24,6 +24,40 @@ interface VaultEntry {
   value: string;
 }
 
+/**
+ * The case rule the real backend applies to a vault `kind` before it mints a
+ * token. INLINED COPY of `privent-backend/src/vault/canonical-kind.ts`
+ * (`normalizePiiKind(kind).toUpperCase()`), reproduced here because that
+ * repository is private and cannot be a dependency of this one.
+ *
+ * WHAT THIS COPY DOES NOT REPRODUCE: `normalizePiiKind`'s alias table, which
+ * folds the ML vocabulary (`EMAIL_ADDRESS`, `US_SSN`) onto the SDK's names.
+ * Only the CASE axis is copied, because case is what `TOKEN_RE` is sensitive to
+ * and case is what this instrument exists to be able to disagree about. A test
+ * that needs the alias axis has to say so explicitly via `tokens`.
+ */
+export function backendCanonicalKind(kind: string): string {
+  return kind.toUpperCase();
+}
+
+/**
+ * How the mock should case a minted token, so a test can make the mock DISAGREE
+ * with the node about case. The defect this exists for is not that the mock
+ * mints the wrong case — it is that until now the mock ECHOED the node's own
+ * kind and therefore could never disagree, so no test could catch a case
+ * regression.
+ *
+ * `faithful` is the default: it applies what the backend applies. `lower` and
+ * `raw` are explicit opt-ins for a disagreeing backend.
+ */
+export type TokenCaseMode = 'faithful' | 'lower' | 'raw';
+
+export function applyTokenCase(kind: string, mode: TokenCaseMode): string {
+  if (mode === 'lower') return kind.toLowerCase();
+  if (mode === 'raw') return kind;
+  return backendCanonicalKind(kind);
+}
+
 export interface HttpExecOpts {
   items: Array<{ json: Record<string, unknown> }>;
   params: Record<string, unknown>;
@@ -46,6 +80,12 @@ export interface HttpExecOpts {
     category: string;
     sensitivity: string;
   }>;
+  /**
+   * Case the mock mints tokens in. Defaults to `faithful` — the backend's own
+   * rule — so the instrument is correct without anyone remembering to opt in.
+   * Set `lower` to simulate a backend the node cannot scan.
+   */
+  tokenCase?: TokenCaseMode;
   /** Custom find-or-create-batch response builder. */
   tokens?: (items: Array<{ kind: string; normalizedValue: string; originalValue: string }>) => VaultToken[];
   /** Custom retrieve-batch response builder. */
@@ -87,11 +127,14 @@ export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
         const items = body.items as Array<{ kind: string; normalizedValue: string; originalValue: string }>;
         const tokens = opts.tokens
           ? opts.tokens(items)
-          : items.map((it, i) => ({
-              kind: it.kind,
-              value: it.normalizedValue,
-              token: `[${it.kind}_${String(i + 1).padStart(3, '0')}]`,
-            }));
+          : items.map((it, i) => {
+              const minted = applyTokenCase(it.kind, opts.tokenCase ?? 'faithful');
+              return {
+                kind: minted,
+                value: it.normalizedValue,
+                token: `[${minted}_${String(i + 1).padStart(3, '0')}]`,
+              };
+            });
         return { tokens };
       }
       if (url === '/v1/vault/retrieve-batch') {
