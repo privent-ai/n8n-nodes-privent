@@ -95,10 +95,16 @@ export class Privent implements INodeType {
               'No API key. Tokenize and Detokenize run entirely inside n8n with local regex detection — your data never leaves your n8n instance.',
           },
         ],
-        // Newly-added nodes default to Local (no key, no backend). NOTE: the
-        // RUNTIME fallback in getAuthMode() stays 'apiKey' so pre-2.1.0 nodes
-        // (no stored authentication value) keep their original behavior — only
-        // this UI default, which applies to freshly-added nodes, changes.
+        // Newly-added nodes default to Local (no key, no backend).
+        //
+        // This default is a UI-only fact and does NOT decide what a stored node
+        // runs as. n8n never persists a parameter equal to its default, so a
+        // node left on this default stores no `authentication` key at all — and
+        // neither does a pre-2.1.0 node, or a 2.1.0–2.2.0 node left on the
+        // then-default 'apiKey'. All three are identical on disk at
+        // typeVersion 1, because `version` was not bumped when this default
+        // flipped in 2.2.1. `resolveAuthMode` settles it by credential presence
+        // instead, and says so on the item when it had to infer. See NP-S.
         default: 'local',
       },
       {

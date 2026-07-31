@@ -9,6 +9,7 @@ import {
   buildAuditMetadata,
   buildLocalDetectors,
   fetchActiveCustomDetectors,
+  authWarning,
   getAuthMode,
   resolveContext,
   riskScore,
@@ -212,6 +213,7 @@ async function handleTokenizeLocal(ctx: IExecuteFunctions, i: number): Promise<I
     ...item.json,
     [textField]: tokenizedText,
     privent: {
+      ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
       sessionId,
       entities: entities.map((e) => ({
         token: e.token,
@@ -410,6 +412,7 @@ export async function handleTokenize(
     ...item.json,
     [textField]: tokenizedText,
     privent: {
+      ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
       sessionId,
       entities: entities.map((e) => ({
         token: e.token,

@@ -176,9 +176,51 @@ async function priventRequest<T>(
   })) as T;
 }
 
-/** Node-level auth mode. Defaults to `apiKey` (the pre-tokenless behavior). */
+/** Shown on the item when the mode was INFERRED rather than chosen. */
+export const AUTH_INFERRED_WARNING =
+  'Authentication was never set explicitly on this node, and no Privent credential is attached, so the run fell back to Local (No Backend): detection is regex-only, and the cloud vault, ML scoring and audit trail are inactive. Pick a mode in the Authentication dropdown to make this deliberate.';
+
+/**
+ * Node-level auth mode, plus whether it was CHOSEN or INFERRED.
+ *
+ * A stored node with no `authentication` key is ambiguous by construction: n8n
+ * does not persist a parameter equal to its default, and this package flipped
+ * that default from `apiKey` to `local` in 2.2.1 without bumping `version`. So
+ * pre-2.1.0 nodes, 2.1.0–2.2.0 nodes left on `apiKey`, and 2.2.1+ nodes left on
+ * `local` are byte-identical on disk at `typeVersion: 1`. typeVersion cannot
+ * separate them; credential PRESENCE can.
+ *
+ * The presence probe is `getNode().credentials`, which is what n8n itself reads
+ * (`node.credentials?.[type]`) and which `getNode()` returns intact. It is NOT
+ * `getCredentials()`: that throws `Credentials not found` when displayOptions
+ * hides the credential, so a try/catch around it would return the wrong answer
+ * confidently — measured, not assumed.
+ *
+ * `getNodeParameter(..., '')` distinguishes absent from set because n8n resolves
+ * it as `get(node.parameters, name, fallback)` against the STORED parameters,
+ * with no default-filling in the execution path.
+ */
+export function resolveAuthMode(ctx: IExecuteFunctions): {
+  mode: 'apiKey' | 'tokenless' | 'local';
+  inferred: boolean;
+} {
+  const stored = ctx.getNodeParameter('authentication', 0, '') as string;
+  if (stored === 'apiKey' || stored === 'tokenless' || stored === 'local') {
+    return { mode: stored, inferred: false };
+  }
+  const hasApiKeyCredential = Boolean(ctx.getNode().credentials?.priventApi);
+  return { mode: hasApiKeyCredential ? 'apiKey' : 'local', inferred: true };
+}
+
+/** Node-level auth mode. See `resolveAuthMode` for how an absent value resolves. */
 export function getAuthMode(ctx: IExecuteFunctions): 'apiKey' | 'tokenless' | 'local' {
-  return ctx.getNodeParameter('authentication', 0, 'apiKey') as 'apiKey' | 'tokenless' | 'local';
+  return resolveAuthMode(ctx).mode;
+}
+
+/** The warning to surface when the mode was inferred as local, else undefined. */
+export function authWarning(ctx: IExecuteFunctions): string | undefined {
+  const { mode, inferred } = resolveAuthMode(ctx);
+  return inferred && mode === 'local' ? AUTH_INFERRED_WARNING : undefined;
 }
 
 /** Reads the backend `baseUrl` for the active auth mode. apiKey →

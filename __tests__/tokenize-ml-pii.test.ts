@@ -90,7 +90,10 @@ function makeExec(
     getNodeParameter: (name: string, _i: number, fallback?: unknown) =>
       name in params ? params[name] : fallback,
     getCredentials: async () => ({ apiKey: 'k', baseUrl: 'https://api.test.local', vaultBackend: 'cloud' }),
-    getNode: () => node,
+    // apiKey mode is what this test exercises, so the node must SAY it has the
+    // credential its `getCredentials` already answers with — an absent
+    // credential now resolves to local, which is the point of the change.
+    getNode: () => ({ ...node, credentials: { priventApi: { id: 'c', name: 'Privent account' } } }),
     getExecutionId: () => 'exec-ml',
     getWorkflow: () => ({ id: 'wf-ml', name: 'ml-pii' }),
     getMode: () => 'manual',
