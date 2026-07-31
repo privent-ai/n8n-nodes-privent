@@ -162,7 +162,35 @@ describe('token case disagreement between the node and the vault', () => {
   });
 
   it('redeeming nothing is not reported as success — closed by N4-4', async () => {
-    const { restored } = await tokenizeThenDetokenize('lower');
-    expect(restored.privent.detokenized).not.toBe(true);
+    // The ASSERTION is unchanged from the day this test was written red. The
+    // FIXTURE changed, because the world did: this used to reach zero-redemption
+    // through a case-skewed mint, and SDK-A (core 0.10.0) made that exact path
+    // round-trip successfully — `detokenized: true` is now the correct answer
+    // there, which is why the sibling test above went green. Zero redemption is
+    // still reachable and still has to be reported honestly, so the fixture now
+    // produces it the way a real deployment does: a placeholder the vault never
+    // minted (expired, or minted under another Session ID).
+    const { handler } = makeCaseSkewedVault('faithful');
+    const detOut = await new Privent().execute.call(
+      makeExec(
+        {
+          authentication: 'apiKey',
+          resource: 'detokenize',
+          operation: 'detokenize',
+          sessionId: SESSION_ID,
+          targetField: '*',
+          strict: false,
+          traceId: '',
+          agentName: '',
+          targetAgentName: '',
+        },
+        [{ json: { text: 'reach [EMAIL_404] now' } }],
+        handler,
+      ),
+    );
+    const privent = (detOut[0]![0]!.json as { privent: Record<string, unknown> }).privent;
+
+    expect(privent.detokenized).not.toBe(true);
+    expect(String(privent.reason)).toContain('Only 0 of the 1');
   });
 });
