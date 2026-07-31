@@ -2,6 +2,7 @@ import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import type { AuditEvent, HandoffReason } from '@priventai/core';
 import {
+  NODE_VERSION,
   auditLog,
   buildAuditMetadata,
   resolveContext,
@@ -96,6 +97,7 @@ export async function handleHandoff(
   return {
     ...item.json,
     privent: {
+      nodeVersion: NODE_VERSION,
       handoff: true,
       fromAgentName: ctxAudit.agentName,
       toAgentName: toAgentName ?? null,

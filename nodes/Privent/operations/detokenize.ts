@@ -4,6 +4,7 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import type { AuditEvent } from '@priventai/core';
 import { scanForTokens, detokenizeDeep } from '@priventai/core';
 import {
+  NODE_VERSION,
   N8nHttpVault,
   WorkflowStaticDataVault,
   auditLog,
@@ -135,6 +136,7 @@ export async function handleDetokenize(
     return {
       ...item.json,
       privent: {
+        nodeVersion: NODE_VERSION,
         ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
         sessionId,
         detokenized: false,
@@ -225,6 +227,7 @@ export async function handleDetokenize(
   return {
     ...json,
     privent: {
+      nodeVersion: NODE_VERSION,
       ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
       sessionId,
       detokenized,

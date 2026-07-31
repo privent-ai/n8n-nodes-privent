@@ -3,6 +3,7 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import type { AuditEvent, EntityKind, RegexDetector } from '@priventai/core';
 import { DEFAULT_DETECTORS } from '@priventai/core';
 import {
+  NODE_VERSION,
   N8nHttpVault,
   WorkflowStaticDataVault,
   auditLog,
@@ -213,6 +214,7 @@ async function handleTokenizeLocal(ctx: IExecuteFunctions, i: number): Promise<I
     ...item.json,
     [textField]: tokenizedText,
     privent: {
+      nodeVersion: NODE_VERSION,
       ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
       sessionId,
       entities: entities.map((e) => ({
@@ -412,6 +414,7 @@ export async function handleTokenize(
     ...item.json,
     [textField]: tokenizedText,
     privent: {
+      nodeVersion: NODE_VERSION,
       ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
       sessionId,
       entities: entities.map((e) => ({
