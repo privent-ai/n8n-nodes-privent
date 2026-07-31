@@ -141,39 +141,24 @@ for (const d of detectors) {
   d.source = d.source.replace('\\b\\d{1,5}\\s+', '\\b\\d{1,5}[A-Za-z]?\\s+');
 }
 
-// ── Local override: the IBAN printed form ────────────────────────────────────
-// `@priventai/core`'s IBAN detector is `\b[A-Z]{2}\d{2}[A-Z0-9]{4,30}\b` — no
-// separators, no `i` flag — so an IBAN written the way ISO 13616 defines for
-// PRINTING, which is how it appears on an invoice or in an email, is not
-// detected. Worse than a miss: the PHONE detector takes the digit run in the
-// middle, so `pay GB29 NWBK 6016 1331 9268 19 now` became
-// `pay GB29 NWBK [PHONE_001] 19 now` — a wrong kind, with the country and bank
-// codes left in cleartext. Measured 2 of 12 forms through this package's own
-// local path.
+// ── The IBAN override lived here, and was deleted ────────────────────────────
+// This package carried its own IBAN pattern because core's missed the ISO 13616
+// printed form. `@priventai/core@0.10.2` fixes it upstream (privent-sdk
+// `ff9e305`, `packages/core/src/tokenizer/patterns.ts:109`), so the duplication
+// is no longer forced — and a copy that can be deleted needs no spanning test to
+// keep it honest. METHOD §6's preferred outcome.
 //
-// The kind is deliberately `IBAN`, the same kind core emits: on the compact form
-// both detectors match the same span and `removeOverlaps` keeps one, and on the
-// printed forms this one is strictly longer, so it wins the span back from PHONE.
+// Measured before deleting: core's pattern scores 12/12 on the same twelve forms
+// this package's override scored 12/12 on. The two differed on exactly one form
+// outside that space — dot separators, `GB29.NWBK.6016…`, which mine accepted
+// and theirs does not — and that is not worth a permanent cross-repo drift risk.
+// Theirs is also tighter before the validator: 65 raw regex hits against my 443
+// over the same 72.45 MB, both with zero survivors, and their four-character
+// grouping is documented as load-bearing against a measured false positive
+// ("ES2022 y versiones posteriores") that a looser form let through.
 //
-// The grammar lives in core and the fix belongs there too (SDK-H). This override
-// is what this repository can deliver on its own, and it is added AFTER the
-// CORE_KINDS filter on purpose — that filter exists to avoid duplicating core,
-// and here the duplication is the point.
-//
-// Measured before adding: 12/12 forms detected, and ZERO surviving false
-// positives across 72.6 MB (repo prose 0.16 MB, business prose 0.01 MB, and
-// 72.45 MB of node_modules text as a one-off scale check). 443 raw regex hits on
-// that 72.45 MB, all rejected by the MOD-97 + country-length validator, which
-// this package already carries as `validateIBAN`.
-detectors.push({
-  kind: 'IBAN',
-  source: '\\b[A-Z]{2}\\d{2}(?:[ \\u00A0.\\-]?[A-Z0-9]{4})+(?:[ \\u00A0.\\-]?[A-Z0-9]{1,3})?\\b',
-  flags: 'gi',
-  confidence: 0.97,
-  category: 'financial',
-  tier: 'high',
-  validatorName: 'validateIBAN',
-});
+// `__tests__/iban-printed-form.test.ts` stays as the tripwire: it runs all twelve
+// forms through the node and fails if core ever regresses.
 
 // ── Admission: which contextual detectors may enter `aggressive` ──
 // The list is MEASURED, never judged. `scripts/measure-detector-fp.mjs` admits a

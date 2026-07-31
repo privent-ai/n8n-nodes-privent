@@ -194,15 +194,24 @@ for (const d of contextual) {
     hits,
     fpSample,
     hitSample,
-    verdict: falsePositives > 0 ? 'REJECTED (false positives)' : hits > 0 ? 'ADMITTED' : 'INERT (fires on nothing)',
+    // "INERT" used to sit here, and it read as "vetted" to anyone scanning the
+    // table. It had not earned that: a detector that fires on nothing has not
+    // been shown to be safe, only to be untested against anything it matches.
+    // The third state is NOT MEASURED, and it says what it means.
+    verdict:
+      falsePositives > 0
+        ? 'MEASURED — rejected (false positives)'
+        : hits > 0
+          ? 'MEASURED — admitted'
+          : 'NOT MEASURED (no positive case exists for this kind)',
   });
 }
 
 rows.sort((a, b) => b.falsePositives - a.falsePositives || a.kind.localeCompare(b.kind));
 
-const admitted = rows.filter((r) => r.verdict === 'ADMITTED');
-const rejected = rows.filter((r) => r.verdict.startsWith('REJECTED'));
-const inert = rows.filter((r) => r.verdict.startsWith('INERT'));
+const admitted = rows.filter((r) => r.verdict.includes('admitted'));
+const rejected = rows.filter((r) => r.verdict.includes('rejected'));
+const unmeasured = rows.filter((r) => r.verdict.startsWith('NOT MEASURED'));
 
 writeFileSync(
   join(ROOT, 'scripts/detector-admission.json'),
@@ -230,9 +239,18 @@ const table = [
   '',
   `| verdict | count |`,
   `|---|---|`,
-  `| ADMITTED | ${admitted.length} |`,
-  `| REJECTED (false positives) | ${rejected.length} |`,
-  `| INERT (fires on nothing) | ${inert.length} |`,
+  `| MEASURED — admitted | ${admitted.length} |`,
+  `| MEASURED — rejected (false positives) | ${rejected.length} |`,
+  `| **NOT MEASURED** (no positive case exists for this kind) | ${unmeasured.length} |`,
+  '',
+  '**`NOT MEASURED` is not a verdict.** A detector that fires on nothing has not',
+  'been shown to be safe — only to be untested against anything it matches. The',
+  'corpus grows with the work: every item that touches a detector adds positive',
+  'cases for the kinds it touches, and those kinds move out of this row. Dropping',
+  'the unmeasured set from the package was considered and REJECTED: a detector',
+  'that is not shipped can never be measured into a tier, so it forecloses the',
+  'only exit that resolves the question, and 65.8 KB inside a 214 KB community',
+  'node is not a cost anyone is paying. See NP-X.',
   '',
   '## Narrowed corpus scope',
   '',
@@ -258,5 +276,5 @@ const table = [
 writeFileSync(join(ROOT, 'docs/detector-fp-table.md'), `${table}\n`);
 
 console.log(`negatives ${negatives.length} lines · positives ${positives.length} cases`);
-console.log(`ADMITTED ${admitted.length} · REJECTED ${rejected.length} · INERT ${inert.length}`);
+console.log(`ADMITTED ${admitted.length} · REJECTED ${rejected.length} · NOT MEASURED ${unmeasured.length}`);
 console.log(`admitted: ${admitted.map((r) => r.kind).join(', ') || '(none)'}`);

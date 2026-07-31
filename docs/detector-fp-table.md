@@ -14,9 +14,18 @@ positive, not as a hit.
 
 | verdict | count |
 |---|---|
-| ADMITTED | 8 |
-| REJECTED (false positives) | 99 |
-| INERT (fires on nothing) | 361 |
+| MEASURED — admitted | 8 |
+| MEASURED — rejected (false positives) | 99 |
+| **NOT MEASURED** (no positive case exists for this kind) | 361 |
+
+**`NOT MEASURED` is not a verdict.** A detector that fires on nothing has not
+been shown to be safe — only to be untested against anything it matches. The
+corpus grows with the work: every item that touches a detector adds positive
+cases for the kinds it touches, and those kinds move out of this row. Dropping
+the unmeasured set from the package was considered and REJECTED: a detector
+that is not shipped can never be measured into a tier, so it forecloses the
+only exit that resolves the question, and 65.8 KB inside a 214 KB community
+node is not a cost anyone is paying. See NP-X.
 
 ## Narrowed corpus scope
 
@@ -30,472 +39,472 @@ still has to score zero on the corpora that remain.
 
 | kind | corpora | false positives | positive hits | verdict | sample |
 |---|---|---|---|---|---|
-| `PSN_ID` | A+B | 15156 | 0 | REJECTED (false positives) | All |
-| `INSTAGRAM_USERNAME` | A+B | 13949 | 0 | REJECTED (false positives) | notable |
-| `XBOX_GAMERTAG` | A+B | 11561 | 0 | REJECTED (false positives) | All notable  |
-| `TNT_TRACKING` | A+B | 1075 | 0 | REJECTED (false positives) |  Changelog |
-| `NAME` | A+B | 857 | 0 | REJECTED (false positives) | All notable changes to |
-| `IATA_AIRPORT_CODE` | A+B | 160 | 0 | REJECTED (false positives) | to the |
-| `CARD_AUTH_CODE` | A+B | 107 | 0 | REJECTED (false positives) | authoritative |
-| `WORK_ORDER_NUMBER` | A+B | 93 | 0 | REJECTED (false positives) | workflow |
-| `LICENSE_PLATE` | A+B | 83 | 0 | REJECTED (false positives) | regex |
-| `DISPATCHER_ID` | A+B | 62 | 0 | REJECTED (false positives) | displayName |
-| `HOTEL_RESERVATION` | A+B | 34 | 0 | REJECTED (false positives) | configured |
-| `BOOKING_NUMBER` | A+B | 33 | 0 | REJECTED (false positives) | resolution |
-| `TIKTOK_USERNAME` | A+B | 31 | 0 | REJECTED (false positives) | @privent.ai |
-| `SOCIAL_MEDIA_HANDLE` | A+B | 29 | 0 | REJECTED (false positives) | @privent |
-| `EMERGENCY_MEDICAL_INCIDENT` | A+B | 19 | 0 | REJECTED (false positives) | migration |
-| `PE_LICENSE` | A+B | 17 | 0 | REJECTED (false positives) | persistent |
-| `CATALOG_NUMBER` | A+B | 14 | 0 | REJECTED (false positives) | categories |
-| `CUSTOMER_ID` | A+B | 14 | 0 | REJECTED (false positives) | customer emails |
-| `EMERGENCY_CALL_REF` | A+B | 13 | 0 | REJECTED (false positives) | callability |
-| `TOURNAMENT_REGISTRATION_ID` | A+B | 12 | 0 | REJECTED (false positives) | RegexDetector |
-| `AIRCRAFT_REGISTRATION` | A+B | 10 | 0 | REJECTED (false positives) | regex-only |
-| `INVESTMENT_ACCOUNT` | A+B | 9 | 0 | REJECTED (false positives) | Invocation |
-| `PASSPORT_US` | A+B | 9 | 0 | REJECTED (false positives) | pass is skipped |
-| `PHONE_UK` | A+B | 9 | 0 | REJECTED (false positives) | 212) 555-0177 labelled PHONE_UK, expected PHONE_US |
-| `RMA_NUMBER` | A+B | 9 | 0 | REJECTED (false positives) | return createHash |
-| `DEPOSITION_REF` | A+B | 8 | 0 | REJECTED (false positives) | dependency |
-| `GERMAN_LICENSE_PLATE` | A+B | 8 | 0 | REJECTED (false positives) | So N4 |
-| `AUSTRALIAN_LICENSE_PLATE` | A+B | 7 | 0 | REJECTED (false positives) | SHA-256 |
-| `TWITTER_USER_ID` | A+B | 6 | 0 | REJECTED (false positives) | 1234567893 labelled TWITTER_USER_ID, expected NPI_NUMBER |
-| `INDIAN_AADHAAR` | A+B | 5 | 0 | REJECTED (false positives) | 4111 1111 1111 labelled INDIAN_AADHAAR, expected CREDIT_CARD |
-| `JAPANESE_MY_NUMBER` | A+B | 5 | 0 | REJECTED (false positives) | 4111 1111 1111 labelled JAPANESE_MY_NUMBER, expected CREDIT_ |
-| `NPI_NUMBER` | A+B | 5 | 1 | REJECTED (false positives) | 415-555-0142  labelled NPI_NUMBER, expected PHONE_US |
-| `BATCH_LOT_NUMBER` | A+B | 4 | 0 | REJECTED (false positives) | batch retrieve |
-| `CANADIAN_LICENSE_PLATE` | A+B | 4 | 0 | REJECTED (false positives) | SHA-256 |
-| `MANUFACTURING_SERIAL` | A+B | 4 | 0 | REJECTED (false positives) | serializeForWire |
-| `PERFORMANCE_REVIEW_ID` | A+B | 4 | 0 | REJECTED (false positives) | reviewThreshold |
-| `SEARCH_RESCUE_MISSION_ID` | A+B | 4 | 0 | REJECTED (false positives) | searchListMethod |
-| `TELEGRAM_USER_ID` | A+B | 4 | 0 | REJECTED (false positives) | 1234567893 labelled TELEGRAM_USER_ID, expected NPI_NUMBER |
-| `TERMINAL_ID` | A+B | 4 | 0 | REJECTED (false positives) | positives |
-| `VENDOR_CODE` | A+B | 4 | 0 | REJECTED (false positives) | vendored |
-| `PRODUCTION_ID` | A+B | 3 | 0 | REJECTED (false positives) | production |
-| `UK_CHARITY_NUMBER` | A+B | 3 | 0 | REJECTED (false positives) | 0048217 labelled UK_CHARITY_NUMBER, expected EMPLOYEE_ID |
-| `CUSIP` | A+B | 2 | 0 | REJECTED (false positives) | ALLOWLIST |
-| `DELAWARE_LICENSE_PLATE` | A+B | 2 | 0 | REJECTED (false positives) | 004821 labelled DELAWARE_LICENSE_PLATE, expected INVOICE_NUM |
-| `DISCIPLINARY_ACTION_ID` | A+B | 2 | 0 | REJECTED (false positives) | warning in the UI |
-| `GENERIC_SECRET` | A+B | 2 | 0 | REJECTED (false positives) | secret parameter |
-| `INSURANCE_CERTIFICATE` | A+B | 2 | 0 | REJECTED (false positives) | certFingerprint |
-| `JUDGMENT_NUMBER` | A+B | 2 | 0 | REJECTED (false positives) | order: string |
-| `LEAVE_REQUEST_ID` | A+B | 2 | 0 | REJECTED (false positives) | Leave default |
-| `MISSING_PERSON_CASE` | A+B | 2 | 0 | REJECTED (false positives) | missing headers |
-| `RHODE_ISLAND_LICENSE_PLATE` | A+B | 2 | 0 | REJECTED (false positives) | 004821 labelled RHODE_ISLAND_LICENSE_PLATE, expected INVOICE |
-| `SOURCE_ID` | A+B | 2 | 0 | REJECTED (false positives) | source layout |
-| `TRAINING_CERT_ID` | A+B | 2 | 0 | REJECTED (false positives) | certFingerprint |
-| `TRAVEL_AGENCY_BOOKING` | A+B | 2 | 0 | REJECTED (false positives) | trip leaves |
-| `US_LICENSE_PLATE` | A+B | 2 | 0 | REJECTED (false positives) | License: MIT |
-| `AIRCRAFT_TAIL_NUMBER` | A+B | 1 | 0 | REJECTED (false positives) | N4 |
-| `AMBULANCE_CALL_ID` | A+B | 1 | 0 | REJECTED (false positives) | ambiguous |
-| `ARAMEX_TRACKING` | A+B | 1 | 0 | REJECTED (false positives) |  961234567890 labelled ARAMEX_TRACKING, expected FEDEX_TRACK |
-| `ARGENTINA_DNI` | A+B | 1 | 0 | REJECTED (false positives) | 0048217 labelled ARGENTINA_DNI, expected EMPLOYEE_ID |
-| `AWS_SECRET_KEY` | A+B | 1 | 0 | REJECTED (false positives) | 0x52908400098527886E0F7030069857D2E4169E labelled AWS_SECRET |
-| `BINANCE_CHAIN_ADDRESS` | A+B | 1 | 0 | REJECTED (false positives) | 0x52908400098527886E0F7030069857D2E4169EE7 labelled BINANCE_ |
-| `BULGARIAN_PERSONAL_NUMBER` | A+B | 1 | 0 | REJECTED (false positives) | 1234567893 labelled BULGARIAN_PERSONAL_NUMBER, expected NPI_ |
-| `COURSE_CODE` | A+B | 1 | 0 | REJECTED (false positives) | ISBN 978 labelled COURSE_CODE, expected ISBN |
-| `CPT_CODE` | A+B | 1 | 0 | REJECTED (false positives) | 11734 labelled CPT_CODE, expected PURCHASE_ORDER |
-| `DEVICE_UUID` | A+B | 1 | 0 | REJECTED (false positives) | 7ec6cf05-e87a-4b90-9f44-dad2f11c89ad |
-| `DHL_TRACKING` | A+B | 1 | 0 | REJECTED (false positives) |  1234567893 labelled DHL_TRACKING, expected NPI_NUMBER |
-| `ECUADOR_CEDULA` | A+B | 1 | 0 | REJECTED (false positives) | 1234567893 labelled ECUADOR_CEDULA, expected NPI_NUMBER |
-| `EMERGENCY_CONTACT` | A+B | 1 | 0 | REJECTED (false positives) | ice reported MAC |
-| `FLEET_VEHICLE_ID` | A+B | 1 | 0 | REJECTED (false positives) | fleet record |
-| `FLORIDA_LICENSE_PLATE` | A+B | 1 | 0 | REJECTED (false positives) | MAC 00 labelled FLORIDA_LICENSE_PLATE, expected MAC_ADDRESS |
-| `GENERIC_TRACKING_NUMBER` | A+B | 1 | 0 | REJECTED (false positives) | Shipment 961234567890 labelled GENERIC_TRACKING_NUMBER, expe |
-| `GLS_TRACKING` | A+B | 1 | 0 | REJECTED (false positives) |  961234567890 labelled GLS_TRACKING, expected FEDEX_TRACKING |
-| `HEROKU_API_KEY` | A+B | 1 | 0 | REJECTED (false positives) | 7ec6cf05-e87a-4b90-9f44-dad2f11c89ad |
-| `HUNGARIAN_TAX_ID` | A+B | 1 | 0 | REJECTED (false positives) | 1234567893 labelled HUNGARIAN_TAX_ID, expected NPI_NUMBER |
-| `INVOICE_NUMBER` | A+B | 1 | 0 | REJECTED (false positives) | Invocation |
-| `JORDAN_NATIONAL_ID` | A+B | 1 | 0 | REJECTED (false positives) | 1234567893 labelled JORDAN_NATIONAL_ID, expected NPI_NUMBER |
-| `KENYA_NATIONAL_ID` | A+B | 1 | 0 | REJECTED (false positives) | 0048217 labelled KENYA_NATIONAL_ID, expected EMPLOYEE_ID |
-| `KUWAIT_CIVIL_ID` | A+B | 1 | 0 | REJECTED (false positives) | 961234567890 labelled KUWAIT_CIVIL_ID, expected FEDEX_TRACKI |
-| `LEBANON_NATIONAL_ID` | A+B | 1 | 0 | REJECTED (false positives) | 0048217 labelled LEBANON_NATIONAL_ID, expected EMPLOYEE_ID |
-| `MALAYSIA_MYKAD` | A+B | 1 | 0 | REJECTED (false positives) | 961234567890 labelled MALAYSIA_MYKAD, expected FEDEX_TRACKIN |
-| `MINECRAFT_UUID` | A+B | 1 | 0 | REJECTED (false positives) | 7ec6cf05-e87a-4b90-9f44-dad2f11c89ad |
-| `NEW_YORK_LICENSE_PLATE` | A+B | 1 | 0 | REJECTED (false positives) | INV-2026 labelled NEW_YORK_LICENSE_PLATE, expected INVOICE_N |
-| `PAYROLL_NUMBER` | A+B | 1 | 0 | REJECTED (false positives) | Payroll flagged |
-| `PHILIPPINES_UMID` | A+B | 1 | 0 | REJECTED (false positives) | 961234567890 labelled PHILIPPINES_UMID, expected FEDEX_TRACK |
-| `PHONE_US` | A+B | 1 | 0 | REJECTED (false positives) | 1234567893 labelled PHONE_US, expected NPI_NUMBER |
-| `POLYGON_ADDRESS` | A+B | 1 | 0 | REJECTED (false positives) | 0x52908400098527886E0F7030069857D2E4169EE7 labelled POLYGON_ |
-| `PROJECT_CODE` | A+B | 1 | 0 | REJECTED (false positives) | project adheres |
-| `PROMO_CODE` | A+B | 1 | 0 | REJECTED (false positives) | discount applies |
-| `PUROLATOR_TRACKING` | A+B | 1 | 0 | REJECTED (false positives) |  961234567890 labelled PUROLATOR_TRACKING, expected FEDEX_TR |
-| `RUSSIAN_PASSPORT` | A+B | 1 | 0 | REJECTED (false positives) | 1234567893 labelled RUSSIAN_PASSPORT, expected NPI_NUMBER |
-| `SAUDI_NATIONAL_ID` | A+B | 1 | 0 | REJECTED (false positives) | 1234567893 labelled SAUDI_NATIONAL_ID, expected NPI_NUMBER |
-| `SEDOL` | A+B | 1 | 0 | REJECTED (false positives) | 0048217 labelled SEDOL, expected EMPLOYEE_ID |
-| `SHIPMENT_TRACKING` | A+B | 1 | 0 | REJECTED (false positives) | Shipment 961234567890 labelled SHIPMENT_TRACKING, expected F |
-| `SOLANA_ADDRESS` | A+B | 1 | 0 | REJECTED (false positives) | 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa labelled SOLANA_ADDRESS,  |
-| `TRIP_ID` | A+B | 1 | 0 | REJECTED (false positives) | trip fidelity |
-| `UZBEKISTAN_PASSPORT` | A+B | 1 | 0 | REJECTED (false positives) | AB1234563 labelled UZBEKISTAN_PASSPORT, expected DEA_NUMBER |
-| `VIETNAM_CCCD` | A+B | 1 | 0 | REJECTED (false positives) | 961234567890 labelled VIETNAM_CCCD, expected FEDEX_TRACKING |
-| `WYOMING_LICENSE_PLATE` | A+B | 1 | 0 | REJECTED (false positives) | 11734 labelled WYOMING_LICENSE_PLATE, expected PURCHASE_ORDE |
-| `ZIP_CODE_US` | A+B | 1 | 0 | REJECTED (false positives) | 11734 labelled ZIP_CODE_US, expected PURCHASE_ORDER |
-| `ADDRESS_PO_BOX` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ADDRESS_STREET` | B | 0 | 3 | ADMITTED | 742 Evergreen Terrace (ADDRESS_STREET) |
-| `ADJUSTER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AIR_QUALITY_PERMIT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AIR_WAYBILL_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AIRBNB_RESERVATION_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AIRCRAFT_MODE_S` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AIRLINE_BOOKING_REFERENCE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AIRLINE_PNR` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ALABAMA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ALASKA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ALGORAND_ADDRESS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AMAZON_TRACKING` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `APEX_PLAYER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `APPLICATION_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `APPRAISAL_REFERENCE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ARGENTINA_CUIT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ARIZONA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ARKANSAS_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ARTICLE_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AUSTRALIA_POST_TRACKING` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AUSTRALIAN_MEDICARE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AVALANCHE_ADDRESS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AWS_ARN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AWS_CERTIFICATION` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AZURE_RESOURCE_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `AZURE_STORAGE_KEY` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BAHRAIN_CPR` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BANK_ACCOUNT_UK` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BATTLETAG` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BENEFICIARY_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BENEFITS_PLAN_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BILL_OF_LADING` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BIOBANK_SAMPLE_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BIOMETRIC_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BITCOIN_ADDRESS` | A+B | 0 | 1 | ADMITTED | 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa (BITCOIN_ADDRESS) |
-| `BOM_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BORDER_CROSSING_CARD` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BRAZILIAN_CNPJ` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BRAZILIAN_CPF` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BROADBAND_SERVICE_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `BSB_AU` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CALIFORNIA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CANADA_POST_TRACKING` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CARD_EXPIRY` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CARDANO_ADDRESS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CART_SESSION_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CHEQUE_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CHI_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CHILE_RUT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CHINA_POST_TRACKING` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CISCO_CERTIFICATION` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CLABE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CLAIM_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CLIENT_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `COD_PLAYER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `COLOMBIA_CEDULA` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `COLOMBIA_NIT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `COLORADO_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `COMPANY_NUMBER_UK` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `COMPTIA_CERTIFICATION` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CONNECTICUT_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CONTAINER_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CONTRACT_REFERENCE_2` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CONTRIBUTOR_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `COPYRIGHT_REG` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `COSMOS_ADDRESS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CPA_LICENSE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CRUISE_BOOKING_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CRYPTO_TX_HASH` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CSGO_FRIEND_CODE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CVV` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CVV_CODE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `CZECH_NATIONAL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DATE_OF_BIRTH` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DEA_NUMBER` | A+B | 0 | 1 | ADMITTED | DEA AB1234563 (DEA_NUMBER) |
-| `DEGREE_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DEPARTMENT_CODE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DIRECT_DEPOSIT_REF` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DISASTER_VICTIM_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DISCORD_USER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DNA_SEQUENCE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DONOR_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DOORDASH_ORDER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DOTA_FRIEND_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DRIVER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DRIVING_LICENSE_UK` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DRIVING_LICENSE_US` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DRUG_DOSAGE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DRUG_TEST_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `DUTCH_BSN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `EDITORIAL_TICKET` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `EGYPT_NATIONAL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `EHIC_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `EMERGENCY_CONTACT_REF` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `EMERGENCY_SHELTER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ENVIRONMENTAL_CERTIFICATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `EPA_ID_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `EPIC_GAMES_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `EQUIPMENT_SERIAL` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ESCROW_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ESPORTS_PLAYER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ETHEREUM_ADDRESS` | A+B | 0 | 1 | ADMITTED | 0x52908400098527886E0F7030069857D2E4169EE7 (ETHEREUM_ADDRESS |
-| `EXAM_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `EXHIBIT_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `EXIT_INTERVIEW_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `EXPENSE_REPORT_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FAA_AIRMAN_CERTIFICATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FACEBOOK_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FACILITY_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FACULTY_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FEDEX_TRACKING` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FIJI_NATIONAL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FINRA_LICENSE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FIRE_INCIDENT_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FIREBASE_API_KEY` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FIREFIGHTER_BADGE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FIVERR_ORDER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FLIGHT_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FORTNITE_ACCOUNT_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FRAMEWORK_AGREEMENT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FRENCH_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FRENCH_SOCIAL_SECURITY` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `FREQUENT_FLYER_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GENERIC_API_KEY` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GENETIC_MARKER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GEORGIA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GERMAN_TAX_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GHANA_CARD` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GIFT_AID_REFERENCE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GIFT_CARD_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GIG_PLATFORM_ORDER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GIG_PLATFORM_USER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GLOBAL_ENTRY_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GRANT_REFERENCE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `GRUBHUB_ORDER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `HAWAII_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `HAZARDOUS_WASTE_MANIFEST` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `HAZMAT_INCIDENT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `HEALTH_INSURANCE_CLAIM` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `HOA_ACCOUNT_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `HOTEL_LOYALTY_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `HOUSING_ASSIGNMENT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `HUNGARIAN_PERSONAL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `IATA_AIRLINE_CODE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ICAO_AIRCRAFT_TYPE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ICD10_CODE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `IDAHO_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `IFSC` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ILLINOIS_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `IMO_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `INCIDENT_REPORT_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `INDIANA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `INDONESIA_NIK` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `INDONESIA_NPWP` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `INSPECTION_CERTIFICATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `INSTACART_ORDER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `INSTALLATION_REF` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `INTERNATIONAL_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `IOWA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `IPV4` | A+B | 0 | 1 | ADMITTED | 203.0.113.42 (IP_ADDRESS/IPV4) |
-| `IPV6` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ISIN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ISRAEL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ITALIAN_FISCAL_CODE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ITIN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `JAPAN_POST_TRACKING` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `JAPANESE_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `JOB_APPLICATION_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `KANSAS_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `KAZAKHSTAN_IIN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `KENTUCKY_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `KENYA_KRA_PIN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `KUBERNETES_SECRET` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `KYRGYZSTAN_PIN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `LAB_TEST_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `LEASE_AGREEMENT_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `LEGACY_REFERENCE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `LEI` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `LINKEDIN_PROFILE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `LITECOIN_ADDRESS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `LLOYDS_REGISTER_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `LOUISIANA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `LOYALTY_CARD_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `LYFT_RIDE_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MAC_ADDRESS` | A+B | 0 | 1 | ADMITTED | 00:1B:44:11:3A:B7 (MAC_ADDRESS) |
-| `MAILGUN_API_KEY` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MAINE_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MANUSCRIPT_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MARITIME_CALLSIGN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MARYLAND_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MASSACHUSETTS_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MASTER_AIRWAY_BILL` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MATTER_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MEMBERSHIP_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MERCHANT_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MEXICAN_CURP` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MEXICAN_RFC` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MICHIGAN_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MICROSOFT_CERTIFICATION` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MINNESOTA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MISSISSIPPI_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MISSOURI_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MLS_LISTING_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MMSI_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MONERO_ADDRESS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MONTANA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MOROCCO_NATIONAL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MORTGAGE_LOAN_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `MYANMAR_NRC` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NEAR_ADDRESS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NEBRASKA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NEVADA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NEW_HAMPSHIRE_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NEW_JERSEY_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NEW_MEXICO_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NEW_ZEALAND_DRIVER_LICENSE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NEW_ZEALAND_IRD` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NEW_ZEALAND_PASSPORT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NIGERIA_BVN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NIGERIA_NIN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NINTENDO_FRIEND_CODE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NORTH_CAROLINA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NORTH_DAKOTA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NPDES_PERMIT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `NURSING_LICENSE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `OAUTH_CLIENT_SECRET` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `OAUTH_TOKEN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ODOMETER_READING_REF` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `OFFICIAL_SHIP_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `OHIO_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `OKLAHOMA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `OMAN_CIVIL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ONTRAC_TRACKING` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ORDER_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `OREGON_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `OVERWATCH_BATTLETAG` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PALLET_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PARAMEDIC_CERTIFICATION` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PART_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PENNSYLVANIA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PERU_DNI` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PERU_RUC` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PHONE_INTERNATIONAL` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PHONE_LINE_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PHONE_UK_MOBILE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PMP_CERTIFICATION` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PNG_NATIONAL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `POLICE_BADGE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `POLICE_REPORT_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `POLISH_PESEL` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `POLKADOT_ADDRESS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `POSTCODE_UK` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `POSTMATES_DELIVERY_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PRESS_PASS_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PRO_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PROBATE_CASE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PROPERTY_PARCEL_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PROPERTY_TAX_ACCOUNT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PROTOCOL_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PROVIDER_LICENSE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PSC_INSPECTION_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PUBLISHING_CONTRACT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `PURCHASE_ORDER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `QATAR_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `QC_CERTIFICATE_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `QUOTATION_REFERENCE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `QUOTE_REFERENCE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `REAL_ESTATE_LICENSE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `RECRUITER_REF` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `REDDIT_USERNAME` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `REINSURANCE_TREATY` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `REMEDIATION_SITE_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `RENTAL_CAR_CONFIRMATION` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `RESEARCH_GRANT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `RETIREMENT_ACCOUNT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `RFQ_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `RIOT_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `RIPPLE_ADDRESS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ROBLOX_USER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ROMANIAN_CNP` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ROUTING_NUMBER_MFG` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ROYAL_MAIL_TRACKING` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `RUSSIAN_SNILS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SALARY_AMOUNT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SAMOA_NATIONAL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SCHOLARSHIP_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SEAFARER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SERBIAN_JMBG` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SERVICE_REQUEST_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SESSION_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SETTLEMENT_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SHIPPING_CONTAINER_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SHIPPING_TRACKING` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SIM_CARD_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SINGAPORE_NRIC` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SMART_METER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SOUTH_AFRICA_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SOUTH_CAROLINA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SOUTH_DAKOTA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SOUTH_KOREAN_RRN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SPANISH_DNI` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SPILL_REPORT_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `STEAM_ID64` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `STOCK_TRADE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `STORM_WATER_PERMIT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SUBSCRIBER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `SUPPLIER_ID_2` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TAJIKISTAN_NATIONAL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TASKRABBIT_TASK_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TAX_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TEACHING_LICENSE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TELECOMS_ACCOUNT_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TELEMATICS_DEVICE_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TENDER_REFERENCE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TENNESSEE_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TEXAS_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TEZOS_ADDRESS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `THAILAND_NATIONAL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `THEME_PARK_TICKET` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TITLE_DEED_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TOLL_TAG_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TONGA_NATIONAL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TRAVEL_DOCUMENT_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TRI_FACILITY_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TSA_PRECHECK_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TURKEY_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TURKMENISTAN_PASSPORT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TWILIO_API_KEY` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `TWITCH_USERNAME` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UAE_EMIRATES_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UBER_TRIP_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UBEREATS_ORDER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UK_BANK_ACCOUNT_IBAN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UK_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UKRAINIAN_INN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UKRAINIAN_PASSPORT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UNDERWRITER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UNIVERSITY_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UPS_TRACKING` | A+B | 0 | 1 | ADMITTED |  1Z999AA10123456784 (UPS_TRACKING) |
-| `UPWORK_JOB_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `URUGUAY_CEDULA` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `US_EIN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `USERNAME` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `USPS_TRACKING` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UST_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UTAH_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UTILITY_BILL_ACCOUNT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UTR_UK` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `UZBEKISTAN_STIR` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `VACCINATION_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `VAT_NUMBER` | A+B | 0 | 1 | ADMITTED | VAT GB123456789 (VAT_NUMBER) |
-| `VEHICLE_INSURANCE_POLICY` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `VENEZUELA_CEDULA` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `VENEZUELA_RIF` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `VERMONT_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `VIN` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `VIN_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `VIRGINIA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `VISA_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `VOLUNTEER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `WASHINGTON_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `WATER_QUALITY_CERTIFICATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `WEST_VIRGINIA_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `WIRE_TRANSFER_DETAILS` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `WISCONSIN_LICENSE_PLATE` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `WISHLIST_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `YOUTUBE_CHANNEL_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
+| `PSN_ID` | A+B | 15156 | 0 | MEASURED — rejected (false positives) | All |
+| `INSTAGRAM_USERNAME` | A+B | 13949 | 0 | MEASURED — rejected (false positives) | notable |
+| `XBOX_GAMERTAG` | A+B | 11561 | 0 | MEASURED — rejected (false positives) | All notable  |
+| `TNT_TRACKING` | A+B | 1075 | 0 | MEASURED — rejected (false positives) |  Changelog |
+| `NAME` | A+B | 857 | 0 | MEASURED — rejected (false positives) | All notable changes to |
+| `IATA_AIRPORT_CODE` | A+B | 160 | 0 | MEASURED — rejected (false positives) | to the |
+| `CARD_AUTH_CODE` | A+B | 107 | 0 | MEASURED — rejected (false positives) | authoritative |
+| `WORK_ORDER_NUMBER` | A+B | 93 | 0 | MEASURED — rejected (false positives) | workflow |
+| `LICENSE_PLATE` | A+B | 83 | 0 | MEASURED — rejected (false positives) | regex |
+| `DISPATCHER_ID` | A+B | 62 | 0 | MEASURED — rejected (false positives) | displayName |
+| `HOTEL_RESERVATION` | A+B | 34 | 0 | MEASURED — rejected (false positives) | configured |
+| `BOOKING_NUMBER` | A+B | 33 | 0 | MEASURED — rejected (false positives) | resolution |
+| `TIKTOK_USERNAME` | A+B | 31 | 0 | MEASURED — rejected (false positives) | @privent.ai |
+| `SOCIAL_MEDIA_HANDLE` | A+B | 29 | 0 | MEASURED — rejected (false positives) | @privent |
+| `EMERGENCY_MEDICAL_INCIDENT` | A+B | 19 | 0 | MEASURED — rejected (false positives) | migration |
+| `PE_LICENSE` | A+B | 17 | 0 | MEASURED — rejected (false positives) | persistent |
+| `CATALOG_NUMBER` | A+B | 14 | 0 | MEASURED — rejected (false positives) | categories |
+| `CUSTOMER_ID` | A+B | 14 | 0 | MEASURED — rejected (false positives) | customer emails |
+| `EMERGENCY_CALL_REF` | A+B | 13 | 0 | MEASURED — rejected (false positives) | callability |
+| `TOURNAMENT_REGISTRATION_ID` | A+B | 12 | 0 | MEASURED — rejected (false positives) | RegexDetector |
+| `AIRCRAFT_REGISTRATION` | A+B | 10 | 0 | MEASURED — rejected (false positives) | regex-only |
+| `INVESTMENT_ACCOUNT` | A+B | 9 | 0 | MEASURED — rejected (false positives) | Invocation |
+| `PASSPORT_US` | A+B | 9 | 0 | MEASURED — rejected (false positives) | pass is skipped |
+| `PHONE_UK` | A+B | 9 | 0 | MEASURED — rejected (false positives) | 212) 555-0177 labelled PHONE_UK, expected PHONE_US |
+| `RMA_NUMBER` | A+B | 9 | 0 | MEASURED — rejected (false positives) | return createHash |
+| `DEPOSITION_REF` | A+B | 8 | 0 | MEASURED — rejected (false positives) | dependency |
+| `GERMAN_LICENSE_PLATE` | A+B | 8 | 0 | MEASURED — rejected (false positives) | So N4 |
+| `AUSTRALIAN_LICENSE_PLATE` | A+B | 7 | 0 | MEASURED — rejected (false positives) | SHA-256 |
+| `TWITTER_USER_ID` | A+B | 6 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled TWITTER_USER_ID, expected NPI_NUMBER |
+| `INDIAN_AADHAAR` | A+B | 5 | 0 | MEASURED — rejected (false positives) | 4111 1111 1111 labelled INDIAN_AADHAAR, expected CREDIT_CARD |
+| `JAPANESE_MY_NUMBER` | A+B | 5 | 0 | MEASURED — rejected (false positives) | 4111 1111 1111 labelled JAPANESE_MY_NUMBER, expected CREDIT_ |
+| `NPI_NUMBER` | A+B | 5 | 1 | MEASURED — rejected (false positives) | 415-555-0142  labelled NPI_NUMBER, expected PHONE_US |
+| `BATCH_LOT_NUMBER` | A+B | 4 | 0 | MEASURED — rejected (false positives) | batch retrieve |
+| `CANADIAN_LICENSE_PLATE` | A+B | 4 | 0 | MEASURED — rejected (false positives) | SHA-256 |
+| `MANUFACTURING_SERIAL` | A+B | 4 | 0 | MEASURED — rejected (false positives) | serializeForWire |
+| `PERFORMANCE_REVIEW_ID` | A+B | 4 | 0 | MEASURED — rejected (false positives) | reviewThreshold |
+| `SEARCH_RESCUE_MISSION_ID` | A+B | 4 | 0 | MEASURED — rejected (false positives) | searchListMethod |
+| `TELEGRAM_USER_ID` | A+B | 4 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled TELEGRAM_USER_ID, expected NPI_NUMBER |
+| `TERMINAL_ID` | A+B | 4 | 0 | MEASURED — rejected (false positives) | positives |
+| `VENDOR_CODE` | A+B | 4 | 0 | MEASURED — rejected (false positives) | vendored |
+| `PRODUCTION_ID` | A+B | 3 | 0 | MEASURED — rejected (false positives) | production |
+| `UK_CHARITY_NUMBER` | A+B | 3 | 0 | MEASURED — rejected (false positives) | 0048217 labelled UK_CHARITY_NUMBER, expected EMPLOYEE_ID |
+| `CUSIP` | A+B | 2 | 0 | MEASURED — rejected (false positives) | ALLOWLIST |
+| `DELAWARE_LICENSE_PLATE` | A+B | 2 | 0 | MEASURED — rejected (false positives) | 004821 labelled DELAWARE_LICENSE_PLATE, expected INVOICE_NUM |
+| `DISCIPLINARY_ACTION_ID` | A+B | 2 | 0 | MEASURED — rejected (false positives) | warning in the UI |
+| `GENERIC_SECRET` | A+B | 2 | 0 | MEASURED — rejected (false positives) | secret parameter |
+| `INSURANCE_CERTIFICATE` | A+B | 2 | 0 | MEASURED — rejected (false positives) | certFingerprint |
+| `JUDGMENT_NUMBER` | A+B | 2 | 0 | MEASURED — rejected (false positives) | order: string |
+| `LEAVE_REQUEST_ID` | A+B | 2 | 0 | MEASURED — rejected (false positives) | Leave default |
+| `MISSING_PERSON_CASE` | A+B | 2 | 0 | MEASURED — rejected (false positives) | missing headers |
+| `RHODE_ISLAND_LICENSE_PLATE` | A+B | 2 | 0 | MEASURED — rejected (false positives) | 004821 labelled RHODE_ISLAND_LICENSE_PLATE, expected INVOICE |
+| `SOURCE_ID` | A+B | 2 | 0 | MEASURED — rejected (false positives) | source layout |
+| `TRAINING_CERT_ID` | A+B | 2 | 0 | MEASURED — rejected (false positives) | certFingerprint |
+| `TRAVEL_AGENCY_BOOKING` | A+B | 2 | 0 | MEASURED — rejected (false positives) | trip leaves |
+| `US_LICENSE_PLATE` | A+B | 2 | 0 | MEASURED — rejected (false positives) | License: MIT |
+| `AIRCRAFT_TAIL_NUMBER` | A+B | 1 | 0 | MEASURED — rejected (false positives) | N4 |
+| `AMBULANCE_CALL_ID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | ambiguous |
+| `ARAMEX_TRACKING` | A+B | 1 | 0 | MEASURED — rejected (false positives) |  961234567890 labelled ARAMEX_TRACKING, expected FEDEX_TRACK |
+| `ARGENTINA_DNI` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 0048217 labelled ARGENTINA_DNI, expected EMPLOYEE_ID |
+| `AWS_SECRET_KEY` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 0x52908400098527886E0F7030069857D2E4169E labelled AWS_SECRET |
+| `BINANCE_CHAIN_ADDRESS` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 0x52908400098527886E0F7030069857D2E4169EE7 labelled BINANCE_ |
+| `BULGARIAN_PERSONAL_NUMBER` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled BULGARIAN_PERSONAL_NUMBER, expected NPI_ |
+| `COURSE_CODE` | A+B | 1 | 0 | MEASURED — rejected (false positives) | ISBN 978 labelled COURSE_CODE, expected ISBN |
+| `CPT_CODE` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 11734 labelled CPT_CODE, expected PURCHASE_ORDER |
+| `DEVICE_UUID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 7ec6cf05-e87a-4b90-9f44-dad2f11c89ad |
+| `DHL_TRACKING` | A+B | 1 | 0 | MEASURED — rejected (false positives) |  1234567893 labelled DHL_TRACKING, expected NPI_NUMBER |
+| `ECUADOR_CEDULA` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled ECUADOR_CEDULA, expected NPI_NUMBER |
+| `EMERGENCY_CONTACT` | A+B | 1 | 0 | MEASURED — rejected (false positives) | ice reported MAC |
+| `FLEET_VEHICLE_ID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | fleet record |
+| `FLORIDA_LICENSE_PLATE` | A+B | 1 | 0 | MEASURED — rejected (false positives) | MAC 00 labelled FLORIDA_LICENSE_PLATE, expected MAC_ADDRESS |
+| `GENERIC_TRACKING_NUMBER` | A+B | 1 | 0 | MEASURED — rejected (false positives) | Shipment 961234567890 labelled GENERIC_TRACKING_NUMBER, expe |
+| `GLS_TRACKING` | A+B | 1 | 0 | MEASURED — rejected (false positives) |  961234567890 labelled GLS_TRACKING, expected FEDEX_TRACKING |
+| `HEROKU_API_KEY` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 7ec6cf05-e87a-4b90-9f44-dad2f11c89ad |
+| `HUNGARIAN_TAX_ID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled HUNGARIAN_TAX_ID, expected NPI_NUMBER |
+| `INVOICE_NUMBER` | A+B | 1 | 0 | MEASURED — rejected (false positives) | Invocation |
+| `JORDAN_NATIONAL_ID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled JORDAN_NATIONAL_ID, expected NPI_NUMBER |
+| `KENYA_NATIONAL_ID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 0048217 labelled KENYA_NATIONAL_ID, expected EMPLOYEE_ID |
+| `KUWAIT_CIVIL_ID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 961234567890 labelled KUWAIT_CIVIL_ID, expected FEDEX_TRACKI |
+| `LEBANON_NATIONAL_ID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 0048217 labelled LEBANON_NATIONAL_ID, expected EMPLOYEE_ID |
+| `MALAYSIA_MYKAD` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 961234567890 labelled MALAYSIA_MYKAD, expected FEDEX_TRACKIN |
+| `MINECRAFT_UUID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 7ec6cf05-e87a-4b90-9f44-dad2f11c89ad |
+| `NEW_YORK_LICENSE_PLATE` | A+B | 1 | 0 | MEASURED — rejected (false positives) | INV-2026 labelled NEW_YORK_LICENSE_PLATE, expected INVOICE_N |
+| `PAYROLL_NUMBER` | A+B | 1 | 0 | MEASURED — rejected (false positives) | Payroll flagged |
+| `PHILIPPINES_UMID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 961234567890 labelled PHILIPPINES_UMID, expected FEDEX_TRACK |
+| `PHONE_US` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled PHONE_US, expected NPI_NUMBER |
+| `POLYGON_ADDRESS` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 0x52908400098527886E0F7030069857D2E4169EE7 labelled POLYGON_ |
+| `PROJECT_CODE` | A+B | 1 | 0 | MEASURED — rejected (false positives) | project adheres |
+| `PROMO_CODE` | A+B | 1 | 0 | MEASURED — rejected (false positives) | discount applies |
+| `PUROLATOR_TRACKING` | A+B | 1 | 0 | MEASURED — rejected (false positives) |  961234567890 labelled PUROLATOR_TRACKING, expected FEDEX_TR |
+| `RUSSIAN_PASSPORT` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled RUSSIAN_PASSPORT, expected NPI_NUMBER |
+| `SAUDI_NATIONAL_ID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled SAUDI_NATIONAL_ID, expected NPI_NUMBER |
+| `SEDOL` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 0048217 labelled SEDOL, expected EMPLOYEE_ID |
+| `SHIPMENT_TRACKING` | A+B | 1 | 0 | MEASURED — rejected (false positives) | Shipment 961234567890 labelled SHIPMENT_TRACKING, expected F |
+| `SOLANA_ADDRESS` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa labelled SOLANA_ADDRESS,  |
+| `TRIP_ID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | trip fidelity |
+| `UZBEKISTAN_PASSPORT` | A+B | 1 | 0 | MEASURED — rejected (false positives) | AB1234563 labelled UZBEKISTAN_PASSPORT, expected DEA_NUMBER |
+| `VIETNAM_CCCD` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 961234567890 labelled VIETNAM_CCCD, expected FEDEX_TRACKING |
+| `WYOMING_LICENSE_PLATE` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 11734 labelled WYOMING_LICENSE_PLATE, expected PURCHASE_ORDE |
+| `ZIP_CODE_US` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 11734 labelled ZIP_CODE_US, expected PURCHASE_ORDER |
+| `ADDRESS_PO_BOX` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ADDRESS_STREET` | B | 0 | 3 | MEASURED — admitted | 742 Evergreen Terrace (ADDRESS_STREET) |
+| `ADJUSTER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AIR_QUALITY_PERMIT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AIR_WAYBILL_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AIRBNB_RESERVATION_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AIRCRAFT_MODE_S` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AIRLINE_BOOKING_REFERENCE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AIRLINE_PNR` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ALABAMA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ALASKA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ALGORAND_ADDRESS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AMAZON_TRACKING` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `APEX_PLAYER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `APPLICATION_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `APPRAISAL_REFERENCE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ARGENTINA_CUIT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ARIZONA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ARKANSAS_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ARTICLE_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AUSTRALIA_POST_TRACKING` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AUSTRALIAN_MEDICARE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AVALANCHE_ADDRESS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AWS_ARN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AWS_CERTIFICATION` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AZURE_RESOURCE_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `AZURE_STORAGE_KEY` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BAHRAIN_CPR` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BANK_ACCOUNT_UK` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BATTLETAG` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BENEFICIARY_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BENEFITS_PLAN_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BILL_OF_LADING` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BIOBANK_SAMPLE_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BIOMETRIC_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BITCOIN_ADDRESS` | A+B | 0 | 1 | MEASURED — admitted | 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa (BITCOIN_ADDRESS) |
+| `BOM_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BORDER_CROSSING_CARD` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BRAZILIAN_CNPJ` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BRAZILIAN_CPF` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BROADBAND_SERVICE_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `BSB_AU` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CALIFORNIA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CANADA_POST_TRACKING` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CARD_EXPIRY` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CARDANO_ADDRESS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CART_SESSION_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CHEQUE_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CHI_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CHILE_RUT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CHINA_POST_TRACKING` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CISCO_CERTIFICATION` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CLABE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CLAIM_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CLIENT_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `COD_PLAYER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `COLOMBIA_CEDULA` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `COLOMBIA_NIT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `COLORADO_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `COMPANY_NUMBER_UK` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `COMPTIA_CERTIFICATION` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CONNECTICUT_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CONTAINER_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CONTRACT_REFERENCE_2` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CONTRIBUTOR_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `COPYRIGHT_REG` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `COSMOS_ADDRESS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CPA_LICENSE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CRUISE_BOOKING_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CRYPTO_TX_HASH` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CSGO_FRIEND_CODE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CVV` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CVV_CODE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `CZECH_NATIONAL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DATE_OF_BIRTH` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DEA_NUMBER` | A+B | 0 | 1 | MEASURED — admitted | DEA AB1234563 (DEA_NUMBER) |
+| `DEGREE_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DEPARTMENT_CODE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DIRECT_DEPOSIT_REF` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DISASTER_VICTIM_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DISCORD_USER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DNA_SEQUENCE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DONOR_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DOORDASH_ORDER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DOTA_FRIEND_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DRIVER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DRIVING_LICENSE_UK` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DRIVING_LICENSE_US` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DRUG_DOSAGE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DRUG_TEST_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `DUTCH_BSN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `EDITORIAL_TICKET` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `EGYPT_NATIONAL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `EHIC_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `EMERGENCY_CONTACT_REF` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `EMERGENCY_SHELTER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ENVIRONMENTAL_CERTIFICATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `EPA_ID_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `EPIC_GAMES_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `EQUIPMENT_SERIAL` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ESCROW_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ESPORTS_PLAYER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ETHEREUM_ADDRESS` | A+B | 0 | 1 | MEASURED — admitted | 0x52908400098527886E0F7030069857D2E4169EE7 (ETHEREUM_ADDRESS |
+| `EXAM_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `EXHIBIT_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `EXIT_INTERVIEW_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `EXPENSE_REPORT_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FAA_AIRMAN_CERTIFICATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FACEBOOK_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FACILITY_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FACULTY_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FEDEX_TRACKING` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FIJI_NATIONAL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FINRA_LICENSE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FIRE_INCIDENT_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FIREBASE_API_KEY` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FIREFIGHTER_BADGE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FIVERR_ORDER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FLIGHT_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FORTNITE_ACCOUNT_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FRAMEWORK_AGREEMENT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FRENCH_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FRENCH_SOCIAL_SECURITY` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `FREQUENT_FLYER_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GENERIC_API_KEY` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GENETIC_MARKER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GEORGIA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GERMAN_TAX_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GHANA_CARD` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GIFT_AID_REFERENCE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GIFT_CARD_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GIG_PLATFORM_ORDER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GIG_PLATFORM_USER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GLOBAL_ENTRY_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GRANT_REFERENCE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `GRUBHUB_ORDER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `HAWAII_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `HAZARDOUS_WASTE_MANIFEST` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `HAZMAT_INCIDENT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `HEALTH_INSURANCE_CLAIM` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `HOA_ACCOUNT_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `HOTEL_LOYALTY_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `HOUSING_ASSIGNMENT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `HUNGARIAN_PERSONAL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `IATA_AIRLINE_CODE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ICAO_AIRCRAFT_TYPE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ICD10_CODE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `IDAHO_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `IFSC` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ILLINOIS_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `IMO_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `INCIDENT_REPORT_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `INDIANA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `INDONESIA_NIK` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `INDONESIA_NPWP` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `INSPECTION_CERTIFICATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `INSTACART_ORDER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `INSTALLATION_REF` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `INTERNATIONAL_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `IOWA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `IPV4` | A+B | 0 | 1 | MEASURED — admitted | 203.0.113.42 (IP_ADDRESS/IPV4) |
+| `IPV6` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ISIN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ISRAEL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ITALIAN_FISCAL_CODE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ITIN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `JAPAN_POST_TRACKING` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `JAPANESE_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `JOB_APPLICATION_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `KANSAS_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `KAZAKHSTAN_IIN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `KENTUCKY_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `KENYA_KRA_PIN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `KUBERNETES_SECRET` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `KYRGYZSTAN_PIN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `LAB_TEST_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `LEASE_AGREEMENT_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `LEGACY_REFERENCE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `LEI` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `LINKEDIN_PROFILE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `LITECOIN_ADDRESS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `LLOYDS_REGISTER_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `LOUISIANA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `LOYALTY_CARD_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `LYFT_RIDE_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MAC_ADDRESS` | A+B | 0 | 1 | MEASURED — admitted | 00:1B:44:11:3A:B7 (MAC_ADDRESS) |
+| `MAILGUN_API_KEY` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MAINE_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MANUSCRIPT_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MARITIME_CALLSIGN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MARYLAND_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MASSACHUSETTS_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MASTER_AIRWAY_BILL` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MATTER_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MEMBERSHIP_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MERCHANT_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MEXICAN_CURP` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MEXICAN_RFC` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MICHIGAN_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MICROSOFT_CERTIFICATION` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MINNESOTA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MISSISSIPPI_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MISSOURI_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MLS_LISTING_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MMSI_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MONERO_ADDRESS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MONTANA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MOROCCO_NATIONAL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MORTGAGE_LOAN_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `MYANMAR_NRC` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NEAR_ADDRESS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NEBRASKA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NEVADA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NEW_HAMPSHIRE_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NEW_JERSEY_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NEW_MEXICO_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NEW_ZEALAND_DRIVER_LICENSE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NEW_ZEALAND_IRD` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NEW_ZEALAND_PASSPORT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NIGERIA_BVN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NIGERIA_NIN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NINTENDO_FRIEND_CODE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NORTH_CAROLINA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NORTH_DAKOTA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NPDES_PERMIT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `NURSING_LICENSE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `OAUTH_CLIENT_SECRET` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `OAUTH_TOKEN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ODOMETER_READING_REF` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `OFFICIAL_SHIP_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `OHIO_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `OKLAHOMA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `OMAN_CIVIL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ONTRAC_TRACKING` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ORDER_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `OREGON_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `OVERWATCH_BATTLETAG` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PALLET_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PARAMEDIC_CERTIFICATION` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PART_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PENNSYLVANIA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PERU_DNI` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PERU_RUC` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PHONE_INTERNATIONAL` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PHONE_LINE_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PHONE_UK_MOBILE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PMP_CERTIFICATION` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PNG_NATIONAL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `POLICE_BADGE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `POLICE_REPORT_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `POLISH_PESEL` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `POLKADOT_ADDRESS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `POSTCODE_UK` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `POSTMATES_DELIVERY_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PRESS_PASS_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PRO_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PROBATE_CASE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PROPERTY_PARCEL_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PROPERTY_TAX_ACCOUNT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PROTOCOL_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PROVIDER_LICENSE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PSC_INSPECTION_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PUBLISHING_CONTRACT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `PURCHASE_ORDER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `QATAR_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `QC_CERTIFICATE_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `QUOTATION_REFERENCE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `QUOTE_REFERENCE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `REAL_ESTATE_LICENSE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `RECRUITER_REF` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `REDDIT_USERNAME` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `REINSURANCE_TREATY` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `REMEDIATION_SITE_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `RENTAL_CAR_CONFIRMATION` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `RESEARCH_GRANT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `RETIREMENT_ACCOUNT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `RFQ_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `RIOT_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `RIPPLE_ADDRESS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ROBLOX_USER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ROMANIAN_CNP` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ROUTING_NUMBER_MFG` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `ROYAL_MAIL_TRACKING` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `RUSSIAN_SNILS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SALARY_AMOUNT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SAMOA_NATIONAL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SCHOLARSHIP_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SEAFARER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SERBIAN_JMBG` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SERVICE_REQUEST_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SESSION_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SETTLEMENT_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SHIPPING_CONTAINER_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SHIPPING_TRACKING` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SIM_CARD_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SINGAPORE_NRIC` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SMART_METER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SOUTH_AFRICA_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SOUTH_CAROLINA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SOUTH_DAKOTA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SOUTH_KOREAN_RRN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SPANISH_DNI` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SPILL_REPORT_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `STEAM_ID64` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `STOCK_TRADE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `STORM_WATER_PERMIT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SUBSCRIBER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `SUPPLIER_ID_2` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TAJIKISTAN_NATIONAL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TASKRABBIT_TASK_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TAX_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TEACHING_LICENSE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TELECOMS_ACCOUNT_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TELEMATICS_DEVICE_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TENDER_REFERENCE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TENNESSEE_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TEXAS_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TEZOS_ADDRESS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `THAILAND_NATIONAL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `THEME_PARK_TICKET` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TITLE_DEED_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TOLL_TAG_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TONGA_NATIONAL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TRAVEL_DOCUMENT_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TRI_FACILITY_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TSA_PRECHECK_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TURKEY_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TURKMENISTAN_PASSPORT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TWILIO_API_KEY` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `TWITCH_USERNAME` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UAE_EMIRATES_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UBER_TRIP_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UBEREATS_ORDER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UK_BANK_ACCOUNT_IBAN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UK_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UKRAINIAN_INN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UKRAINIAN_PASSPORT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UNDERWRITER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UNIVERSITY_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UPS_TRACKING` | A+B | 0 | 1 | MEASURED — admitted |  1Z999AA10123456784 (UPS_TRACKING) |
+| `UPWORK_JOB_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `URUGUAY_CEDULA` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `US_EIN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `USERNAME` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `USPS_TRACKING` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UST_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UTAH_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UTILITY_BILL_ACCOUNT` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UTR_UK` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `UZBEKISTAN_STIR` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `VACCINATION_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `VAT_NUMBER` | A+B | 0 | 1 | MEASURED — admitted | VAT GB123456789 (VAT_NUMBER) |
+| `VEHICLE_INSURANCE_POLICY` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `VENEZUELA_CEDULA` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `VENEZUELA_RIF` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `VERMONT_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `VIN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `VIN_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `VIRGINIA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `VISA_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `VOLUNTEER_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `WASHINGTON_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `WATER_QUALITY_CERTIFICATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `WEST_VIRGINIA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `WIRE_TRANSFER_DETAILS` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `WISCONSIN_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `WISHLIST_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
+| `YOUTUBE_CHANNEL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
 
