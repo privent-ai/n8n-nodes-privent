@@ -47,7 +47,20 @@ export default defineConfig({
   format: ['cjs'],
   bundle: true,
   noExternal: ['@priventai/core'],
-  external: ['n8n-workflow', '@opentelemetry/api', 'zod'],
+  // `zod` is BUNDLED, not external. It was external and undeclared, which worked
+  // only because n8n ships its own copy — a requirement met by an accident of
+  // packaging is not met, and anything loading this node outside such an n8n
+  // failed on install with `Cannot find module 'zod'` (NP-AA).
+  //
+  // Declaring it was tried first and is not permitted: this package's own gate,
+  // `@n8n/eslint-plugin-community-nodes`, rejects `zod` in `peerDependencies`
+  // ("only n8n-workflow and @n8n/ai-node-sdk are permitted") and rejects any
+  // `dependencies` at all ("runtime dependencies get bundled into the n8n
+  // instance and can conflict with other nodes or the n8n runtime itself").
+  // The rule's own text names the remaining option: bundle it.
+  //
+  // Measured cost: the node bundle goes from 221 KB to 343 KB, +121 KB.
+  external: ['n8n-workflow', '@opentelemetry/api'],
   dts: false,
   sourcemap: true,
   clean: true,

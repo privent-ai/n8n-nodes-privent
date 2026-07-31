@@ -27,3 +27,6 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run loadability
+      # Ties the built bundle to the locked @priventai/core. Nothing checked this
+      # before, so "manifest, lockfile and artifact agree" was an assumption.
+      - run: npm run verify:artifact

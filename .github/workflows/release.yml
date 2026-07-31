@@ -26,6 +26,9 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      # Ties the built bundle to the locked @priventai/core. Nothing checked this
+      # before, so "manifest, lockfile and artifact agree" was an assumption.
+      - run: npm run verify:artifact
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
