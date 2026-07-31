@@ -7,7 +7,7 @@
  * devDependency of the codegen ONLY; this file imports nothing from it and is
  * never bundled with it.
  *
- * Coverage: 576 detectors (high 11 / medium 97 / contextual 460).
+ * Coverage: 575 detectors (high 10 / medium 97 / contextual 460).
  * Skipped: 1 ReDoS-unsafe, 3 @priventai/core overlaps.
  *
  * Each `kind` is TOKEN_RE-safe (`^[A-Z][A-Z0-9_]{1,31}$`) so Step-3 `[KIND_NNN]`
@@ -258,7 +258,6 @@ export const LOCAL_DETECTORS: LocalDetector[] = [
   { kind: "HUNGARIAN_TAX_ID", source: "\\b(\\d{10})\\b", flags: "g", confidence: 0.858, category: "government", tier: "contextual" },
   { kind: "IATA_AIRLINE_CODE", source: "\\b(?:AIRLINE|CARRIER)[-\\s]?(?:CODE|IATA)?[-\\s]?[:#]?\\s*([A-Z]{2})\\b", flags: "gi", confidence: 0.407, category: "aviation", tier: "contextual" },
   { kind: "IATA_AIRPORT_CODE", source: "\\b(?:AIRPORT|FROM|TO|VIA|IATA)[-\\s]?(?:CODE)?[-\\s]?[:#]?\\s*([A-Z]{3})\\b", flags: "gi", confidence: 0.408, category: "aviation", tier: "contextual" },
-  { kind: "IBAN", source: "\\b[A-Z]{2}\\d{2}(?:[ \\u00A0.\\-]?[A-Z0-9]{4})+(?:[ \\u00A0.\\-]?[A-Z0-9]{1,3})?\\b", flags: "gi", confidence: 0.97, category: "financial", tier: "high", validatorName: "validateIBAN" },
   { kind: "ICAO_AIRCRAFT_TYPE", source: "\\b(?:AIRCRAFT|TYPE|ICAO)[-\\s]?(?:CODE|DESIGNATOR)?[-\\s]?[:#]?\\s*([A-Z][0-9][A-Z0-9]{1,2})\\b", flags: "gi", confidence: 0.407, category: "aviation", tier: "contextual" },
   { kind: "ICD10_CODE", source: "\\b([A-Z]\\d{2}(?:\\.\\d{1,2})?)\\b", flags: "g", confidence: 0.607, category: "healthcare", tier: "contextual" },
   { kind: "IDAHO_LICENSE_PLATE", source: "\\b(\\d[A-Z]\\d{5})\\b", flags: "g", confidence: 0.608, category: "vehicles", tier: "contextual" },

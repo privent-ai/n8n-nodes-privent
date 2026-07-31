@@ -33,19 +33,16 @@ describe('LOCAL_DETECTORS (generated)', () => {
     expect(LOCAL_DETECTORS.length).toBeGreaterThanOrEqual(300);
   });
 
-  // The rule is still "do not duplicate a core kind". The exception is named,
-  // singular, and has to stay that way: `IBAN` is deliberately re-declared here
-  // because core's pattern misses the ISO 13616 PRINTED form and the fix belongs
-  // in core (SDK-H) but cannot be delivered from this repository. Emitting the
-  // SAME kind is what makes the two collapse cleanly — on the compact form both
-  // match the same span and `removeOverlaps` keeps one; on the printed forms this
-  // one is longer and takes the span back from PHONE.
+  // "Do not duplicate a core kind" — restored to an unconditional rule.
   //
-  // Any OTHER core duplicate still fails this test, which is the point of listing
-  // the exception rather than dropping the assertion.
-  const INTENTIONAL_CORE_OVERRIDES = new Set(['IBAN']);
+  // For one commit there was a named exception: this package carried its own
+  // `IBAN` pattern because core's missed the ISO 13616 printed form. Core fixed
+  // it upstream in 0.10.2, the override was deleted, and the exception list is
+  // empty again. Kept as history because the next person to need an override
+  // should know the shape it took and that it was meant to be temporary.
+  const INTENTIONAL_CORE_OVERRIDES = new Set<string>();
 
-  it('every kind is TOKEN_RE-safe, unique, and not an unintended core duplicate', () => {
+  it('every kind is TOKEN_RE-safe, unique, and not a core duplicate', () => {
     const seen = new Set<string>();
     for (const d of LOCAL_DETECTORS) {
       expect(d.kind, d.kind).toMatch(/^[A-Z][A-Z0-9_]{1,31}$/);
@@ -57,7 +54,7 @@ describe('LOCAL_DETECTORS (generated)', () => {
     }
   });
 
-  it('the only core override is the one that is documented', () => {
+  it('there is no undocumented core override', () => {
     const overrides = LOCAL_DETECTORS.filter((d) => CORE_KINDS.has(d.kind)).map((d) => d.kind);
     expect(overrides.sort()).toEqual([...INTENTIONAL_CORE_OVERRIDES].sort());
   });

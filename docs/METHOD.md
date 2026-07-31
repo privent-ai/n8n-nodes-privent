@@ -72,3 +72,27 @@ a detector you want back is how the rule stops meaning anything.
 its reason, and change scope only where the corpus is demonstrably unrepresentative
 of the subject — never the threshold. A narrowed scope removes an argument for
 rejection; it never removes the requirement to pass.
+
+---
+
+## 3. Grow the corpus with the work, and never let a missing measurement read as a passing one
+
+A measurement register has three states, not two, and the third one is the
+dangerous one: *not measured*. Naming it after its symptom — "inert", "no hits",
+"quiet" — turns an absence of evidence into an appearance of evidence.
+
+**Instance — NP-X.** 361 of 468 detectors produced zero false positives and zero
+positive hits. The table called them `INERT`, which reads as *vetted* to anyone
+scanning it, and the admission rule that would have accepted them on zero-FP
+alone would have been admitting them for looking harmless. They are now
+`NOT MEASURED (no positive case exists for this kind)`.
+
+Dropping them from the package was considered and rejected: it is cheap and
+**one-way**, because a detector that is not shipped can never be measured into a
+tier. The cheap exit foreclosed the only exit that resolves the question.
+
+**Rule.** Label the unmeasured as unmeasured, in the generated artifact, where
+the reader looks. And grow the corpus incrementally: every item that touches a
+detector adds positive cases for the kinds it touches. A standing rule beats a
+heroic pass, because the heroic pass never happens and the standing rule
+compounds.

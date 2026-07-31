@@ -64,7 +64,7 @@
   },
   "devDependencies": {
     "@n8n/eslint-plugin-community-nodes": "0.27.0",
-    "@priventai/core": "^0.10.0",
+    "@priventai/core": "^0.10.2",
     "@types/node": "^22.0.0",
     "@typescript-eslint/parser": "^8.62.0",
     "eslint": "^9.29.0",
