@@ -12,9 +12,9 @@ import type {
  */
 export class PriventVisitorApi implements ICredentialType {
   name = 'priventVisitorApi';
-  displayName = 'Privent Tokenless';
+  displayName = 'Privent Tokenless API';
   documentationUrl = 'https://www.privent.ai/docs';
-  icon: Icon = 'file:privent.png';
+  icon: Icon = 'file:../nodes/privent.png';
 
   properties: INodeProperties[] = [
     {

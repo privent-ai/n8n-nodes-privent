@@ -1,10 +1,23 @@
 /**
  * Post-build asset copy.
- * n8n resolves a node's `icon: 'file:privent.png'` relative to the compiled
- * .node.js file, and reads the codex `*.node.json` beside it. tsup only emits
- * .js/.js.map — it does not copy non-TypeScript assets. This script fills that
- * gap: PNG icon + codex JSON into each node dir, and the PNG into the
- * credential dir (the credential also declares `icon: 'file:privent.png'`).
+ *
+ * tsup emits only .js/.js.map, so the icon and the codex JSON have to be placed
+ * beside the compiled output by hand.
+ *
+ * ONE icon file, not three. n8n resolves `icon: 'file:…'` with
+ * `path.join(path.dirname(compiledFile), iconPath)` and then rejects anything
+ * that escapes the package directory (n8n-core directory-loader.js:315-320), so
+ * a `../` reference resolves normally and a wrong one throws at load time
+ * rather than failing quietly. Both the node and the credentials therefore point
+ * at a single `dist/nodes/privent.png`:
+ *
+ *   dist/nodes/Privent/Privent.node.js  + file:../privent.png       -> dist/nodes/privent.png
+ *   dist/credentials/*.credentials.js   + file:../nodes/privent.png -> dist/nodes/privent.png
+ *
+ * The source tree keeps the same single file at nodes/privent.png, which is
+ * also where `@n8n/community-nodes/icon-validation` resolves it from. Copying a
+ * brand file into every directory that references it would leave three copies
+ * that can drift — F-I in miniature.
  */
 
 const { cpSync, mkdirSync } = require('fs');
@@ -15,19 +28,17 @@ const pngSrc = resolve(root, 'nodes/privent.png');
 
 const NODES = ['Privent'];
 
+// The single icon that both the node and the credentials resolve to.
+mkdirSync(resolve(root, 'dist/nodes'), { recursive: true });
+cpSync(pngSrc, resolve(root, 'dist/nodes/privent.png'));
+
 for (const name of NODES) {
   const destDir = resolve(root, 'dist/nodes', name);
   mkdirSync(destDir, { recursive: true });
-  cpSync(pngSrc, resolve(destDir, 'privent.png'));
   cpSync(
     resolve(root, 'nodes', name, `${name}.node.json`),
     resolve(destDir, `${name}.node.json`),
   );
 }
 
-// Credential icon.
-const credDir = resolve(root, 'dist/credentials');
-mkdirSync(credDir, { recursive: true });
-cpSync(pngSrc, resolve(credDir, 'privent.png'));
-
-console.log('✓ PNG icons + codex JSON copied to dist node/credential directories');
+console.log('✓ PNG icon (single copy) + codex JSON copied to dist');

@@ -3,7 +3,10 @@
   "version": "2.4.0",
   "description": "Privent DLP nodes for n8n: session-scoped tokenization, risk scoring, and safe detokenization for AI agent workflows",
   "homepage": "https://www.privent.ai/docs",
-  "author": "Privent AI <hello@privent.ai>",
+  "author": {
+    "name": "Privent AI",
+    "email": "hello@privent.ai"
+  },
   "license": "MIT",
   "type": "commonjs",
   "repository": {
@@ -16,8 +19,8 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint 'dist/**/*.js' package.json",
-    "lint:fix": "eslint 'dist/**/*.js' package.json --fix",
+    "lint": "eslint 'nodes/**/*.ts' 'credentials/**/*.ts' 'shared/**/*.ts' 'dist/**/*.js' package.json",
+    "lint:fix": "eslint 'nodes/**/*.ts' 'credentials/**/*.ts' 'shared/**/*.ts' 'dist/**/*.js' package.json --fix",
     "loadability": "node scripts/check-loadability.mjs",
     "gen:detectors": "node scripts/gen-local-detectors.mjs"
   },
@@ -49,7 +52,7 @@
     "NOTICE"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "publishConfig": {
     "access": "public",
@@ -59,11 +62,12 @@
     "n8n-workflow": "*"
   },
   "devDependencies": {
-    "@n8n/eslint-plugin-community-nodes": "^0.21",
+    "@n8n/eslint-plugin-community-nodes": "0.27.0",
     "@priventai/core": "^0.8.0",
     "@types/node": "^22.0.0",
     "@typescript-eslint/parser": "^8.62.0",
     "eslint": "^9.29.0",
+    "eslint-plugin-n8n-nodes-base": "1.16.7",
     "n8n-workflow": "^1.73.0",
     "openredaction": "^1.1.2",
     "tsup": "^8.3.0",

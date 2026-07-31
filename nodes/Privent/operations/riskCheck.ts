@@ -10,6 +10,7 @@ import {
   resolveContext,
   riskScoreBatch,
   safeTriggerMode,
+  wrapNodeError,
 } from '../../../shared/privent-http.js';
 
 /** The length-mismatch guard inside `riskScoreBatch` is a logical (not HTTP)
@@ -58,7 +59,7 @@ export async function executeRiskCheck(ctx: IExecuteFunctions): Promise<INodeExe
       if (ctx.continueOnFail()) {
         errors.set(i, err as Error);
       } else {
-        throw err;
+        throw wrapNodeError(ctx, err);
       }
     }
   }

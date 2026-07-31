@@ -44,7 +44,12 @@ try {
   const base = join(tmp, 'node_modules', 'n8n-nodes-privent', 'dist');
   const require = createRequire(join(tmp, 'package.json'));
 
-  const targets = readdirSync(join(base, 'nodes')).map((d) => join(base, 'nodes', d, `${d}.node.js`));
+  // Directories only. `dist/nodes/` also holds the shared `privent.png` that
+  // both the node and the credentials resolve to, and mapping a file name
+  // through the `<dir>/<dir>.node.js` pattern builds a path that cannot exist.
+  const targets = readdirSync(join(base, 'nodes'), { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => join(base, 'nodes', e.name, `${e.name}.node.js`));
   for (const f of readdirSync(join(base, 'credentials'))) {
     if (f.endsWith('.credentials.js')) targets.push(join(base, 'credentials', f));
   }

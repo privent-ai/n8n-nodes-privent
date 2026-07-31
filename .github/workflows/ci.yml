@@ -8,11 +8,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # n8n 2.28.7 requires node >=22.22 and its image ships v24, so 20 was
+    # testing a runtime n8n cannot host. 24 is what the real image runs and
+    # nothing tested it before. The chain is ~9s; the matrix costs nothing.
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
       - run: npm run build

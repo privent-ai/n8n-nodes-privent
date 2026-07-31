@@ -17,7 +17,13 @@ describe('tokenless resource gating', () => {
     );
     expect(tokenlessResource).toBeDefined();
     const values = (tokenlessResource!.options as Array<{ value: string }>).map((o) => o.value);
-    expect(values).toEqual(['session', 'tokenize', 'detokenize', 'riskCheck']);
+    // Compare as a SET. The contract is which four resources tokenless offers;
+    // the array order is presentation, and n8n's own
+    // `node-param-options-type-unsorted-items` rule requires it to be
+    // alphabetical by display name. Asserting the sequence locked the code's
+    // then-current order, not the contract — it went red on a pure reorder that
+    // changed no `value`.
+    expect([...values].sort()).toEqual(['detokenize', 'riskCheck', 'session', 'tokenize']);
   });
 
   it('every Audit/Handoff property is gated to authentication apiKey', () => {
