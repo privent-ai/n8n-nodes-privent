@@ -474,10 +474,17 @@ The telemetry ping tokenless *does* send cannot substitute: its allowlist is
 `item_count`, `status`, `error_type`, `timestamp` — execution-level facts, with
 entity kinds and counts deliberately excluded.
 
-**This is a product finding, not a rig caveat — NP-AE.** The closure condition's
-second half, *every block is visible to the operator*, has no mechanism in this
-mode. **E4-b can therefore pass containment and fail visibility, and the rig must
-report those as two verdicts rather than one.** A rig asserting *"the block was
+**This is a product finding, not a rig caveat — NP-AE, and it has been RULED: the
+design is the answer.** An anonymous visitor has no organisation for an audit row
+to belong to, and the alternative — widening the anonymous telemetry ping — would
+publish detection facts to an unauthenticated endpoint. The trade is disclosed in
+the node's README instead of being closed in code.
+
+**Consequence for this cell, and it is binding: E4-b's result is TWO verdicts —
+containment and visibility — and they cannot be summed into one green or one red.
+A rig that reports a single verdict for E4-b is reporting less than it
+measured.** Expect containment PASS and visibility NOT APPLICABLE-BY-DESIGN,
+with the second citing NP-AE rather than being scored as a failure. A rig asserting *"the block was
 visible to the operator"* would be correct about the closure condition and wrong
 about the product, which is what it looks like when the two disagree.
 
