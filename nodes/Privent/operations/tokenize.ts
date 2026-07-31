@@ -282,6 +282,7 @@ export async function handleTokenize(
   //    detector only; the external LLM still receives just the tokenized
   //    text produced below, so raw PHI never reaches the untrusted model.
   let risk = null;
+  let mlDegraded: { status: string | null; reason: string } | null = null;
   let flaggedForReview = false;
   const backendSpans: Span[] = [];
   if (detectionMode !== 'local') {
@@ -315,6 +316,21 @@ export async function handleTokenize(
       if (detectionMode === 'cloud') {
         throw new NodeApiError(ctx.getNode(), err as JsonObject, { itemIndex: i });
       }
+      // auto degrades, but it no longer degrades in silence. An item scored by
+      // the backend and an item the backend never saw used to be indistinguishable
+      // downstream, and the audit event recorded `detection_mode: auto` either way.
+      // 402 is the case that made this indefensible: Payment Required is a plan
+      // decision, not a blip, it will be there for every item in the run, and
+      // `cloud` fails the run on the identical response. n8n wraps every transport
+      // failure in NodeApiError, whose `httpCode` is a STRING.
+      const status = (err as { httpCode?: string }).httpCode ?? null;
+      mlDegraded = {
+        status,
+        reason:
+          status === '402'
+            ? 'ML scoring was skipped because the Privent backend answered 402 Payment Required — the plan or quota for ML scoring is exhausted, so this item was masked by local regex detection only and carries no risk score. Detection Mode "Cloud" would have failed the run instead.'
+            : `ML scoring was skipped${status ? ` after HTTP ${status}` : ''} because the Privent backend could not be reached — this item was masked by local regex detection only and carries no risk score.`,
+      };
     }
   }
 
@@ -384,6 +400,7 @@ export async function handleTokenize(
       risk_level: risk?.risk_level ?? null,
       flagged_for_review: flaggedForReview,
       detection_mode: detectionMode,
+      ...(mlDegraded ? { ml_degraded: true, ml_degraded_status: mlDegraded.status } : {}),
       ...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
     }),
   };
@@ -403,6 +420,7 @@ export async function handleTokenize(
         ...(e.sensitivity != null ? { sensitivity: e.sensitivity } : {}),
       })),
       risk,
+      ...(mlDegraded ? { mlDegraded } : {}),
       flaggedForReview,
     },
   };

@@ -1,5 +1,13 @@
-import type { IExecuteFunctions } from 'n8n-workflow';
+import type { IExecuteFunctions, JsonObject } from 'n8n-workflow';
+import { NodeApiError } from 'n8n-workflow';
 import { vi } from 'vitest';
+
+/** Enough of the status line for NodeApiError to build its own message. */
+const STATUS_TEXT: Record<number, string> = {
+  402: 'Payment Required',
+  429: 'Too Many Requests',
+  500: 'Internal Server Error',
+};
 
 /**
  * Test harness for the stateless (HTTP) triad. Mocks
@@ -54,6 +62,18 @@ export interface HttpExecOpts {
   risk?: Record<string, unknown>;
   /** Endpoints that should reject (simulate transport failure). */
   failUrls?: string[];
+  /**
+   * Endpoints that should reject with an HTTP STATUS, e.g. `{ '/v1/risk/score': 402 }`.
+   *
+   * `failUrls` throws a bare `Error`, which carries no status — so no test could
+   * ever tell a quota rejection apart from a socket reset, which is exactly the
+   * distinction this suite needs to make. Real n8n never hands a node a raw
+   * transport error either: `httpRequestWithAuthentication` wraps EVERY failure
+   * in `NodeApiError` before the node sees it (n8n-core 2.28.4,
+   * `.../request-helpers/authentication.js:63`), and the status survives as
+   * `NodeApiError.httpCode` — a STRING, measured in the real image.
+   */
+  failStatus?: Record<string, number>;
   evaluateExpression?: (expr: string, i: number) => unknown;
 }
 
@@ -82,6 +102,13 @@ export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
       calls.push({ url, body });
       if (opts.failUrls?.includes(url)) {
         throw new Error(`simulated transport failure: ${url}`);
+      }
+      const status = opts.failStatus?.[url];
+      if (status !== undefined) {
+        throw new NodeApiError({ ...node, typeVersion: 1, position: [0, 0], parameters: {} }, {
+          message: `Request failed with status code ${status}`,
+          response: { status, statusText: STATUS_TEXT[status] ?? '', data: {} },
+        } as unknown as JsonObject);
       }
       if (url === '/v1/vault/find-or-create-batch') {
         const items = body.items as Array<{ kind: string; normalizedValue: string; originalValue: string }>;
