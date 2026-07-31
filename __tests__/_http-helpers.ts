@@ -19,6 +19,10 @@ export interface FakeNode {
   id: string;
   name: string;
   type: string;
+  /** Credentials ATTACHED to the node, the way n8n stores them. n8n's own
+   *  `_getCredentials` reads exactly this (`node.credentials?.[type]`), and
+   *  `getNode()` hands back a deepCopy that keeps it — measured in n8nio/n8n:2.28.7. */
+  credentials?: Record<string, { id: string; name: string }>;
 }
 
 interface VaultToken {
@@ -100,6 +104,8 @@ export interface HttpExecOpts {
   retrieve?: (tokens: string[]) => VaultEntry[];
   /** Custom /v1/risk/score response. */
   risk?: Record<string, unknown>;
+  /** Omit the attached apiKey credential — for tests of the no-credential path. */
+  noCredentials?: boolean;
   /** Endpoints that should reject (simulate transport failure). */
   failUrls?: string[];
   /**
@@ -125,15 +131,28 @@ export interface HttpExecHandle {
   auditEvents: () => Array<Record<string, unknown>>;
 }
 
+const DEFAULT_CREDENTIALS = { priventApi: { id: 'cred-default', name: 'Privent account' } };
+
 export const DEFAULT_HTTP_NODE: FakeNode = {
   id: 'node-uuid-1',
   name: 'Privent Node',
   type: 'n8n-nodes-privent.test',
+  // This harness's `getCredentials` always answers with an apiKey, so the node
+  // it hands to the code under test must also SAY it has one attached. A mock
+  // that returns a credential while the node it describes claims none is
+  // internally inconsistent, and every test here was written for apiKey mode.
+  // Tests that need the no-credential case pass their own node.
+  credentials: DEFAULT_CREDENTIALS,
 };
 
 export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
   const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
-  const node = opts.node ?? DEFAULT_HTTP_NODE;
+  const base = opts.node ?? DEFAULT_HTTP_NODE;
+  // Every test here runs a backend-backed mode, so the node says it has the
+  // credential this harness already answers with. `noCredentials` opts out.
+  const node: FakeNode = opts.noCredentials
+    ? { id: base.id, name: base.name, type: base.type }
+    : { ...base, ...(base.credentials ? {} : { credentials: DEFAULT_CREDENTIALS }) };
   const workflow = opts.workflow ?? { id: 'wf-1', name: 'Test Workflow' };
 
   const httpRequestWithAuthentication = vi.fn(
@@ -207,6 +226,7 @@ export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
     getExecutionId: () => opts.executionId ?? 'exec-1',
     getWorkflow: () => workflow,
     getMode: () => opts.mode ?? 'manual',
+    getWorkflowStaticData: () => ({}),
     continueOnFail: () => opts.continueOnFail ?? false,
     evaluateExpression: opts.evaluateExpression ?? (() => undefined),
     helpers: { httpRequestWithAuthentication },

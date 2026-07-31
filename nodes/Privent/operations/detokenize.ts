@@ -9,6 +9,7 @@ import {
   WorkflowStaticDataVault,
   auditLog,
   buildAuditMetadata,
+  authWarning,
   getAuthMode,
   makeResolvedVault,
   resolveContext,
@@ -136,6 +137,7 @@ export async function handleDetokenize(
       ...item.json,
       privent: {
         nodeVersion: NODE_VERSION,
+        ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
         sessionId,
         detokenized: false,
         reason: noTrustedSinks
@@ -224,6 +226,12 @@ export async function handleDetokenize(
 
   return {
     ...json,
-    privent: { nodeVersion: NODE_VERSION, sessionId, detokenized, ...(detokenized ? {} : { reason }) },
+    privent: {
+      nodeVersion: NODE_VERSION,
+      ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
+      sessionId,
+      detokenized,
+      ...(detokenized ? {} : { reason }),
+    },
   };
 }
