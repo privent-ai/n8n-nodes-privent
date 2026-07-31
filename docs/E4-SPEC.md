@@ -298,3 +298,44 @@ never set explicitly and the run is regex-only.
   need the 16 GB box. If the rig wants a cell that runs in CI today, this is it —
   and CI coverage for E4-c would be the first time any part of the closure
   condition ran on every commit.
+
+---
+
+## 7 · Published version to pin, and the transition that is this release's acceptance evidence
+
+**Pin `n8n-nodes-privent@3.0.0`** (published 2026-08-01, tarball sha256
+`8207c46e66a45a5c36f8f0fd83aee594ff20c29c60c51eef038fb1ac8789e771`, bundling
+`@priventai/core@0.10.2` — the bundle states that itself, readable from the
+tarball without executing it).
+
+Measured from **two clean installs of the published packages**, not from source,
+with the same harness and E4-c's exact input:
+
+```
+2.4.0   in : GB29 NWBK 6016 1331 9268 19
+        out: GB29 NWBK [PHONE_001] 19          kinds: [PHONE]
+
+3.0.0   in : GB29 NWBK 6016 1331 9268 19
+        out: [IBAN_001]                        kinds: [IBAN]
+```
+
+The country and bank codes no longer survive in cleartext, and the span is no
+longer taken under the wrong kind. **E4-c red on 2.4.0, green on 3.0.0** — a
+better acceptance record than any test inside this repository, because it is
+measured on the artifact a customer installs.
+
+The rig's other canaries on the same two installs:
+
+| input | 2.4.0 | 3.0.0 |
+|---|---|---|
+| `privent-rig-a1@fixture.invalid` | `[EMAIL_001]` | `[EMAIL_001]` |
+| `ayse@demo.acme.com` | **unmasked** | `[EMAIL_001]` |
+| `privent.nodeVersion` on the item | `undefined` | `3.0.0` |
+
+The second row is NP-L in the published package: an ordinary corporate subdomain,
+silently unmasked, in the version customers are running today.
+
+**One install-time caveat, recorded as NP-AA.** The published bundle requires
+`zod` at runtime and does not declare it; n8n ships zod itself
+(`n8nio/n8n:2.28.7`, 3.25.67), so it resolves inside n8n but not in a bare
+project. If the rig loads the node outside n8n, install `zod` alongside it.
