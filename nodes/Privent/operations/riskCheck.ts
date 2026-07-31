@@ -2,6 +2,7 @@ import type { IExecuteFunctions, INodeExecutionData, JsonObject } from 'n8n-work
 import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import type { AuditEvent } from '@priventai/core';
 import {
+  NODE_VERSION,
   auditLog,
   buildAuditMetadata,
   getAuthMode,
@@ -128,6 +129,7 @@ export async function executeRiskCheck(ctx: IExecuteFunctions): Promise<INodeExe
       json: {
         ...item.json,
         privent: {
+          nodeVersion: NODE_VERSION,
           risk_score: risk.risk_score,
           risk_level: risk.risk_level,
           categories: risk.categories,
