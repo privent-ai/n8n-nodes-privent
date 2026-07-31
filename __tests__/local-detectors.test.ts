@@ -33,14 +33,33 @@ describe('LOCAL_DETECTORS (generated)', () => {
     expect(LOCAL_DETECTORS.length).toBeGreaterThanOrEqual(300);
   });
 
-  it('every kind is TOKEN_RE-safe, unique, and not a core duplicate', () => {
+  // The rule is still "do not duplicate a core kind". The exception is named,
+  // singular, and has to stay that way: `IBAN` is deliberately re-declared here
+  // because core's pattern misses the ISO 13616 PRINTED form and the fix belongs
+  // in core (SDK-H) but cannot be delivered from this repository. Emitting the
+  // SAME kind is what makes the two collapse cleanly — on the compact form both
+  // match the same span and `removeOverlaps` keeps one; on the printed forms this
+  // one is longer and takes the span back from PHONE.
+  //
+  // Any OTHER core duplicate still fails this test, which is the point of listing
+  // the exception rather than dropping the assertion.
+  const INTENTIONAL_CORE_OVERRIDES = new Set(['IBAN']);
+
+  it('every kind is TOKEN_RE-safe, unique, and not an unintended core duplicate', () => {
     const seen = new Set<string>();
     for (const d of LOCAL_DETECTORS) {
       expect(d.kind, d.kind).toMatch(/^[A-Z][A-Z0-9_]{1,31}$/);
-      expect(CORE_KINDS.has(d.kind), d.kind).toBe(false);
+      if (!INTENTIONAL_CORE_OVERRIDES.has(d.kind)) {
+        expect(CORE_KINDS.has(d.kind), d.kind).toBe(false);
+      }
       expect(seen.has(d.kind), `duplicate ${d.kind}`).toBe(false);
       seen.add(d.kind);
     }
+  });
+
+  it('the only core override is the one that is documented', () => {
+    const overrides = LOCAL_DETECTORS.filter((d) => CORE_KINDS.has(d.kind)).map((d) => d.kind);
+    expect(overrides.sort()).toEqual([...INTENTIONAL_CORE_OVERRIDES].sort());
   });
 
   it('every detector has a valid confidence and tier', () => {

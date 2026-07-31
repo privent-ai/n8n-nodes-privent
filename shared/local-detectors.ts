@@ -7,7 +7,7 @@
  * devDependency of the codegen ONLY; this file imports nothing from it and is
  * never bundled with it.
  *
- * Coverage: 575 detectors (high 10 / medium 97 / contextual 460).
+ * Coverage: 576 detectors (high 11 / medium 97 / contextual 460).
  * Skipped: 1 ReDoS-unsafe, 3 @priventai/core overlaps.
  *
  * Each `kind` is TOKEN_RE-safe (`^[A-Z][A-Z0-9_]{1,31}$`) so Step-3 `[KIND_NNN]`
@@ -37,7 +37,7 @@ export interface LocalDetector {
 
 export const LOCAL_DETECTORS: LocalDetector[] = [
   { kind: "ADDRESS_PO_BOX", source: "\\b(P\\.?O\\.?\\s?Box\\s\\d+)\\b", flags: "gi", confidence: 0.607, category: "contact", tier: "contextual" },
-  { kind: "ADDRESS_STREET", source: "\\b\\d{1,5}\\s+[A-Za-z0-9][A-Za-z0-9'’.\\-]*(?:\\s+[A-Za-z0-9][A-Za-z0-9'’.\\-]*){0,4}\\s+(?:Street|St\\.?|Road|Rd\\.?|Avenue|Ave\\.?|Lane|Ln\\.?|Drive|Dr\\.?|Court|Ct\\.?|Boulevard|Blvd\\.?|Way|Terrace|Ter\\.?|Place|Pl\\.?|Trail|Trl\\.?|Parkway|Pkwy\\.?|Highway|Hwy\\.)(?:\\s+(?:Apt|Unit|Suite|Ste)\\s*\\d+)?\\b", flags: "gi", confidence: 0.607, category: "contact", tier: "aggressive-only" },
+  { kind: "ADDRESS_STREET", source: "\\b\\d{1,5}[A-Za-z]?\\s+[A-Za-z0-9][A-Za-z0-9'’.\\-]*(?:\\s+[A-Za-z0-9][A-Za-z0-9'’.\\-]*){0,4}\\s+(?:Street|St\\.?|Road|Rd\\.?|Avenue|Ave\\.?|Lane|Ln\\.?|Drive|Dr\\.?|Court|Ct\\.?|Boulevard|Blvd\\.?|Way|Terrace|Ter\\.?|Place|Pl\\.?|Trail|Trl\\.?|Parkway|Pkwy\\.?|Highway|Hwy\\.)(?:\\s+(?:Apt|Unit|Suite|Ste)\\s*\\d+)?\\b", flags: "gi", confidence: 0.607, category: "contact", tier: "aggressive-only" },
   { kind: "ADJUSTER_ID", source: "\\b(?:ADJUSTER|ADJ)[-\\s]?(?:ID|NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,12})\\b", flags: "gi", confidence: 0.607, category: "insurance", tier: "contextual" },
   { kind: "AIR_QUALITY_PERMIT", source: "\\b(?:AIR|EMISSION)[-\\s]?PERMIT[-\\s]?(?:NO|NUM|NUMBER)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,12})\\b", flags: "gi", confidence: 0.408, category: "environmental", tier: "contextual" },
   { kind: "AIR_WAYBILL_NUMBER", source: "\\b(?:AWB|AIR\\s?WAYBILL)[-\\s]?(?:NO|NUM|NUMBER)?[-\\s]?[:#]?\\s*(\\d{3}[-\\s]?\\d{8})\\b", flags: "gi", confidence: 0.608, category: "logistics", tier: "contextual" },
@@ -258,6 +258,7 @@ export const LOCAL_DETECTORS: LocalDetector[] = [
   { kind: "HUNGARIAN_TAX_ID", source: "\\b(\\d{10})\\b", flags: "g", confidence: 0.858, category: "government", tier: "contextual" },
   { kind: "IATA_AIRLINE_CODE", source: "\\b(?:AIRLINE|CARRIER)[-\\s]?(?:CODE|IATA)?[-\\s]?[:#]?\\s*([A-Z]{2})\\b", flags: "gi", confidence: 0.407, category: "aviation", tier: "contextual" },
   { kind: "IATA_AIRPORT_CODE", source: "\\b(?:AIRPORT|FROM|TO|VIA|IATA)[-\\s]?(?:CODE)?[-\\s]?[:#]?\\s*([A-Z]{3})\\b", flags: "gi", confidence: 0.408, category: "aviation", tier: "contextual" },
+  { kind: "IBAN", source: "\\b[A-Z]{2}\\d{2}(?:[ \\u00A0.\\-]?[A-Z0-9]{4})+(?:[ \\u00A0.\\-]?[A-Z0-9]{1,3})?\\b", flags: "gi", confidence: 0.97, category: "financial", tier: "high", validatorName: "validateIBAN" },
   { kind: "ICAO_AIRCRAFT_TYPE", source: "\\b(?:AIRCRAFT|TYPE|ICAO)[-\\s]?(?:CODE|DESIGNATOR)?[-\\s]?[:#]?\\s*([A-Z][0-9][A-Z0-9]{1,2})\\b", flags: "gi", confidence: 0.407, category: "aviation", tier: "contextual" },
   { kind: "ICD10_CODE", source: "\\b([A-Z]\\d{2}(?:\\.\\d{1,2})?)\\b", flags: "g", confidence: 0.607, category: "healthcare", tier: "contextual" },
   { kind: "IDAHO_LICENSE_PLATE", source: "\\b(\\d[A-Z]\\d{5})\\b", flags: "g", confidence: 0.608, category: "vehicles", tier: "contextual" },

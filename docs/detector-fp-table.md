@@ -130,7 +130,7 @@ still has to score zero on the corpora that remain.
 | `WYOMING_LICENSE_PLATE` | A+B | 1 | 0 | REJECTED (false positives) | 11734 labelled WYOMING_LICENSE_PLATE, expected PURCHASE_ORDE |
 | `ZIP_CODE_US` | A+B | 1 | 0 | REJECTED (false positives) | 11734 labelled ZIP_CODE_US, expected PURCHASE_ORDER |
 | `ADDRESS_PO_BOX` | A+B | 0 | 0 | INERT (fires on nothing) | — |
-| `ADDRESS_STREET` | B | 0 | 2 | ADMITTED | 742 Evergreen Terrace (ADDRESS_STREET) |
+| `ADDRESS_STREET` | B | 0 | 3 | ADMITTED | 742 Evergreen Terrace (ADDRESS_STREET) |
 | `ADJUSTER_ID` | A+B | 0 | 0 | INERT (fires on nothing) | — |
 | `AIR_QUALITY_PERMIT` | A+B | 0 | 0 | INERT (fires on nothing) | — |
 | `AIR_WAYBILL_NUMBER` | A+B | 0 | 0 | INERT (fires on nothing) | — |
