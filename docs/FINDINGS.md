@@ -31,6 +31,15 @@ how a finding dies; this is the index that keeps them visible.
 
 Rules learned from these findings live in [METHOD.md](METHOD.md).
 
+> **OUR WEAKEST DETECTION IS ON THE PATH CHOSEN BY THE MOST SECURITY-CONSCIOUS
+> CUSTOMERS.** Every serious detection finding this round — NP-Z (printed IBANs
+> missed), NP-L (real addresses at `demo.`/`test.`/`sample.` subdomains
+> suppressed), NP-U (`aggressive` measurably worse than `standard`) — lands in
+> **local mode**, the only path with no backend, no ML and no second opinion, so
+> a defect there has nothing to correct it and nothing to reveal it. It is also
+> the mode customers choose precisely because they care most about their data
+> leaving, which is why this is recorded here rather than inside any one finding.
+
 **Status:** `open` — real, not fixed, no item scheduled · `recorded` — real, not
 fixed, item scheduled or deliberately declined · `closed` — fixed and verified.
 
