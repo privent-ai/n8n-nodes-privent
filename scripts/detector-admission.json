@@ -2,7 +2,6 @@
   "admitted": [
     "ADDRESS_STREET",
     "BITCOIN_ADDRESS",
-    "DEA_NUMBER",
     "ETHEREUM_ADDRESS",
     "IPV4",
     "MAC_ADDRESS",
