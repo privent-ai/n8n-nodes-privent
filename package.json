@@ -22,7 +22,8 @@
     "lint": "eslint 'nodes/**/*.ts' 'credentials/**/*.ts' 'shared/**/*.ts' 'dist/**/*.js' package.json",
     "lint:fix": "eslint 'nodes/**/*.ts' 'credentials/**/*.ts' 'shared/**/*.ts' 'dist/**/*.js' package.json --fix",
     "loadability": "node scripts/check-loadability.mjs",
-    "gen:detectors": "node scripts/gen-local-detectors.mjs"
+    "gen:detectors": "node scripts/gen-local-detectors.mjs",
+    "measure:fp": "node scripts/measure-detector-fp.mjs"
   },
   "keywords": [
     "n8n-community-node-package",

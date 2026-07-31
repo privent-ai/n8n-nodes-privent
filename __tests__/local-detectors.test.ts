@@ -47,7 +47,7 @@ describe('LOCAL_DETECTORS (generated)', () => {
     for (const d of LOCAL_DETECTORS) {
       expect(d.confidence, d.kind).toBeGreaterThan(0);
       expect(d.confidence, d.kind).toBeLessThanOrEqual(1);
-      expect(['high', 'medium', 'contextual'], d.kind).toContain(d.tier);
+      expect(['high', 'medium', 'aggressive-only', 'contextual'], d.kind).toContain(d.tier);
     }
   });
 

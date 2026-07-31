@@ -94,7 +94,18 @@ describe('local tokenize/detokenize round-trip (zero network, no Session node)',
     expect(restored).toContain(SSN);
   });
 
-  it('Aggressive masks an address that Standard leaves untouched', async () => {
+  // COVERAGE REMOVED ON PURPOSE, AND NAMED.
+  //
+  // This used to read "Aggressive masks an address that Standard leaves
+  // untouched". `ADDRESS_STREET` is no longer in either level: it produced a
+  // measured false positive on the negative corpus — it matched
+  // `0 bakes its own literal in place`, a sentence from this repository's own
+  // source, as a street address. Its row is in docs/detector-fp-table.md.
+  //
+  // The assertion is not loosened to hide that. It states the contract that now
+  // holds, and the UI copy for Aggressive says the same thing to the operator, so
+  // nobody discovers the change by noticing an address came through unmasked.
+  it('neither level masks a street address — ADDRESS_STREET failed its measurement', async () => {
     const run = async (level: string) => {
       const out = await new Privent().execute.call(
         makeLocalExec(
@@ -115,7 +126,7 @@ describe('local tokenize/detokenize round-trip (zero network, no Session node)',
     };
 
     expect(await run('standard')).toContain(STREET);
-    expect(await run('aggressive')).not.toContain(STREET);
+    expect(await run('aggressive')).toContain(STREET);
   });
 
   it('detokenize errors with no session id and no upstream Tokenize item', async () => {
@@ -140,13 +151,20 @@ describe('local tokenize/detokenize round-trip (zero network, no Session node)',
 });
 
 describe('buildLocalDetectors tier gating', () => {
-  it('Standard excludes contextual detectors; Aggressive includes them', () => {
+  // Aggressive used to be "standard plus all 468 contextual detectors", which is
+  // how `reach` became a gamertag. It is now "standard plus the MEASURED
+  // admission list", and `contextual` — the ones that failed the measurement —
+  // is in NEITHER level.
+  it('Aggressive adds exactly the measured tier; contextual is in neither level', () => {
     const standard = buildLocalDetectors('standard');
     const aggressive = buildLocalDetectors('aggressive');
-    const contextual = LOCAL_DETECTORS.filter((d) => d.tier === 'contextual').length;
+    const admitted = LOCAL_DETECTORS.filter((d) => d.tier === 'aggressive-only').length;
+    const rejected = LOCAL_DETECTORS.filter((d) => d.tier === 'contextual').length;
 
+    expect(admitted).toBeGreaterThan(0);
+    expect(rejected).toBeGreaterThan(0);
     expect(aggressive.length).toBeGreaterThan(standard.length);
-    expect(aggressive.length - standard.length).toBe(contextual);
+    expect(aggressive.length - standard.length).toBe(admitted);
   });
 });
 

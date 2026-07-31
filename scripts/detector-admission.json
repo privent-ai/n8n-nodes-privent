@@ -1,0 +1,12 @@
+{
+  "admitted": [
+    "BITCOIN_ADDRESS",
+    "DEA_NUMBER",
+    "ETHEREUM_ADDRESS",
+    "IPV4",
+    "MAC_ADDRESS",
+    "UPS_TRACKING",
+    "VAT_NUMBER"
+  ],
+  "generatedBy": "scripts/measure-detector-fp.mjs"
+}

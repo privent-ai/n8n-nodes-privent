@@ -1,0 +1,52 @@
+# Positive corpus — business-shaped prose that DOES carry a value a detector
+# should find. One case per line: EXPECTED_KIND | value | sentence.
+#
+# PROVENANCE. Hand-authored for this repository, in this session, by the
+# assistant, for the N4-7b measurement. No line is copied from a customer, a real
+# mailbox, a real ticket, or any external dataset. Every value is synthetic:
+# addresses use RFC 2606 reserved domains, card numbers are the publicly
+# published test PANs, and every other identifier is invented to match a format
+# rather than to name a person.
+#
+# WHY IT EXISTS. Zero false positives is not evidence that a detector works. A
+# detector that never fires at all also scores zero, and admitting it would mean
+# admitting it for looking harmless. Each detector admitted to `aggressive` must
+# also fire on at least one case below. Detectors that fire on neither corpus are
+# named as dead weight with a count, not quietly admitted.
+#
+# EXPECTED_KIND may list synonyms separated by '/', e.g. `IP_ADDRESS/IPV4`. Two
+# detector names for the same concept are not a mislabelling, and counting them
+# as one would reject a correct detector for a naming choice. EXPECTED_KIND is
+# the kind the value SHOULD be reported as. A detector that
+# matches the value under a different kind is counted as a false positive, not a
+# hit: capturing a real value under the wrong kind is the same category
+# corruption N4-7a measured, where `hello@privent.ai` was reported as
+# SOCIAL_MEDIA_HANDLE and TIKTOK_USERNAME rather than as an email address.
+
+EMAIL | ayse.demir@fixture.invalid | Please copy ayse.demir@fixture.invalid on the renewal thread.
+EMAIL | test.user@bank.invalid | The escalation contact for this account is test.user@bank.invalid.
+EMAIL | sample.reports@clinic.invalid | Scheduled reports are delivered to sample.reports@clinic.invalid every Monday.
+EMAIL | demo.account@insurer.invalid | Access was provisioned for demo.account@insurer.invalid last week.
+EMAIL | procurement@vendor.invalid | Forward the signed order to procurement@vendor.invalid before Friday.
+PHONE_US | 415-555-0142 | The on-call number for the pilot is 415-555-0142 during business hours.
+PHONE_US | (212) 555-0177 | Reception can be reached at (212) 555-0177 if the badge system is down.
+SSN | 123-45-6789 | The onboarding form still shows 123-45-6789 in the tax section.
+SSN | 234-56-7890 | Payroll flagged 234-56-7890 as a duplicate entry in the import.
+CREDIT_CARD | 4111 1111 1111 1111 | The failed charge was against 4111 1111 1111 1111 on the corporate account.
+CREDIT_CARD | 5555 5555 5555 4444 | Finance replaced 5555 5555 5555 4444 after the vendor breach notice.
+IBAN | TR33 0006 1005 9786 4578 3241 26 | Settlement goes to TR33 0006 1005 9786 4578 3241 26 under the new terms.
+IBAN | DE89 3704 0044 0532 0130 00 | The euro account is DE89 3704 0044 0532 0130 00 as of this quarter.
+VIN | 1HGCM82633A004352 | The fleet record for 1HGCM82633A004352 is missing its service history.
+MAC_ADDRESS | 00:1B:44:11:3A:B7 | The rogue device reported MAC 00:1B:44:11:3A:B7 on the guest network.
+IP_ADDRESS/IPV4 | 203.0.113.42 | Traffic from 203.0.113.42 tripped the rate limiter twice overnight.
+NPI_NUMBER | 1234567893 | The referral lists NPI 1234567893 for the ordering provider.
+DEA_NUMBER | AB1234563 | The prescription record carries DEA AB1234563 in the header.
+EMPLOYEE_ID | EMP-0048217 | Timesheet corrections are pending for EMP-0048217 this period.
+INVOICE_NUMBER | INV-2026-004821 | Invoice INV-2026-004821 was issued against the wrong cost centre.
+PURCHASE_ORDER | PO-2026-11734 | Receipting is blocked until PO-2026-11734 is approved by procurement.
+VAT_NUMBER | GB123456789 | The supplier record shows VAT GB123456789 which no longer validates.
+UPS_TRACKING | 1Z999AA10123456784 | The replacement unit is moving under 1Z999AA10123456784.
+FEDEX_TRACKING | 961234567890 | Shipment 961234567890 was delivered to the wrong dock door.
+ISBN | 978-3-16-148410-0 | The training pack cites ISBN 978-3-16-148410-0 as required reading.
+BITCOIN_ADDRESS | 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa | The ransom note listed 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa as the destination.
+ETHEREUM_ADDRESS | 0x52908400098527886E0F7030069857D2E4169EE7 | Treasury moved the balance to 0x52908400098527886E0F7030069857D2E4169EE7 last night.

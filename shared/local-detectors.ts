@@ -7,7 +7,7 @@
  * devDependency of the codegen ONLY; this file imports nothing from it and is
  * never bundled with it.
  *
- * Coverage: 575 detectors (high 10 / medium 97 / contextual 468).
+ * Coverage: 575 detectors (high 10 / medium 97 / contextual 461).
  * Skipped: 1 ReDoS-unsafe, 3 @priventai/core overlaps.
  *
  * Each `kind` is TOKEN_RE-safe (`^[A-Z][A-Z0-9_]{1,31}$`) so Step-3 `[KIND_NNN]`
@@ -27,8 +27,10 @@ export interface LocalDetector {
   confidence: number;
   /** Best-effort category label (`'other'` when not resolvable). */
   category: string;
-  /** Precision tier — `contextual` is default-OFF in Step 3. */
-  tier: 'high' | 'medium' | 'contextual';
+  /** Precision tier. `high`/`medium` are in both levels; `aggressive-only`
+   *  is in `aggressive` and was MEASURED safe (docs/detector-fp-table.md);
+   *  `contextual` is in NEITHER — it failed that measurement. */
+  tier: 'high' | 'medium' | 'aggressive-only' | 'contextual';
   /** Name of a checksum/format validator in `runValidator`, when applicable. */
   validatorName?: string;
 }
@@ -87,7 +89,7 @@ export const LOCAL_DETECTORS: LocalDetector[] = [
   { kind: "BINANCE_CHAIN_ADDRESS", source: "\\b(0x[a-fA-F0-9]{40})\\b", flags: "g", confidence: 0.858, category: "financial", tier: "contextual" },
   { kind: "BIOBANK_SAMPLE_ID", source: "\\b(?:BIOBANK|SAMPLE|SPECIMEN)[-\\s]?(?:ID|NO)?[-\\s]?[:#]?\\s*([A-Z0-9]{8,15})\\b", flags: "gi", confidence: 0.858, category: "healthcare", tier: "contextual" },
   { kind: "BIOMETRIC_ID", source: "\\b(?:FINGERPRINT|RETINAL?[-\\s\\u00A0]?SCAN|IRIS[-\\s\\u00A0]?SCAN|VOICE[-\\s\\u00A0]?PRINT|FACIAL[-\\s\\u00A0]?RECOGNITION|BIOMETRIC)[-\\s\\u00A0]?(?:ID|DATA|TEMPLATE|HASH)?[-\\s\\u00A0.:#]*([A-Z0-9][A-Z0-9._-]{7,39})\\b", flags: "gi", confidence: 0.859, category: "healthcare", tier: "contextual" },
-  { kind: "BITCOIN_ADDRESS", source: "\\b([13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-z0-9]{39,59})\\b", flags: "g", confidence: 0.859, category: "financial", tier: "contextual" },
+  { kind: "BITCOIN_ADDRESS", source: "\\b([13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-z0-9]{39,59})\\b", flags: "g", confidence: 0.859, category: "financial", tier: "aggressive-only" },
   { kind: "BLANKET_ORDER", source: "\\b(?:BLANKET|BO|Blanket\\s+Order)[-#\\s]?(\\d{6,12})\\b", flags: "gi", confidence: 0.607, category: "procurement", tier: "medium" },
   { kind: "BLOOD_TYPE", source: "\\b(?:blood\\s+type|blood\\s+group)[:\\s]+(A|B|AB|O)[+-]?\\b", flags: "gi", confidence: 0.608, category: "healthcare", tier: "medium" },
   { kind: "BOM_NUMBER", source: "\\bBOM[-\\s]?(?:NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,12})\\b", flags: "gi", confidence: 0.607, category: "manufacturing", tier: "contextual" },
@@ -149,7 +151,7 @@ export const LOCAL_DETECTORS: LocalDetector[] = [
   { kind: "DATE", source: "\\b((?:\\d{1,2}[\\/\\-.]\\d{1,2}[\\/\\-.]\\d{2,4})|(?:\\d{1,2}\\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\s+\\d{2,4}))\\b", flags: "gi", confidence: 0.606, category: "personal", tier: "contextual" },
   { kind: "DATE_OF_BIRTH", source: "\\b(?:DOB|date of birth|birth ?date)[:\\s-]*((?:\\d{1,2}[\\/\\-.]\\d{1,2}[\\/\\-.]\\d{2,4})|(?:\\d{1,2}\\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\s+\\d{2,4}))\\b", flags: "gi", confidence: 0.859, category: "personal", tier: "contextual" },
   { kind: "DD_MANDATE", source: "\\b(?:DD|DIRECT[-\\s]?DEBIT)[-\\s]?(?:MANDATE|REF(?:ERENCE)?|NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,18})\\b", flags: "gi", confidence: 0.858, category: "financial", tier: "medium" },
-  { kind: "DEA_NUMBER", source: "\\b(?:DEA[-\\s\\u00A0]*(?:NO|NUM(?:BER)?)?[-\\s\\u00A0.:#]*)?([A-Z]{2}(?:[\\s\\u00A0.-]?\\d){7})\\b", flags: "gi", confidence: 0.859, category: "healthcare", tier: "contextual" },
+  { kind: "DEA_NUMBER", source: "\\b(?:DEA[-\\s\\u00A0]*(?:NO|NUM(?:BER)?)?[-\\s\\u00A0.:#]*)?([A-Z]{2}(?:[\\s\\u00A0.-]?\\d){7})\\b", flags: "gi", confidence: 0.859, category: "healthcare", tier: "aggressive-only" },
   { kind: "DEGREE_NUMBER", source: "\\b(?:DEGREE|DIPLOMA|CERTIFICATE)[-\\s]?(?:NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,14})\\b", flags: "gi", confidence: 0.858, category: "education", tier: "contextual" },
   { kind: "DELAWARE_LICENSE_PLATE", source: "\\b(\\d{6})\\b", flags: "g", confidence: 0.607, category: "vehicles", tier: "contextual" },
   { kind: "DEPARTMENT_CODE", source: "\\b(?:DEPT|DEPARTMENT)[-\\s]?(?:CODE)?[-\\s]?[:#]?\\s*([A-Z]{3,6})\\b", flags: "g", confidence: 0.406, category: "education", tier: "contextual" },
@@ -193,7 +195,7 @@ export const LOCAL_DETECTORS: LocalDetector[] = [
   { kind: "EQUIPMENT_SERIAL", source: "\\b(?:EQUIPMENT|DEVICE|ROUTER|MODEM)[-\\s]?(?:SERIAL)?[-\\s]?(?:NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*([A-Z0-9]{10,16})\\b", flags: "gi", confidence: 0.607, category: "telecoms", tier: "contextual" },
   { kind: "ESCROW_NUMBER", source: "\\bESCROW[-\\s]?(?:NO|NUM|NUMBER|ACCOUNT|ACCT|ID)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,12})\\b", flags: "gi", confidence: 0.858, category: "real-estate", tier: "contextual" },
   { kind: "ESPORTS_PLAYER_ID", source: "\\b(?:PLAYER|COMPETITOR|PARTICIPANT)[-\\s]?(?:ID|NO|NUMBER)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,12})\\b", flags: "gi", confidence: 0.607, category: "other", tier: "contextual" },
-  { kind: "ETHEREUM_ADDRESS", source: "\\b(0x[a-fA-F0-9]{40})\\b", flags: "g", confidence: 0.859, category: "financial", tier: "contextual" },
+  { kind: "ETHEREUM_ADDRESS", source: "\\b(0x[a-fA-F0-9]{40})\\b", flags: "g", confidence: 0.859, category: "financial", tier: "aggressive-only" },
   { kind: "EXAM_ID", source: "\\b(?:EXAM|TEST|QUIZ|ASSESSMENT)[-\\s]?(?:ID|NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,12})\\b", flags: "gi", confidence: 0.607, category: "education", tier: "contextual" },
   { kind: "EXAM_REGISTRATION_NUMBER", source: "\\bEXAM[-\\s]?(\\d{4}[-]\\d{4})\\b", flags: "gi", confidence: 0.858, category: "education", tier: "medium" },
   { kind: "EXHIBIT_NUMBER", source: "\\bEXHIBIT[-\\s]?([A-Z]{1,2}[-]?\\d{1,4})\\b", flags: "gi", confidence: 0.607, category: "legal", tier: "contextual" },
@@ -281,7 +283,7 @@ export const LOCAL_DETECTORS: LocalDetector[] = [
   { kind: "INVOICE_NUMBER", source: "\\b(?:INVOICE|INV)[-\\s]?(?:NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,14})\\b", flags: "gi", confidence: 0.608, category: "retail", tier: "contextual" },
   { kind: "IOT_SERIAL_NUMBER", source: "\\bSN:([A-Z0-9]{12})\\b", flags: "gi", confidence: 0.608, category: "network", tier: "medium" },
   { kind: "IOWA_LICENSE_PLATE", source: "\\b([A-Z]{3}\\d{3})\\b", flags: "g", confidence: 0.608, category: "vehicles", tier: "contextual" },
-  { kind: "IPV4", source: "\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b", flags: "g", confidence: 0.608, category: "network", tier: "contextual" },
+  { kind: "IPV4", source: "\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b", flags: "g", confidence: 0.608, category: "network", tier: "aggressive-only" },
   { kind: "IPV6", source: "\\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\\b", flags: "g", confidence: 0.608, category: "network", tier: "contextual" },
   { kind: "ISBN", source: "\\bISBN[-\\s]?(?:NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*(\\d{3}[-\\s]?\\d{1,5}[-\\s]?\\d{1,7}[-\\s]?\\d{1,7}[-\\s]?\\d{1})\\b", flags: "gi", confidence: 0.407, category: "media", tier: "medium" },
   { kind: "ISIN", source: "\\b[A-Z]{2}[A-Z0-9]{9}\\d\\b", flags: "g", confidence: 0.608, category: "financial", tier: "contextual" },
@@ -318,7 +320,7 @@ export const LOCAL_DETECTORS: LocalDetector[] = [
   { kind: "LOUISIANA_LICENSE_PLATE", source: "\\b(\\d{3}[A-Z]{3})\\b", flags: "g", confidence: 0.608, category: "vehicles", tier: "contextual" },
   { kind: "LOYALTY_CARD_NUMBER", source: "\\bLOYALTY[-\\s]?(?:CARD)?[-\\s]?(?:NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*(\\d{10,16})\\b", flags: "gi", confidence: 0.608, category: "retail", tier: "contextual" },
   { kind: "LYFT_RIDE_ID", source: "\\bLYFT[-\\s]?(?:RIDE|TRIP)[-\\s]?(?:ID|NO|NUMBER)?[-\\s]?[:#]?\\s*([A-Z0-9]{8,24})\\b", flags: "gi", confidence: 0.608, category: "gig-economy", tier: "contextual" },
-  { kind: "MAC_ADDRESS", source: "\\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\\b", flags: "g", confidence: 0.408, category: "network", tier: "contextual" },
+  { kind: "MAC_ADDRESS", source: "\\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\\b", flags: "g", confidence: 0.408, category: "network", tier: "aggressive-only" },
   { kind: "MAILGUN_API_KEY", source: "\\b(key-[a-z0-9]{32})\\b", flags: "g", confidence: 0.858, category: "technology", tier: "contextual" },
   { kind: "MAINE_LICENSE_PLATE", source: "\\b(\\d{4}[A-Z]{2})\\b", flags: "g", confidence: 0.608, category: "vehicles", tier: "contextual" },
   { kind: "MALAYSIA_MYKAD", source: "\\b(\\d{6}[-\\s]?\\d{2}[-\\s]?\\d{4})\\b", flags: "g", confidence: 0.859, category: "government", tier: "contextual" },
@@ -568,7 +570,7 @@ export const LOCAL_DETECTORS: LocalDetector[] = [
   { kind: "UKRAINIAN_PASSPORT", source: "\\b([A-Z]{2}\\d{6})\\b", flags: "g", confidence: 0.859, category: "government", tier: "contextual" },
   { kind: "UNDERWRITER_ID", source: "\\b(?:UNDERWRITER|UW)[-\\s]?(?:ID|NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,12})\\b", flags: "gi", confidence: 0.607, category: "insurance", tier: "contextual" },
   { kind: "UNIVERSITY_ID", source: "\\b(?:UNIVERSITY|COLLEGE|UNI)[-\\s]?(?:ID|NUM(?:BER)?|NO)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,12})\\b", flags: "gi", confidence: 0.859, category: "education", tier: "contextual" },
-  { kind: "UPS_TRACKING", source: "\\b(?:UPS[-\\s]?)?(?:TRACK(?:ING)?|NO|NUM|NUMBER)?[-\\s]?[:#]?\\s*(1Z[A-Z0-9]{16})\\b", flags: "gi", confidence: 0.409, category: "logistics", tier: "contextual" },
+  { kind: "UPS_TRACKING", source: "\\b(?:UPS[-\\s]?)?(?:TRACK(?:ING)?|NO|NUM|NUMBER)?[-\\s]?[:#]?\\s*(1Z[A-Z0-9]{16})\\b", flags: "gi", confidence: 0.409, category: "logistics", tier: "aggressive-only" },
   { kind: "UPWORK_JOB_ID", source: "\\bUPWORK[-\\s]?(?:JOB|CONTRACT|PROJECT)[-\\s]?(?:ID|NO|NUMBER)?[-\\s]?[:#]?\\s*([A-Z0-9]{8,20})\\b", flags: "gi", confidence: 0.608, category: "gig-economy", tier: "contextual" },
   { kind: "URL_WITH_AUTH", source: "\\b(?:https?|ftp):\\/\\/[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+@[^\\s]+\\b", flags: "g", confidence: 0.859, category: "network", tier: "medium" },
   { kind: "URUGUAY_CEDULA", source: "\\b(\\d{1}\\.\\d{3}\\.\\d{3}-\\d{1})\\b", flags: "g", confidence: 0.859, category: "government", tier: "contextual" },
@@ -583,7 +585,7 @@ export const LOCAL_DETECTORS: LocalDetector[] = [
   { kind: "UZBEKISTAN_PASSPORT", source: "\\b([A-Z]{2}\\d{7})\\b", flags: "g", confidence: 0.859, category: "government", tier: "contextual" },
   { kind: "UZBEKISTAN_STIR", source: "\\bSTIR[-\\s]?(?:NO|NUM|NUMBER)?[-\\s]?[:#]?\\s*(\\d{9})\\b", flags: "gi", confidence: 0.859, category: "government", tier: "contextual" },
   { kind: "VACCINATION_ID", source: "\\b(?:VACCINE|VACCINATION|IMMUNIZATION)[-\\s]?(?:ID|RECORD|NO)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,15})\\b", flags: "gi", confidence: 0.858, category: "healthcare", tier: "contextual" },
-  { kind: "VAT_NUMBER", source: "\\b(?:VAT|vat number)[:\\s#-]*([A-Z]{2}(?:[\\s\\u00A0.-]?[A-Z0-9]){7,12})\\b", flags: "gi", confidence: 0.609, category: "government", tier: "contextual" },
+  { kind: "VAT_NUMBER", source: "\\b(?:VAT|vat number)[:\\s#-]*([A-Z]{2}(?:[\\s\\u00A0.-]?[A-Z0-9]){7,12})\\b", flags: "gi", confidence: 0.609, category: "government", tier: "aggressive-only" },
   { kind: "VEHICLE_INSURANCE_POLICY", source: "\\b(?:AUTO|VEHICLE|CAR)[-\\s]?(?:INSURANCE)?[-\\s]?(?:POLICY)?[-\\s]?(?:NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*([A-Z]{2,4}\\d{6,10})\\b", flags: "gi", confidence: 0.858, category: "transportation", tier: "contextual" },
   { kind: "VENDOR_CODE", source: "\\bVEND(?:OR)?[-\\s]?(?:CODE)?[-\\s]?[:#]?\\s*([A-Z0-9]{4,10})\\b", flags: "gi", confidence: 0.607, category: "manufacturing", tier: "contextual" },
   { kind: "VENEZUELA_CEDULA", source: "\\b([VE]-\\d{1,8})\\b", flags: "gi", confidence: 0.859, category: "government", tier: "contextual" },

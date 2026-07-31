@@ -6,7 +6,7 @@
 //
 // See /NOTICE for attribution. Plan: Step 2 (REVISED).
 import { createRequire } from 'node:module';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -121,6 +121,21 @@ for (const p of orx.allPatterns) {
     tier: tierOf(p, validatorName),
     ...(validatorName ? { validatorName } : {}),
   });
+}
+
+// ── Admission: which contextual detectors may enter `aggressive` ──
+// The list is MEASURED, never judged. `scripts/measure-detector-fp.mjs` admits a
+// detector only when it produces zero false positives across both negative
+// corpora AND fires on at least one positive case UNDER THE RIGHT KIND — right
+// value, wrong label counts as a false positive. Everything else keeps
+// `tier: 'contextual'` and is now excluded from BOTH levels: `aggressive` used
+// to mean "all 468 of these at once", which is how `reach` became a gamertag.
+const admission = JSON.parse(
+  readFileSync(new URL('./detector-admission.json', import.meta.url), 'utf8'),
+);
+const ADMITTED = new Set(admission.admitted);
+for (const d of detectors) {
+  if (d.tier === 'contextual' && ADMITTED.has(d.kind)) d.tier = 'aggressive-only';
 }
 
 detectors.sort((a, b) => a.kind.localeCompare(b.kind));
@@ -307,8 +322,10 @@ export interface LocalDetector {
   confidence: number;
   /** Best-effort category label (\`'other'\` when not resolvable). */
   category: string;
-  /** Precision tier — \`contextual\` is default-OFF in Step 3. */
-  tier: 'high' | 'medium' | 'contextual';
+  /** Precision tier. \`high\`/\`medium\` are in both levels; \`aggressive-only\`
+   *  is in \`aggressive\` and was MEASURED safe (docs/detector-fp-table.md);
+   *  \`contextual\` is in NEITHER — it failed that measurement. */
+  tier: 'high' | 'medium' | 'aggressive-only' | 'contextual';
   /** Name of a checksum/format validator in \`runValidator\`, when applicable. */
   validatorName?: string;
 }
