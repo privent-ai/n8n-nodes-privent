@@ -97,3 +97,17 @@ The alert fired once and cleared on its own; no action taken beyond the note her
 Capacity headroom is comfortable until roughly the end of the next quarter.
 Config drift between staging and production was resolved by rebuilding staging.
 Documentation now covers the upgrade path from the two most recent versions.
+
+# ── Infrastructure notes with NON-ROUTABLE addresses ─────────────────────────
+# Added by NP-V. These are business-shaped and contain no personal data: a
+# private address identifies a device only inside a network the reader is
+# already on, and to an external sink it says nothing about a person. Any
+# detector that fires on a line here is producing a false positive, which is how
+# DEA_NUMBER was caught eating "at 172.16.4.1".
+the gateway sits at 172.16.4.1 in that rack
+the printer is still on 192.168.1.50
+the node reported in from 10.0.0.5 this morning
+DHCP failed and it self-assigned 169.254.10.2
+bind 0.0.0.0 for local dev and 127.0.0.1 for the health check
+the discovery group address is 239.255.255.250
+docs use 192.0.2.1 and 198.51.100.7 as example hosts

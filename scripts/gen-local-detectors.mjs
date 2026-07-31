@@ -197,6 +197,43 @@ const PLACEHOLDER_MATCHER = `(value, context) => {
 			return /(\\/\\/|\\/\\*|<!--)/.test(String(context ?? ""));
 		}`;
 
+// ── Local rule: non-routable addresses are not personal data ─────────────────
+// A private address identifies a device only inside a network the reader is
+// already on. To an external sink — the thing this product protects — 10.0.0.5
+// carries no information about a person: it is not linkable to an individual by
+// a recipient who cannot obtain the additional information required. Public IPs
+// are personal data; these are not.
+//
+// And masking them costs more than it protects. A config snippet with 0.0.0.0
+// masked is text the downstream agent can no longer act on — the aggressive-mode
+// failure in miniature.
+//
+// Internal-IP masking as a customer requirement is infrastructure secrecy, not
+// PII. That is a feature request with a different justification, not a default
+// this product carries. Recorded in NP-V, deliberately not built.
+const NON_ROUTABLE_IP_RULE = {
+  patternType: ['IP_ADDRESS', 'IPV4', 'IP', 'IPV4_ADDRESS', 'IP_ADDRESS_V4'],
+  matcher: `(value, _context) => {
+			const parts = String(value).trim().split(".");
+			if (parts.length !== 4) return false;
+			const o = parts.map((p) => Number(p));
+			if (o.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return false;
+			const a = Number(parts[0]), b = Number(parts[1]), c = Number(parts[2]), d = Number(parts[3]);
+			if (a === 0) return true;                              // 0.0.0.0/8, incl. the wildcard
+			if (a === 10) return true;                             // 10.0.0.0/8
+			if (a === 127) return true;                            // 127.0.0.0/8 loopback
+			if (a === 169 && b === 254) return true;               // 169.254.0.0/16 link-local
+			if (a === 172 && b >= 16 && b <= 31) return true;      // 172.16.0.0/12
+			if (a === 192 && b === 168) return true;               // 192.168.0.0/16
+			if (a >= 224 && a <= 239) return true;                 // 224.0.0.0/4 multicast
+			if (a === 255 && b === 255 && c === 255 && d === 255) return true; // broadcast
+			if (a === 192 && b === 0 && c === 2) return true;       // 192.0.2.0/24 TEST-NET-1
+			if (a === 198 && b === 51 && c === 100) return true;    // 198.51.100.0/24 TEST-NET-2
+			if (a === 203 && b === 0 && c === 113) return true;     // 203.0.113.0/24 TEST-NET-3
+			return false;
+		}`,
+};
+
 const fpRules = orx.commonFalsePositives.map((r) => {
   const src = r.matcher.toString();
   return {
@@ -204,6 +241,7 @@ const fpRules = orx.commonFalsePositives.map((r) => {
     matcher: PLACEHOLDER_RULE.test(src) ? PLACEHOLDER_MATCHER : src,
   };
 });
+fpRules.push(NON_ROUTABLE_IP_RULE);
 
 // ── Emit ──
 const VALIDATORS_BLOCK = `// ── Vendored standalone validators (ported from openredaction validators/index.ts, MIT — see /NOTICE).

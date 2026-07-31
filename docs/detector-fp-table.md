@@ -8,15 +8,15 @@ both negative corpora **and** fires on **at least one** positive case under the
 **right kind**. Capturing a real value under the wrong kind counts as a false
 positive, not as a hit.
 
-- negative corpus lines measured: **2743** (repository prose/source + hand-authored business prose)
-- positive cases measured: **30**
+- negative corpus lines measured: **2750** (repository prose/source + hand-authored business prose)
+- positive cases measured: **32**
 - contextual detectors considered: **468**
 
 | verdict | count |
 |---|---|
-| MEASURED — admitted | 8 |
-| MEASURED — rejected (false positives) | 99 |
-| **NOT MEASURED** (no positive case exists for this kind) | 361 |
+| MEASURED — admitted | 7 |
+| MEASURED — rejected (false positives) | 101 |
+| **NOT MEASURED** (no positive case exists for this kind) | 360 |
 
 **`NOT MEASURED` is not a verdict.** A detector that fires on nothing has not
 been shown to be safe — only to be untested against anything it matches. The
@@ -39,11 +39,11 @@ still has to score zero on the corpora that remain.
 
 | kind | corpora | false positives | positive hits | verdict | sample |
 |---|---|---|---|---|---|
-| `PSN_ID` | A+B | 15355 | 0 | MEASURED — rejected (false positives) | All |
-| `INSTAGRAM_USERNAME` | A+B | 14118 | 0 | MEASURED — rejected (false positives) | notable |
-| `XBOX_GAMERTAG` | A+B | 11700 | 0 | MEASURED — rejected (false positives) | All notable  |
-| `TNT_TRACKING` | A+B | 1088 | 0 | MEASURED — rejected (false positives) |  Changelog |
-| `NAME` | A+B | 861 | 0 | MEASURED — rejected (false positives) | All notable changes to |
+| `PSN_ID` | A+B | 15403 | 0 | MEASURED — rejected (false positives) | All |
+| `INSTAGRAM_USERNAME` | A+B | 14163 | 0 | MEASURED — rejected (false positives) | notable |
+| `XBOX_GAMERTAG` | A+B | 11731 | 0 | MEASURED — rejected (false positives) | All notable  |
+| `TNT_TRACKING` | A+B | 1089 | 0 | MEASURED — rejected (false positives) |  Changelog |
+| `NAME` | A+B | 864 | 0 | MEASURED — rejected (false positives) | All notable changes to |
 | `IATA_AIRPORT_CODE` | A+B | 161 | 0 | MEASURED — rejected (false positives) | to the |
 | `CARD_AUTH_CODE` | A+B | 107 | 0 | MEASURED — rejected (false positives) | authoritative |
 | `WORK_ORDER_NUMBER` | A+B | 93 | 0 | MEASURED — rejected (false positives) | workflow |
@@ -59,18 +59,18 @@ still has to score zero on the corpora that remain.
 | `CUSTOMER_ID` | A+B | 14 | 0 | MEASURED — rejected (false positives) | customer emails |
 | `EMERGENCY_CALL_REF` | A+B | 13 | 0 | MEASURED — rejected (false positives) | callability |
 | `TOURNAMENT_REGISTRATION_ID` | A+B | 12 | 0 | MEASURED — rejected (false positives) | RegexDetector |
+| `PHONE_UK` | A+B | 11 | 0 | MEASURED — rejected (false positives) | 239.255.255 |
 | `AIRCRAFT_REGISTRATION` | A+B | 10 | 0 | MEASURED — rejected (false positives) | regex-only |
 | `INVESTMENT_ACCOUNT` | A+B | 9 | 0 | MEASURED — rejected (false positives) | Invocation |
 | `PASSPORT_US` | A+B | 9 | 0 | MEASURED — rejected (false positives) | pass is skipped |
-| `PHONE_UK` | A+B | 9 | 0 | MEASURED — rejected (false positives) | 212) 555-0177 labelled PHONE_UK, expected PHONE_US |
 | `RMA_NUMBER` | A+B | 9 | 0 | MEASURED — rejected (false positives) | return createHash |
 | `DEPOSITION_REF` | A+B | 8 | 0 | MEASURED — rejected (false positives) | dependency |
 | `GERMAN_LICENSE_PLATE` | A+B | 8 | 0 | MEASURED — rejected (false positives) | So N4 |
 | `AUSTRALIAN_LICENSE_PLATE` | A+B | 7 | 0 | MEASURED — rejected (false positives) | SHA-256 |
+| `NPI_NUMBER` | A+B | 6 | 1 | MEASURED — rejected (false positives) | 415-555-0142  labelled NPI_NUMBER, expected PHONE_US |
 | `TWITTER_USER_ID` | A+B | 6 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled TWITTER_USER_ID, expected NPI_NUMBER |
 | `INDIAN_AADHAAR` | A+B | 5 | 0 | MEASURED — rejected (false positives) | 4111 1111 1111 labelled INDIAN_AADHAAR, expected CREDIT_CARD |
 | `JAPANESE_MY_NUMBER` | A+B | 5 | 0 | MEASURED — rejected (false positives) | 4111 1111 1111 labelled JAPANESE_MY_NUMBER, expected CREDIT_ |
-| `NPI_NUMBER` | A+B | 5 | 1 | MEASURED — rejected (false positives) | 415-555-0142  labelled NPI_NUMBER, expected PHONE_US |
 | `BATCH_LOT_NUMBER` | A+B | 4 | 0 | MEASURED — rejected (false positives) | batch retrieve |
 | `CANADIAN_LICENSE_PLATE` | A+B | 4 | 0 | MEASURED — rejected (false positives) | SHA-256 |
 | `MANUFACTURING_SERIAL` | A+B | 4 | 0 | MEASURED — rejected (false positives) | serializeForWire |
@@ -79,6 +79,7 @@ still has to score zero on the corpora that remain.
 | `TELEGRAM_USER_ID` | A+B | 4 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled TELEGRAM_USER_ID, expected NPI_NUMBER |
 | `TERMINAL_ID` | A+B | 4 | 0 | MEASURED — rejected (false positives) | positives |
 | `VENDOR_CODE` | A+B | 4 | 0 | MEASURED — rejected (false positives) | vendored |
+| `DEA_NUMBER` | A+B | 3 | 1 | MEASURED — rejected (false positives) | at 172.16.4.1 |
 | `PRODUCTION_ID` | A+B | 3 | 0 | MEASURED — rejected (false positives) | production |
 | `UK_CHARITY_NUMBER` | A+B | 3 | 0 | MEASURED — rejected (false positives) | 0048217 labelled UK_CHARITY_NUMBER, expected EMPLOYEE_ID |
 | `CUSIP` | A+B | 2 | 0 | MEASURED — rejected (false positives) | ALLOWLIST |
@@ -103,6 +104,7 @@ still has to score zero on the corpora that remain.
 | `BULGARIAN_PERSONAL_NUMBER` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled BULGARIAN_PERSONAL_NUMBER, expected NPI_ |
 | `COURSE_CODE` | A+B | 1 | 0 | MEASURED — rejected (false positives) | ISBN 978 labelled COURSE_CODE, expected ISBN |
 | `CPT_CODE` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 11734 labelled CPT_CODE, expected PURCHASE_ORDER |
+| `DATE` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 51.15.20 labelled DATE, expected IP_ADDRESS/IPV4 |
 | `DEVICE_UUID` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 7ec6cf05-e87a-4b90-9f44-dad2f11c89ad |
 | `DHL_TRACKING` | A+B | 1 | 0 | MEASURED — rejected (false positives) |  1234567893 labelled DHL_TRACKING, expected NPI_NUMBER |
 | `ECUADOR_CEDULA` | A+B | 1 | 0 | MEASURED — rejected (false positives) | 1234567893 labelled ECUADOR_CEDULA, expected NPI_NUMBER |
@@ -212,9 +214,7 @@ still has to score zero on the corpora that remain.
 | `CVV` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
 | `CVV_CODE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
 | `CZECH_NATIONAL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
-| `DATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
 | `DATE_OF_BIRTH` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
-| `DEA_NUMBER` | A+B | 0 | 1 | MEASURED — admitted | DEA AB1234563 (DEA_NUMBER) |
 | `DEGREE_NUMBER` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
 | `DEPARTMENT_CODE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
 | `DIRECT_DEPOSIT_REF` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
@@ -299,7 +299,7 @@ still has to score zero on the corpora that remain.
 | `INSTALLATION_REF` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
 | `INTERNATIONAL_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
 | `IOWA_LICENSE_PLATE` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
-| `IPV4` | A+B | 0 | 1 | MEASURED — admitted | 203.0.113.42 (IP_ADDRESS/IPV4) |
+| `IPV4` | A+B | 0 | 3 | MEASURED — admitted | 93.184.216.34 (IP_ADDRESS/IPV4) |
 | `IPV6` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
 | `ISIN` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |
 | `ISRAEL_ID` | A+B | 0 | 0 | NOT MEASURED (no positive case exists for this kind) | — |

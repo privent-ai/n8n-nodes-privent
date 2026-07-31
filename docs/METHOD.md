@@ -96,3 +96,33 @@ the reader looks. And grow the corpus incrementally: every item that touches a
 detector adds positive cases for the kinds it touches. A standing rule beats a
 heroic pass, because the heroic pass never happens and the standing rule
 compounds.
+
+---
+
+## 4. The instrument must not live inside the corpus
+
+One sentence, trivially obvious in hindsight, and it happened three times in one
+day in three different measurements. That is why it is written down.
+
+**Instances.**
+
+- **NP-W (a).** Corpus A was "this repository's prose and source" and the walk
+  included `scripts/` — where the measurement's own code lives. Editing the
+  measurement changed the corpus, which changed the admission list.
+- **NP-Z, the reconciliation.** The comparison script sat in the repository root
+  as a `.mjs` file, inside the corpus it was walking. It reported **12 surviving
+  false positives on corpus A. All twelve were itself** — the IBAN examples in
+  its own source. The corrected number was zero.
+- **NP-W (b), the same shape one level up.** The candidate pool was read from the
+  previous generation's output, so the instrument's own result fed its next
+  input. It oscillated between two states.
+
+**Rule.** Before reporting a corpus measurement, name what is in the corpus and
+confirm the instrument is not. Probe scripts go outside the walked tree or the
+walk excludes them explicitly; a snapshot beats a live walk because it makes the
+corpus a reviewable artifact rather than whatever the directory held that minute.
+
+**Tell.** A finding whose examples look like your own test data probably is your
+own test data. Print the matches, not just the count — the count cannot tell you
+whose text it found.
+

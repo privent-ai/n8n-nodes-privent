@@ -14,6 +14,12 @@
 # also fire on at least one case below. Detectors that fire on neither corpus are
 # named as dead weight with a count, not quietly admitted.
 #
+# One case moved when NP-V landed: the public-IP example used to be
+# `203.0.113.42`, which is TEST-NET-3 — a documentation range, now deliberately
+# suppressed. A positive corpus that proves a detector alive with a value the
+# product is supposed to ignore proves nothing, so it was replaced with two
+# genuinely routable addresses.
+#
 # EXPECTED_KIND may list synonyms separated by '/', e.g. `IP_ADDRESS/IPV4`. Two
 # detector names for the same concept are not a mislabelling, and counting them
 # as one would reject a correct detector for a naming choice. EXPECTED_KIND is
@@ -38,7 +44,8 @@ IBAN | TR33 0006 1005 9786 4578 3241 26 | Settlement goes to TR33 0006 1005 9786
 IBAN | DE89 3704 0044 0532 0130 00 | The euro account is DE89 3704 0044 0532 0130 00 as of this quarter.
 VIN | 1HGCM82633A004352 | The fleet record for 1HGCM82633A004352 is missing its service history.
 MAC_ADDRESS | 00:1B:44:11:3A:B7 | The rogue device reported MAC 00:1B:44:11:3A:B7 on the guest network.
-IP_ADDRESS/IPV4 | 203.0.113.42 | Traffic from 203.0.113.42 tripped the rate limiter twice overnight.
+IP_ADDRESS/IPV4 | 93.184.216.34 | Traffic from 93.184.216.34 tripped the rate limiter twice overnight.
+IP_ADDRESS/IPV4 | 8.8.8.8 | The resolver was pinned to 8.8.8.8 during the incident.
 NPI_NUMBER | 1234567893 | The referral lists NPI 1234567893 for the ordering provider.
 DEA_NUMBER | AB1234563 | The prescription record carries DEA AB1234563 in the header.
 EMPLOYEE_ID | EMP-0048217 | Timesheet corrections are pending for EMP-0048217 this period.
@@ -53,3 +60,4 @@ ETHEREUM_ADDRESS | 0x52908400098527886E0F7030069857D2E4169EE7 | Treasury moved t
 ADDRESS_STREET | 742 Evergreen Terrace | The delivery was refused at 742 Evergreen Terrace and returned to the depot.
 ADDRESS_STREET | 18 Larkspur Lane | Please update the billing address to 18 Larkspur Lane before the next run.
 ADDRESS_STREET | 221B Baker Street | The site survey covers 221B Baker Street and the two adjacent units.
+IP_ADDRESS/IPV4 | 51.15.20.7 | The request originated at 51.15.20.7 last night.

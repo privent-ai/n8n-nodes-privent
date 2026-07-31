@@ -7,7 +7,7 @@
  * devDependency of the codegen ONLY; this file imports nothing from it and is
  * never bundled with it.
  *
- * Coverage: 575 detectors (high 10 / medium 97 / contextual 460).
+ * Coverage: 575 detectors (high 10 / medium 97 / contextual 461).
  * Skipped: 1 ReDoS-unsafe, 3 @priventai/core overlaps.
  *
  * Each `kind` is TOKEN_RE-safe (`^[A-Z][A-Z0-9_]{1,31}$`) so Step-3 `[KIND_NNN]`
@@ -151,7 +151,7 @@ export const LOCAL_DETECTORS: LocalDetector[] = [
   { kind: "DATE", source: "\\b((?:\\d{1,2}[\\/\\-.]\\d{1,2}[\\/\\-.]\\d{2,4})|(?:\\d{1,2}\\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\s+\\d{2,4}))\\b", flags: "gi", confidence: 0.606, category: "personal", tier: "contextual" },
   { kind: "DATE_OF_BIRTH", source: "\\b(?:DOB|date of birth|birth ?date)[:\\s-]*((?:\\d{1,2}[\\/\\-.]\\d{1,2}[\\/\\-.]\\d{2,4})|(?:\\d{1,2}\\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\s+\\d{2,4}))\\b", flags: "gi", confidence: 0.859, category: "personal", tier: "contextual" },
   { kind: "DD_MANDATE", source: "\\b(?:DD|DIRECT[-\\s]?DEBIT)[-\\s]?(?:MANDATE|REF(?:ERENCE)?|NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,18})\\b", flags: "gi", confidence: 0.858, category: "financial", tier: "medium" },
-  { kind: "DEA_NUMBER", source: "\\b(?:DEA[-\\s\\u00A0]*(?:NO|NUM(?:BER)?)?[-\\s\\u00A0.:#]*)?([A-Z]{2}(?:[\\s\\u00A0.-]?\\d){7})\\b", flags: "gi", confidence: 0.859, category: "healthcare", tier: "aggressive-only" },
+  { kind: "DEA_NUMBER", source: "\\b(?:DEA[-\\s\\u00A0]*(?:NO|NUM(?:BER)?)?[-\\s\\u00A0.:#]*)?([A-Z]{2}(?:[\\s\\u00A0.-]?\\d){7})\\b", flags: "gi", confidence: 0.859, category: "healthcare", tier: "contextual" },
   { kind: "DEGREE_NUMBER", source: "\\b(?:DEGREE|DIPLOMA|CERTIFICATE)[-\\s]?(?:NO|NUM(?:BER)?)?[-\\s]?[:#]?\\s*([A-Z0-9]{6,14})\\b", flags: "gi", confidence: 0.858, category: "education", tier: "contextual" },
   { kind: "DELAWARE_LICENSE_PLATE", source: "\\b(\\d{6})\\b", flags: "g", confidence: 0.607, category: "vehicles", tier: "contextual" },
   { kind: "DEPARTMENT_CODE", source: "\\b(?:DEPT|DEPARTMENT)[-\\s]?(?:CODE)?[-\\s]?[:#]?\\s*([A-Z]{3,6})\\b", flags: "g", confidence: 0.406, category: "education", tier: "contextual" },
@@ -900,6 +900,25 @@ const FALSE_POSITIVE_RULES: LocalFalsePositiveRule[] = [
 		} },
   { patternType: ["PHONE","ID","NUMBER"], matcher: (_value, context) => {
 			return /\b(timestamp|time|epoch|unix|millis|seconds|created.at|updated.at)\s*[:\s]*/i.test(context);
+		} },
+  { patternType: ["IP_ADDRESS","IPV4","IP","IPV4_ADDRESS","IP_ADDRESS_V4"], matcher: (value, _context) => {
+			const parts = String(value).trim().split(".");
+			if (parts.length !== 4) return false;
+			const o = parts.map((p) => Number(p));
+			if (o.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return false;
+			const a = Number(parts[0]), b = Number(parts[1]), c = Number(parts[2]), d = Number(parts[3]);
+			if (a === 0) return true;                              // 0.0.0.0/8, incl. the wildcard
+			if (a === 10) return true;                             // 10.0.0.0/8
+			if (a === 127) return true;                            // 127.0.0.0/8 loopback
+			if (a === 169 && b === 254) return true;               // 169.254.0.0/16 link-local
+			if (a === 172 && b >= 16 && b <= 31) return true;      // 172.16.0.0/12
+			if (a === 192 && b === 168) return true;               // 192.168.0.0/16
+			if (a >= 224 && a <= 239) return true;                 // 224.0.0.0/4 multicast
+			if (a === 255 && b === 255 && c === 255 && d === 255) return true; // broadcast
+			if (a === 192 && b === 0 && c === 2) return true;       // 192.0.2.0/24 TEST-NET-1
+			if (a === 198 && b === 51 && c === 100) return true;    // 198.51.100.0/24 TEST-NET-2
+			if (a === 203 && b === 0 && c === 113) return true;     // 203.0.113.0/24 TEST-NET-3
+			return false;
 		} },
 ];
 
