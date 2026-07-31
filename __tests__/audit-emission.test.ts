@@ -53,7 +53,7 @@ describe('PriventSession audit emission', () => {
 describe('PriventTokenize audit emission', () => {
   it('emits a tokenize event whose metadata excludes raw text/tokens', async () => {
     const { exec, auditEvents } = makeHttpExecFn({
-      items: [{ json: { text: 'Reach me at alice@example.com' } }],
+      items: [{ json: { text: 'Reach me at alice@fixture.invalid' } }],
       params: { resource: 'tokenize', operation: 'tokenize', sessionId: '123e4567-e89b-42d3-a456-426614174001', textField: 'text', detectionMode: 'local', reviewThreshold: 1 },
       executionId: EXEC_ID,
       node: { id: 'node-uuid-1', name: 'Tokenize', type: 'n8n-nodes-privent.privent' },

@@ -27,7 +27,7 @@ async function run(text: string) {
 
 describe('PriventTokenize detection — overlap / adjacency parity', () => {
   it('two back-to-back emails → two tokens, both originals removed, order preserved', async () => {
-    const { text, entities } = await run('a@b.com,c@d.com');
+    const { text, entities } = await run('ab@fixture.invalid,cd@fixture.invalid');
     expect(entities).toHaveLength(2);
     expect(text).toBe('[EMAIL_001],[EMAIL_002]');
     expect(text).not.toContain('@');
@@ -42,7 +42,7 @@ describe('PriventTokenize detection — overlap / adjacency parity', () => {
   });
 
   it('nested: an email inside a URL → URL wins, email not separately tokenized', async () => {
-    const { entities } = await run('visit http://user@host.com/x');
+    const { entities } = await run('visit http://user@fixture.invalid/x');
     expect(entities).toHaveLength(1);
     expect(entities[0]!.kind).toBe('URL');
   });

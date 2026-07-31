@@ -15,15 +15,15 @@ describe('WorkflowStaticDataVault', () => {
     const vault = new WorkflowStaticDataVault(makeCtx(sd), 'sess-1');
 
     const r1 = await vault.findOrCreateBatch([
-      { kind: 'EMAIL', value: 'a@x.com' },
-      { kind: 'EMAIL', value: 'b@x.com' },
+      { kind: 'EMAIL', value: 'aa@fixture.invalid' },
+      { kind: 'EMAIL', value: 'bb@fixture.invalid' },
       { kind: 'SSN', value: '123-45-6789' },
     ]);
     expect(r1.map((r) => r.token)).toEqual(['[EMAIL_001]', '[EMAIL_002]', '[SSN_001]']);
 
     // Same values again → identical tokens, no new counters.
     const r2 = await vault.findOrCreateBatch([
-      { kind: 'EMAIL', value: 'a@x.com' },
+      { kind: 'EMAIL', value: 'aa@fixture.invalid' },
       { kind: 'SSN', value: '123-45-6789' },
     ]);
     expect(r2.map((r) => r.token)).toEqual(['[EMAIL_001]', '[SSN_001]']);
@@ -32,10 +32,10 @@ describe('WorkflowStaticDataVault', () => {
   it('retrieveBatch returns originals and skips unknown tokens', async () => {
     const sd: IDataObject = {};
     const vault = new WorkflowStaticDataVault(makeCtx(sd), 'sess-2');
-    await vault.findOrCreateBatch([{ kind: 'EMAIL', value: 'a@x.com' }]);
+    await vault.findOrCreateBatch([{ kind: 'EMAIL', value: 'aa@fixture.invalid' }]);
 
     const rows = await vault.retrieveBatch(['[EMAIL_001]', '[EMAIL_999]']);
-    expect(rows).toEqual([{ token: '[EMAIL_001]', kind: 'EMAIL', value: 'a@x.com' }]);
+    expect(rows).toEqual([{ token: '[EMAIL_001]', kind: 'EMAIL', value: 'aa@fixture.invalid' }]);
     expect(await vault.retrieveBatch([])).toEqual([]);
   });
 
@@ -55,8 +55,8 @@ describe('WorkflowStaticDataVault', () => {
     const sd: IDataObject = {};
     const a = new WorkflowStaticDataVault(makeCtx(sd), 'keep');
     const b = new WorkflowStaticDataVault(makeCtx(sd), 'drop');
-    await a.findOrCreateBatch([{ kind: 'EMAIL', value: 'a@x.com' }]);
-    await b.findOrCreateBatch([{ kind: 'EMAIL', value: 'b@x.com' }]);
+    await a.findOrCreateBatch([{ kind: 'EMAIL', value: 'aa@fixture.invalid' }]);
+    await b.findOrCreateBatch([{ kind: 'EMAIL', value: 'bb@fixture.invalid' }]);
 
     await b.destroy();
     const root = sd.priventVault as { sessions: Record<string, unknown>; order: string[] };

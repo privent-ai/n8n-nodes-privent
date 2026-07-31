@@ -18,7 +18,7 @@ async function flushPromises() {
 describe('Tokenize cloud mode surfaces a NodeApiError on /v1/risk/score failure', () => {
   it('throws NodeApiError when the ML scoring call fails and not continuing', async () => {
     const { exec } = makeHttpExecFn({
-      items: [{ json: { text: 'reach me at alice@example.com' } }],
+      items: [{ json: { text: 'reach me at alice@fixture.invalid' } }],
       params: {
         resource: 'tokenize',
         operation: 'tokenize',

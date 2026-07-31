@@ -70,7 +70,7 @@ describe('tokenless telemetry', () => {
     const httpRequest = vi.fn(async () => ({}));
     const exec = makeExec(
       { authentication: 'tokenless', ...TOKENIZE_PARAMS },
-      [{ json: { text: 'email me at jane@northwind.com' } }],
+      [{ json: { text: 'email me at jane.nw@fixture.invalid' } }],
       httpAuth,
       httpRequest,
     );
@@ -98,7 +98,7 @@ describe('tokenless telemetry', () => {
     expect(typeof event.install_id).toBe('string');
     expect((event.install_id as string).length).toBeGreaterThan(0);
     // No sensitive payload escapes.
-    expect(JSON.stringify(event)).not.toContain('jane@northwind.com');
+    expect(JSON.stringify(event)).not.toContain('jane.nw@fixture.invalid');
 
     // The op still produced its tokenized item.
     expect(out[0]).toHaveLength(1);
@@ -129,7 +129,7 @@ describe('tokenless telemetry', () => {
     });
     const exec = makeExec(
       { authentication: 'tokenless', ...TOKENIZE_PARAMS },
-      [{ json: { text: 'email me at jane@northwind.com' } }],
+      [{ json: { text: 'email me at jane.nw@fixture.invalid' } }],
       vi.fn(async () => ({})),
       httpRequest,
     );
@@ -147,7 +147,7 @@ describe('tokenless telemetry', () => {
 describe('apiKey / local emit no telemetry', () => {
   it('apiKey run posts nothing to /v1/telemetry/events', async () => {
     const { exec, calls } = makeHttpExecFn({
-      items: [{ json: { text: 'Reach me at alice@example.com' } }],
+      items: [{ json: { text: 'Reach me at alice@fixture.invalid' } }],
       params: { authentication: 'apiKey', resource: 'tokenize', operation: 'tokenize', sessionId: '123e4567-e89b-42d3-a456-426614174001', textField: 'text', detectionMode: 'local', reviewThreshold: 1 },
     });
 
@@ -163,7 +163,7 @@ describe('apiKey / local emit no telemetry', () => {
     });
     const exec = makeExec(
       { authentication: 'local', resource: 'tokenize', operation: 'tokenize', sessionId: '', textField: 'text', detectionLevel: 'standard' },
-      [{ json: { text: 'email me at jane@northwind.com' } }],
+      [{ json: { text: 'email me at jane.nw@fixture.invalid' } }],
       throwOnHttp,
       throwOnHttp,
     );

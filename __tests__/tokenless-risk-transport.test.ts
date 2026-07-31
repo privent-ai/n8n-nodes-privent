@@ -112,7 +112,7 @@ describe('tokenless risk transport (X-Visitor-Id, no Bearer, no audit)', () => {
         reviewThreshold: 0.9,
         traceId: '',
         agentName: '',
-      }, [{ json: { text: 'contact bob@example.com' } }]),
+      }, [{ json: { text: 'contact bob.ex@fixture.invalid' } }]),
     );
 
     const score = http.calls.find((c) => c.url === '/v1/risk/score');

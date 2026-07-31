@@ -50,7 +50,7 @@ describe('PriventTokenize — org custom patterns', () => {
     // codename inside it and must evict the longer built-in span.
     const { text, entities } = await runTokenize({
       apiKey: 'k-custom-builtin',
-      items: [{ json: { text: 'ping alice@acme.com' } }],
+      items: [{ json: { text: 'ping alice.fixture@acme.invalid' } }],
       params: tokenizeParams(),
       activePatterns: [
         { kind: 'CODENAME', pattern: 'acme', flags: '', category: 'strategic', sensitivity: 'high' },
@@ -60,7 +60,7 @@ describe('PriventTokenize — org custom patterns', () => {
     expect(kinds).toContain('CODENAME');
     expect(kinds).not.toContain('EMAIL');
     expect(text).not.toContain('acme');
-    expect(text).toContain('alice@'); // EMAIL evicted → the address is left untouched
+    expect(text).toContain('alice.fixture@'); // EMAIL evicted → the address is left untouched
   });
 
   it('custom pattern wins over an overlapping backend/ML span', async () => {
@@ -90,12 +90,12 @@ describe('PriventTokenize — org custom patterns', () => {
   it('fail-open: a patterns-fetch failure still tokenizes on built-ins', async () => {
     const { text, entities } = await runTokenize({
       apiKey: 'k-custom-failopen',
-      items: [{ json: { text: 'mail bob@corp.com' } }],
+      items: [{ json: { text: 'mail bob@fixture.invalid' } }],
       params: tokenizeParams(),
       failUrls: ['/v1/custom-patterns/active'],
     });
     const kinds = entities.map((e) => e.kind);
-    expect(text).not.toContain('bob@corp.com');
+    expect(text).not.toContain('bob@fixture.invalid');
     expect(text).toMatch(/\[EMAIL_\d+\]/);
     expect(kinds).toContain('EMAIL');
   });
