@@ -61,49 +61,14 @@ export default defineConfig(
       'n8n-nodes-base/node-class-description-outputs-wrong': 'off',
       // A third-party API can legitimately have a maximum limit.
       'n8n-nodes-base/node-param-type-options-max-value-present': 'off',
-      // DELIBERATELY ONE RULE LOOSER THAN THE OFFICIAL SCANNER — error -> warn,
-      // not off. There is no vector brand asset anywhere in the product: the
-      // node's icon and privent-frontend/public/og/privent-main-logo.png are
-      // byte-identical, the frontend's own logo component renders a PNG
-      // (components/custom/logo.tsx:12), and no light/dark variant of the mark
-      // has ever existed. That is a brand-asset gap this lint rule happened to
-      // be the first thing to notice — recorded as F-I — and the decision is
-      // that the PNG stays. Tracing the PNG was measured and rejected: potrace
-      // output is a single black path covering the full canvas with the mark as
-      // negative space, monochrome from an RGB source, i.e. a black square in
-      // the node list.
-      //
-      // It stays a WARNING rather than off so every lint run still reports it
-      // and the gate does not quietly claim a clean bill. It is not an error
-      // because a check that can never go green trains everyone to ignore it
-      // (F-H). The official scanner still counts it as an error, so the package
-      // continues to FAIL @n8n/scan-community-package until a real vector asset
-      // exists — F-C stays open on exactly this one point.
-      'n8n-nodes-base/node-class-description-icon-not-svg': 'warn',
-      // SECOND deliberate divergence, same shape: error -> warn, not off.
-      // The rule matches on `paramName.toLowerCase().includes('token')`
-      // (node-param-type-options-password-missing.js:32), so it fires on
-      // `promptTokens` and `completionTokens` — which hold a token COUNT
-      // expression (`={{$json.usage.prompt_tokens}}`), not a secret. n8n's own
-      // exception list already carries this exact class:
-      // FALSE_POSITIVE_NODE_SENSITIVE_PARAM_NAMES = ["maxTokens",
-      // "password_needs_reset"] (constants.js:125). Ours is maxTokens under a
-      // different name.
-      //
-      // Satisfying it would mask two operator-visible expression fields in the
-      // editor to please an instrument that matched a substring — the
-      // instrument corrupting what it measures, applied to the product. Renaming
-      // the parameters would break stored workflows, and inline disables are
-      // ignored by the scanner (allowInlineConfig: false), so a warning is the
-      // honest position. The real fix is upstream: these names belong in n8n's
-      // exception list, or the rule should match more narrowly than
-      // includes('token'). Recorded as F-J; no upstream issue filed yet.
-      //
-      // The scanner still counts these as errors, so they add to the source-leg
-      // failure alongside the icon.
-      'n8n-nodes-base/node-param-type-options-password-missing': 'warn',
     },
   },
+  // tsup keeps source comments, so the line-scoped eslint-disable directives in
+  // nodes/**/*.ts reappear inside the bundle — where the rules they name are
+  // .ts-scoped and never run, making ESLint report every one of them as an
+  // unused directive. The directives are meaningful at their source lines and
+  // meaningless here, so the report is switched off for compiled output only.
+  { files: ['dist/**/*.js'], linterOptions: { reportUnusedDisableDirectives: 'off' } },
   // JSON (notably package.json) needs the TS parser: the package.json-based
   // rules walk a TSESTree ObjectExpression.
   { files: ['**/*.json'], languageOptions: { parser: tsParser } },

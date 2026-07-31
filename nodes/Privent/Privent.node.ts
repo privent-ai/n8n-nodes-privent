@@ -47,6 +47,15 @@ export class Privent implements INodeType {
   description: INodeTypeDescription = {
     displayName: 'Privent',
     name: 'privent',
+    // F-I: there is no vector brand asset anywhere in the product — this icon and
+    // privent-frontend/public/og/privent-main-logo.png are byte-identical, the
+    // frontend's own logo component renders a PNG (components/custom/logo.tsx:12),
+    // and no light/dark variant of the mark has ever existed. Tracing the PNG was
+    // measured and rejected: potrace output is one black path covering the full
+    // canvas with the mark as negative space, monochrome from an RGB source — a
+    // black square in the node list. Scoped to this line so a NEW node class still
+    // errors on a PNG icon.
+    // eslint-disable-next-line n8n-nodes-base/node-class-description-icon-not-svg
     icon: 'file:../privent.png',
     group: ['transform'],
     version: 1,
@@ -605,6 +614,13 @@ export class Privent implements INodeType {
       {
         displayName: 'Prompt Tokens',
         name: 'promptTokens',
+        // F-J: the rule matches on paramName.toLowerCase().includes('token')
+        // (node-param-type-options-password-missing.js:32). This holds a token COUNT
+        // expression, not a secret, and n8n's own exception list already carries the
+        // class — FALSE_POSITIVE_NODE_SENSITIVE_PARAM_NAMES = ['maxTokens',
+        // 'password_needs_reset'] (constants.js:125). Scoped to this line so a
+        // genuinely secret parameter named '…token…' added later still errors.
+        // eslint-disable-next-line n8n-nodes-base/node-param-type-options-password-missing
         type: 'string',
         default: '={{$json.usage.prompt_tokens}}',
         description: 'Expression resolving to the prompt token count. Default reads OpenAI-style {usage:{prompt_tokens}} from the previous node.',
@@ -613,6 +629,13 @@ export class Privent implements INodeType {
       {
         displayName: 'Completion Tokens',
         name: 'completionTokens',
+        // F-J: the rule matches on paramName.toLowerCase().includes('token')
+        // (node-param-type-options-password-missing.js:32). This holds a token COUNT
+        // expression, not a secret, and n8n's own exception list already carries the
+        // class — FALSE_POSITIVE_NODE_SENSITIVE_PARAM_NAMES = ['maxTokens',
+        // 'password_needs_reset'] (constants.js:125). Scoped to this line so a
+        // genuinely secret parameter named '…token…' added later still errors.
+        // eslint-disable-next-line n8n-nodes-base/node-param-type-options-password-missing
         type: 'string',
         default: '={{$json.usage.completion_tokens}}',
         description: 'Expression resolving to the completion token count',
