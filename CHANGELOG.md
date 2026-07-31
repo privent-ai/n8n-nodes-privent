@@ -4,6 +4,35 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.0.1] - 2026-08-01
+
+### Fixed
+
+- **`zod` is now declared.** The package requires it at runtime and declared it
+  nowhere; it worked only because n8n ships its own copy
+  (`n8nio/n8n:2.28.7` carries zod 3.25.67). Anything loading this node outside an
+  n8n that bundles zod failed on install with `Cannot find module 'zod'`.
+  **Now bundled into the published artifact**, so the package carries what it
+  needs. Declaring it was tried first and is not permitted: this package's own
+  gate — `@n8n/eslint-plugin-community-nodes`, the one n8n runs — rejects `zod`
+  in `peerDependencies` (*only `n8n-workflow` and `@n8n/ai-node-sdk` are
+  permitted*) and rejects any `dependencies` at all (*runtime dependencies get
+  bundled into the n8n instance and can conflict with other nodes or the n8n
+  runtime itself*). The rule's own text names the remaining option. Measured
+  cost: the node bundle goes from 221 KB to **343 KB, +121 KB**. The package
+  still declares zero runtime dependencies, which is now true rather than
+  true-by-omission.
+
+### Added — build integrity
+
+- **`npm run verify:artifact`**, wired into CI and into the release job before
+  `npm publish`. It asserts the `@priventai/core` version baked into `dist/`
+  matches the version the lockfile pins, and with `--against <version>` it
+  compares the local build byte-for-byte against what was published to npm.
+  Nothing checked either of those before, so "manifest, lockfile and artifact
+  agree" was an assumption — and answering it once took three separate
+  measurements.
+
 ## [3.0.0] - 2026-08-01
 
 **This is a major version because several changes alter what the node emits, and
