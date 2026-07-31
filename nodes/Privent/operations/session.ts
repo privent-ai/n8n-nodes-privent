@@ -1,7 +1,6 @@
 import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import type { AuditEvent } from '@priventai/core';
-import { TRACER_VERSION } from '@priventai/core';
 import {
   auditLog,
   buildAuditMetadata,
@@ -115,7 +114,16 @@ export async function handleSession(
     nodeId: node.id,
     metadata: buildAuditMetadata(auditCtx, node, {
       session_id_mode: mode,
-      framework_version: safeFrameworkVersion() ?? TRACER_VERSION,
+      // `framework_version` means n8n's version. When the peer cannot be read it
+      // is ABSENT, not guessed: the old fallback wrote core's TRACER_VERSION,
+      // which is not n8n's version and never was — it read as `2.4.0` (this
+      // package) while core bundled 0.8.0, and would have read `0.10.0` (core)
+      // after the bump, because 0.10.0 bakes its own literal in place of the
+      // `globalThis.__SDK_VERSION__` that tsup used to replace. Same lie, new
+      // value. `privent-http.ts:32` already says not to use TRACER_VERSION; this
+      // line did it through a fallback. See NP-Q. The backend stores the field
+      // as null when the key is absent — measured, it does not reject the event.
+      ...(safeFrameworkVersion() ? { framework_version: safeFrameworkVersion() } : {}),
       ...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
       ...(triggerPrincipalIp !== undefined ? { trigger_principal_ip: triggerPrincipalIp } : {}),
       ...(triggerPrincipalUserAgent !== undefined
