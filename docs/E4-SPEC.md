@@ -356,3 +356,157 @@ mismatched `CORE_VERSION`, a single mutated byte, and an absent `dist/`.
 **Reproducibility.** `npm run verify:artifact --against 3.0.1` on a clean checkout
 of the tag reports the local build byte-identical to what npm serves — 342,920
 bytes. The rig can pin by version and, if it wants, verify the bytes it received.
+
+---
+
+# PART TWO · E4-a and E4-b
+
+**Written at `d171f28`, from the node's own code, not from the README.** This
+package has already shipped one version whose declared and actual contents
+disagreed (NP-O), so every claim below cites the file that makes it true.
+
+Status when this was written: **E4-c is green in CI. E4-a and E4-b have never
+been run.** "E4 passes" is currently a sentence that would be true of one third
+of E4, and the fraction belongs beside the claim the way NP-K's 3/9 does.
+
+## 8 · The two remaining modes, named from the code
+
+`nodes/Privent/Privent.node.ts:82,88,93` declares exactly three `authentication`
+values — `apiKey`, `tokenless`, `local` — and `:69-71` binds a credential to two
+of them:
+
+| sub-cell | `authentication` | credential | required fields |
+|---|---|---|---|
+| **E4-a** | `apiKey` | `priventApi` | `apiKey`, `baseUrl`, `vaultBackend` (`memory` \| `cloud`) — `credentials/PriventApi.credentials.ts:16,27,35` |
+| **E4-b** | `tokenless` | `priventVisitorApi` | `baseUrl` only |
+| E4-c | `local` | none | — |
+
+## 9 · E4-c's green transfers to NEITHER, and the reason is mechanical
+
+This is the section E4-c's own result should have carried and did not.
+
+**The containment mechanism is different in all three modes**, measured at three
+call sites:
+
+| | detector set | vault (where the token comes from) | false-positive filter |
+|---|---|---|---|
+| **E4-a** `apiKey` | core's `DEFAULT_DETECTORS` — **10 detectors** — plus org custom patterns (`tokenize.ts:294`, apiKey only) plus backend ML spans from `/v1/risk/score` | **`N8nHttpVault`** — the backend mints, `/v1/vault/find-or-create-batch` (`tokenize.ts:285-288`) | **not applied** |
+| **E4-b** `tokenless` | core's `DEFAULT_DETECTORS` — **10 detectors** — plus backend ML via the visitor path (`privent-http.ts:804`) | **`WorkflowStaticDataVault`** — minted locally in n8n's workflow static data (`tokenize.ts:287`) | **not applied** |
+| **E4-c** `local` | `buildLocalDetectors(level)` — **575 detectors**, this package's generated set | `WorkflowStaticDataVault` | **applied** (`isLocalFalsePositive`) |
+
+Three consequences, each of which breaks the transfer on its own:
+
+1. **A different detector set decides what is PII.** E4-c exercises 575
+   detectors; E4-a and E4-b exercise 10 plus whatever the backend's ML returns. A
+   value E4-c masks may be invisible to E4-a, and the reverse.
+2. **A different component mints the token.** In E4-a the token comes from the
+   backend's vault. A green E4-a is therefore a joint statement about this
+   package **and a backend build**, and the rig must record which backend SHA it
+   ran against or the assertion has no subject. E4-c has no such dependency.
+3. **The false-positive filter runs only in `local`.** Measured: `@example.com`,
+   a private IP and a canary on a comment line all escape in `local` and are
+   masked in `apiKey` — §1's table. So the canary that proves E4-c can also
+   prove **less** than it appears to in the other two.
+
+> **A green in one sub-cell says nothing about the other two.** Print the
+> sub-cell with every E4 result, the way the contract check prints 3/9.
+
+## 10 · What the rig must supply
+
+**E4-a.** A reachable backend, an **organisation**, and an **org-scoped API key**
+(`OrgApiKey`), plus the credential's `baseUrl` and a `vaultBackend` choice. The
+key is minted per org, so the rig has to create both.
+
+> **Hard precondition, and it is not a detail.** The key must be minted into a
+> **non-production database**. This programme has already recorded a workspace
+> `.env` pointing at a production Supabase instance; minting an org and a key
+> into that is not an option under any circumstances. If the rig cannot prove
+> which database its backend is attached to, E4-a does not run.
+
+**E4-b.** A reachable backend and nothing else — `/v1/visitor/credentials` is
+**public and unauthenticated** (`privent-http.ts:440,457`), and the visitor id is
+cached in workflow static data. No org, no key. That makes E4-b the cheaper of
+the two by a wide margin and it should be run first.
+
+**Neither needs a Privent *account* in the customer sense.** Both need a backend
+process the runner can reach, which is the property that blocks them — §12.
+
+## 11 · Negative control per sub-cell, designed before the positive path
+
+E4-c's control does not transfer either, and the reason is the mirror of §9:
+E4-c's controls work by making a **local detector** fail to see the value
+(suppressed domain, comment line, wrong level). E4-a and E4-b do not run those
+detectors and do not apply that filter, so all three E4-c controls would come
+back **masked** and prove nothing.
+
+Each control below keeps the node present, configured, and reporting success —
+METHOD §5: a control that removes the mechanism tests an empty pipeline.
+
+| control | configuration | a red proves |
+|---|---|---|
+| **NC-E4-a1** | backend returns `200` from `/v1/risk/score` with `entities: []` while the canary is a **person name or street address** — a kind the 10 core detectors do not carry | the rig sees an escape caused by **ML not contributing**, with the node reporting success. This is the mode's real failure: E4-a's recall above structured PII is entirely the backend's. |
+| **NC-E4-a2** | vault answers `find-or-create-batch` with **fewer tokens than spans** | the rig sees a **partial mint**: some values masked, others passed through, one item, no error |
+| **NC-E4-b1** | same canary as NC-E4-a1, backend reachable | the same escape, and that E4-b inherits it — the detector set is the same 10 |
+| **NC-E4-b2** | `/v1/visitor/credentials` returns `200` with a **malformed body** | whether tokenless fails closed or proceeds with an unusable visitor id |
+
+**NC-E4-a1 is the primary control for both.** It is one response body, it needs
+no fault injection in this package, and it reproduces the gap the programme has
+already measured from the other side: local detection carries structured PII and
+nothing else, so **person and address are the backend's alone** in these two
+modes.
+
+## 12 · What each sub-cell cannot see — mandatory section
+
+**E4-a cannot see:** whether detection ran completely (that is R-0 — and its
+client half, `privent.mlDegraded`, distinguishes *ML was skipped* from *ML ran*,
+which is more than E1 can do but is not completeness); anything about a value the
+rig did not inject; whether the backend's vault stored the value correctly beyond
+the one token it read back; and whether the org's custom patterns — which only
+this mode fetches — behaved, unless the rig creates one deliberately.
+
+**E4-b cannot see:** anything on the audit stream, because **tokenless emits no
+audit event at all** (an anonymous visitor has no org). Its operator-visible
+record is telemetry plus the item. A rig assertion of the form *"the block was
+visible to the operator"* must read the **item** here, or it will fail E4-b for a
+property that is by design.
+
+**Both cannot see:** the vault contract. NP-K's contract check covers 3 of 9
+endpoints and the three vault endpoints are **not** among them — the only part of
+this node's traffic that carries values rather than counts. A green E4-a proves a
+token came back; it does not prove the request that minted it was well-formed
+against a published schema, because there is no published schema.
+
+## 13 · Neither sub-cell can run in CI, and the property that blocks them
+
+Stated as a finding rather than left to be discovered when the job is written.
+
+Both need **a backend process the runner can reach**. NP-K's three axes, measured
+again on 2026-08-01 and all still holding:
+
+- `privent-backend` publishes no image to a registry this CI can pull — its
+  `release.yml` ships an image bundle to S3, with no ghcr or dockerhub push;
+- `privent-backend` is **PRIVATE** and this repository is **PUBLIC**, so the
+  default `GITHUB_TOKEN` cannot check it out;
+- the only secret this repository holds is `NPM_TOKEN`.
+
+**So E4-a and E4-b are Linux-box cells, not CI cells** — the same class as E1,
+E2, E3 and E5, and unlike E4-c, which is the single exception because it needs no
+backend at all. That asymmetry is the argument for running E4-c in CI now and
+costing E4-a/E4-b on the box privent-n8n already sizes.
+
+The cheap green — a private-repo read credential in a public repository's CI —
+stays refused, for the reason it was refused before: that identity would be
+exposed to fork and pull-request contexts.
+
+**A cell that cannot run is a finding. A cell that quietly is not run is the
+false green this programme has spent the week eliminating.**
+
+## 14 · Handover
+
+Specified, not built, at **`d171f28`**. privent-n8n costs it. The order this
+package would suggest, on measured cost rather than preference: **E4-b first**
+(backend only, no org, no key, public endpoint), then **E4-a** (org + key + a
+database whose identity is proven), and both after E5 if E5's budget is already
+committed — neither is more urgent than E5, and both are more expensive than the
+E4-c that is already green.
+
