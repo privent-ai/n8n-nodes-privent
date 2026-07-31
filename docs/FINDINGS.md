@@ -22,6 +22,13 @@
 One line per finding. Findings scattered across commit messages and PR bodies is
 how a finding dies; this is the index that keeps them visible.
 
+> **This file was written inside the N4-2 + N4-4 stack and lived only there.**
+> That stack is unmerged and waits on another repository's npm publish (SDK-A),
+> so `NP-K` … `NP-O` were reachable only from an open PR — a finding that lives
+> on an unmerged branch is a finding that can be lost, which is the failure this
+> document exists to prevent. Brought to `main` docs-only: no code, no tests.
+> `main` is now canonical; when the stack merges, take this copy.
+
 **Status:** `open` — real, not fixed, no item scheduled · `recorded` — real, not
 fixed, item scheduled or deliberately declined · `closed` — fixed and verified.
 
@@ -29,8 +36,26 @@ fixed, item scheduled or deliberately declined · `closed` — fixed and verifie
 
 | ID | Finding | Status |
 |---|---|---|
+| NP-P | **`auto` detection mode swallowed HTTP 402, and no test could have caught it.** `tokenize.ts` treated every ML failure alike: `cloud` throws, `auto` degrades to regex-only and says nothing. For a timeout that is the documented contract; for 402 Payment Required it is not — the plan or quota is exhausted, it will answer 402 for every item in the run, and `cloud` fails the run on the identical response. Downstream, an item the backend scored and an item it never saw were indistinguishable (`risk: null` is also a legitimate low-risk shape), and the audit event recorded `detection_mode: auto` either way. The second half is instrumental: the suite's only failure primitive was `failUrls`, which throws a bare `Error` carrying no status, so **no test could tell a quota rejection from a socket reset** — the very distinction at issue. Measured in `n8nio/n8n:2.28.7` (digest `sha256:74f1ef0ec73cd1b85c3b55926732c9dfaa544a66d6bb2872fd57718c557954a4`): `httpRequestWithAuthentication` wraps every failure in `NodeApiError` before the node sees it (n8n-core `.../request-helpers/authentication.js:63`), and the status survives as `httpCode`, a **string**. Closed by N4-6 — `auto` still degrades, the data path is unchanged, but the item carries `privent.mlDegraded` and the audit event carries `ml_degraded` / `ml_degraded_status`. | closed |
+| NP-O | **The published artifact does not reveal which `@priventai/core` version it carries.** `tsup.config.ts:28` bundles core via `noExternal`, so the declared range (`^0.8.0`) resolves nothing at runtime and the `dist/` output is the only thing an installed user actually runs. Measured against the two candidate versions: **0 of 4** blocks unique to 0.8.0 and **0 of 12** blocks unique to 0.9.0 appear anywhere in `dist/` (120-byte block comparison) — tree-shaking removes exactly the code that would distinguish them. The lockfile pin (`0.8.0`, `registry.npmjs.org/@priventai/core/-/core-0.8.0.tgz`) is the sole evidence of what shipped, and a lockfile is a statement about a build machine, not about an artifact. Third instance of the runtime-version-invisibility class in this programme; the same reason a version signal has to be *emitted* (N4-8) rather than inferred. | open |
+| NP-N | **`tokens_redeemed` was the number of placeholders FOUND, not the number redeemed.** `detokenize.ts` read it off `placeholders.length` before `retrieveBatch` ran, so an item whose tokens the vault could not resolve left the text unchanged while the audit event recorded a non-zero redemption and the output carried `detokenized: true`. Measured directly — vault returns zero entries, node reports `{"tokens_redeemed":2}` and `detokenized: true`, text byte-identical. Closed by N4-4: found and redeemed are separate numbers and success is derived from the second. The gap between them is now the signal that tokens were present and unresolvable — a distinction that turns out to be available client-side, contrary to what was assumed when the two numbers were treated as one. | closed |
+| NP-M | **Adding `i` to `TOKEN_RE` would not make the node case-tolerant.** `scanForTokens` and `replaceIn` rebuild the pattern as `new RegExp(TOKEN_RE.source, 'g')` (`@priventai/core/dist/index.js:578`, `:615`; source at `privent-sdk/packages/core/src/tokenizer/detokenize.ts:22`, `:85`) and `.source` carries no flags — measured: a `/i` literal rebuilt this way yields `[]` for `[email_001]`. The change that survives the rebuild is the **character class**, `[A-Za-z][A-Za-z0-9_]{1,31}`, one line. It cannot be delivered from this repository: the grammar lives in `@priventai/core`, `tsup.config.ts:28` bundles it via `noExternal`, and `@priventai/core@0.9.0` — the published latest — carries a byte-identical grammar. Tracked as **SDK-A** in privent-sdk; nothing changes here until a fixed core is published and this package rebuilds against it. | open |
 | NP-L | **This product's own false-positive filter suppresses the standard synthetic-fixture domains.** `isLocalFalsePositive` drops any EMAIL whose value contains `example`, `test`, `demo`, `sample`, … (`shared/local-detectors.ts:765`), which is exactly the RFC 2606 reserved space — `example.com`, `.test`, `.example`. So a fixture chosen to be *safe* is invisible to the local detector, and a local-mode test written with one tests nothing. Measured while sweeping the corpus: moving fixtures to `example.invalid` turned a passing round-trip test red because the address stopped being detected at all. This repo's fixtures therefore use `@fixture.invalid` — reserved by RFC 2606 §2 and free of every suppressed word. Sharpens F-05. | open |
 | NP-K | **CI cannot reach a real backend, on any of three axes.** privent-backend publishes no image to a registry this repo's CI can pull — `release.yml` ships an image bundle to S3 over OIDC, with no ghcr/dockerhub push. `privent-backend` is private while `n8n-nodes-privent` is public, and this repo's `ci.yml` uses a plain `actions/checkout@v4` whose default `GITHUB_TOKEN` cannot read another private repository. The only secret this repo holds is `NPM_TOKEN`. So a green tick here has never meant a contract verified against a real backend. | open |
+
+### NP-O — the first fingerprint was wrong, and how it was caught
+
+The first attempt to identify the bundled version searched `dist/` for words
+present only in 0.9.0's source and reported a hit on `authoritative`. That was a
+**false signal**: the word comes from this node's own
+`nodes/Privent/operations/tokenize.ts:29`, not from core at all. A single-token
+search over a bundle cannot tell you which package a string came from.
+
+It was discarded and re-measured at 120-byte block granularity, which is what
+produced the `0 of 4` / `0 of 12` result above. Recorded because the discarded
+measurement was the *convenient* one — it would have answered the question — and
+because a fingerprint that matches your own code is the same defect class as a
+citation nothing verifies.
 
 ### NP-K — the shortcut that was available and declined
 
