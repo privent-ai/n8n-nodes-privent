@@ -145,3 +145,32 @@ corpus a reviewable artifact rather than whatever the directory held that minute
 own test data. Print the matches, not just the count — the count cannot tell you
 whose text it found.
 
+---
+
+## 5. A negative control that removes the mechanism tests an empty pipeline
+
+A control proves the rig can hear. If the way you make protection "absent" is to
+delete the thing that protects, the run passes for free and proves only that a
+pipeline with no protection has no protection. The honest control is **the
+product running, reporting success, and failing to see the value.**
+
+**Instance — E4-c, local mode.** In `local` mode this package IS the protection:
+no interceptor to uninstall, no backend to switch off. Removing the Privent node
+from the workflow leaves a workflow with one fewer step, and of course the canary
+reaches the sink. Nothing is learned. The controls that do teach something keep
+the node in place and configured: a canary of a kind only `aggressive` carries, a
+canary at a suppressed domain, a canary inside a comment line. All three end with
+the node reporting success while the value walks past it — which is also the
+failure mode that actually happens in production, where nobody uninstalls
+anything and a field name is simply wrong.
+
+**Same correction, reached twice, independently.** `privent-n8n` redesigned NC-1
+for the interceptor cell in the same round and arrived at the same place from a
+different mode. Two sessions, two mechanisms, one conclusion: **absence of the
+mechanism is the weakest control available, and it is the one that suggests
+itself first.**
+
+**Rule.** Write the negative control as a *misconfiguration*, not a *deletion*.
+If the only way you can make the control red is to remove the product, the
+control is not measuring the product.
+
