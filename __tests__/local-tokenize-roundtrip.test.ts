@@ -94,6 +94,14 @@ describe('local tokenize/detokenize round-trip (zero network, no Session node)',
     expect(restored).toContain(SSN);
   });
 
+  // `ADDRESS_STREET` was rejected once and re-measured. The single false positive
+  // that rejected it was the phrase `0 bakes its own literal in place`, from a
+  // comment in this package's own source — corpus A is engineering prose written
+  // ABOUT detection, which is adversarial for a street-address pattern in a way
+  // customer text is not. Re-measured against corpus B (business prose) with
+  // positive cases added: zero false positives, two positive hits, admitted.
+  // The threshold did not move; the corpus scope is declared and published in
+  // docs/detector-fp-table.md. See NP-U.
   it('Aggressive masks an address that Standard leaves untouched', async () => {
     const run = async (level: string) => {
       const out = await new Privent().execute.call(
@@ -140,13 +148,20 @@ describe('local tokenize/detokenize round-trip (zero network, no Session node)',
 });
 
 describe('buildLocalDetectors tier gating', () => {
-  it('Standard excludes contextual detectors; Aggressive includes them', () => {
+  // Aggressive used to be "standard plus all 468 contextual detectors", which is
+  // how `reach` became a gamertag. It is now "standard plus the MEASURED
+  // admission list", and `contextual` — the ones that failed the measurement —
+  // is in NEITHER level.
+  it('Aggressive adds exactly the measured tier; contextual is in neither level', () => {
     const standard = buildLocalDetectors('standard');
     const aggressive = buildLocalDetectors('aggressive');
-    const contextual = LOCAL_DETECTORS.filter((d) => d.tier === 'contextual').length;
+    const admitted = LOCAL_DETECTORS.filter((d) => d.tier === 'aggressive-only').length;
+    const rejected = LOCAL_DETECTORS.filter((d) => d.tier === 'contextual').length;
 
+    expect(admitted).toBeGreaterThan(0);
+    expect(rejected).toBeGreaterThan(0);
     expect(aggressive.length).toBeGreaterThan(standard.length);
-    expect(aggressive.length - standard.length).toBe(contextual);
+    expect(aggressive.length - standard.length).toBe(admitted);
   });
 });
 

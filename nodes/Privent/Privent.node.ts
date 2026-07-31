@@ -355,11 +355,12 @@ export class Privent implements INodeType {
             name: 'Aggressive',
             value: 'aggressive',
             description:
-              'Also masks names, addresses and bare-number IDs. More false positives — review the output before sending it downstream.',
+              'Standard plus the extra detectors that passed measurement — currently street addresses, Bitcoin and Ethereum wallet addresses, IPv4 and MAC addresses, DEA numbers, UPS tracking numbers and VAT numbers. It no longer masks personal names, social usernames or gamertags, or bare-number IDs: those patterns matched ordinary words such as "reach" and "today", so they were removed rather than left on. Every admitted detector is listed in docs/detector-fp-table.md with the measurement that admitted it.',
           },
         ],
         default: 'standard',
-        description: 'How broadly local regex detection masks values. Local mode runs entirely inside n8n — no network.',
+        description:
+          'How broadly local regex detection masks values. Local mode runs entirely inside n8n — no network. Every detector in Aggressive was measured against a false-positive corpus before being admitted.',
         displayOptions: { show: { authentication: ['local'], resource: ['tokenize'], operation: ['tokenize'] } },
       },
       {

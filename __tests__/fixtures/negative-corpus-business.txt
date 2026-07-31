@@ -1,0 +1,99 @@
+# Negative corpus — business-shaped prose that contains NO personal data.
+#
+# PROVENANCE. Every line below was hand-authored for this repository, in this
+# session, by the assistant, for the N4-7b measurement. Nothing is copied from a
+# customer, a real mailbox, a real ticket, or any external dataset. There is no
+# generator behind it, deliberately: a corpus we cannot re-run is worse than one
+# we can read, and this one can be diffed line by line.
+#
+# WHY IT EXISTS. The first negative corpus is this repository's own prose and
+# source — technical English about detection. It structurally contains no
+# correspondence, no invoices, no meeting notes, no support threads. Zero hits
+# there says little about the text customers actually send, which is what a local
+# detector meets in production.
+#
+# CONSTRUCTION RULE, applied to every line: business-shaped, and free of anything
+# that identifies a person or an account. No names, no addresses, no mailboxes,
+# no phone numbers, no card or bank identifiers, no government IDs, no usernames.
+# What IS present on purpose: dates, money amounts, percentages, quantities,
+# durations, version strings, product and feature names, generic role words —
+# exactly the material that produced false positives before, and exactly the
+# material a detector must learn to leave alone.
+#
+# Any detector that fires on a line below is producing a false positive, by
+# construction. Lines starting with '#' are comments and are not measured.
+
+# ── Email correspondence, internal ────────────────────────────────────────────
+Thanks for the update — we will review the proposal on Thursday and circle back.
+Following up on the renewal: legal has signed off, procurement is the last step.
+Confirming the workshop is moved to the afternoon slot so the regional teams can join.
+Attaching the revised scope. The only change is the reporting cadence, now monthly.
+Please treat the attached figures as draft until finance closes the quarter.
+Quick note that the vendor review board meets every second Tuesday from now on.
+We are happy with the trial results and would like to extend it by one month.
+The onboarding session ran long, so we moved the security walkthrough to next week.
+Could you confirm whether the discount applies before or after the annual uplift?
+Sharing the summary from this morning so the wider group has the same picture.
+Apologies for the delay — the approval chain took longer than expected this cycle.
+Let us know if the delivery window still works on your side.
+The updated terms are acceptable to us with one clarification about renewal notice.
+Circulating the agenda ahead of time so nobody has to read it in the meeting.
+We would rather push the launch by a week than ship without the migration path.
+
+# ── Invoicing and procurement, identifiers deliberately absent ────────────────
+Total due this period is 12,480.00 EUR, net thirty days from receipt.
+The line item for professional services increased by 8 percent year over year.
+Payment terms remain unchanged: half on signature, half on acceptance.
+We applied the volume discount at the 500-seat tier as agreed in the last renewal.
+The purchase order covers three environments: development, staging and production.
+Please note the currency on this statement is EUR, not USD as in the prior period.
+Storage costs rose 4 percent while compute stayed flat across the quarter.
+The credit note offsets the duplicate charge raised during the migration window.
+Annual subscription runs from the first of the month for twelve calendar months.
+Support is included at the standard tier; premium response times are quoted separately.
+Travel and expenses are billed at cost with receipts, capped at 5 percent of fees.
+The overage is calculated monthly and invoiced in arrears at the contracted rate.
+
+# ── Support threads ───────────────────────────────────────────────────────────
+The dashboard fails to load after the latest release, but only in the staging environment.
+Reproduced it: the request times out after 30 seconds and the retry never fires.
+Clearing the cache resolved it for two of the three affected workspaces.
+We rolled back to version 2.3.1 and the errors stopped within a few minutes.
+Logs show the connection was refused, not reset, so it looks like a firewall rule.
+The export completes but the resulting file is empty when the filter matches nothing.
+Escalating this: the workaround is acceptable for a week, not for the quarter.
+Confirmed fixed in the nightly build. Closing once the customer confirms as well.
+The issue only reproduces when two workflows write to the same table concurrently.
+Adding a retry with backoff removed the flakiness in about 95 percent of runs.
+The report is now correct, but it takes 40 seconds to render on large accounts.
+Please reopen if it recurs after the maintenance window on the eleventh.
+Root cause was a timezone assumption in the scheduler, not the connector itself.
+We cannot reproduce on the current version; requesting the exact steps once more.
+
+# ── Meeting notes ─────────────────────────────────────────────────────────────
+Decision: ship the connector without the optional cache and revisit in the next cycle.
+Action: finance to confirm whether the uplift applies to the pilot workspaces.
+Risk noted: the migration depends on a third-party release we do not control.
+Headcount plan unchanged for the quarter; two roles remain open in the platform team.
+The board asked for a single number, so we agreed to report weekly active workspaces.
+Follow-up needed on why the conversion rate dropped 3 points after the redesign.
+Agreed to keep the current retention policy until the audit is complete.
+Parked: whether to expose the setting in the UI or keep it configuration-only.
+Consensus was that the documentation gap is a bigger problem than the missing feature.
+Next review in two weeks, same slot, with the updated capacity forecast.
+The team prefers a phased rollout starting with internal workspaces only.
+No objections to deprecating the legacy endpoint once usage falls below 1 percent.
+
+# ── Operational and technical notes ───────────────────────────────────────────
+Deploy started at 09:00 and completed in eleven minutes with no rollback.
+The job processes roughly 40,000 records per hour under normal load.
+Latency at the ninety-fifth percentile stayed under 300 milliseconds all week.
+We are keeping the feature flag on for another sprint before removing the old path.
+Disk usage grew 12 percent this month, mostly from the audit retention change.
+The scheduler runs hourly on weekdays and every four hours at the weekend.
+Backups completed successfully for seven consecutive nights.
+Two of the twelve regions are still on the previous release train.
+The alert fired once and cleared on its own; no action taken beyond the note here.
+Capacity headroom is comfortable until roughly the end of the next quarter.
+Config drift between staging and production was resolved by rebuilding staging.
+Documentation now covers the upgrade path from the two most recent versions.

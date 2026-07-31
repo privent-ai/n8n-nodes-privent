@@ -62,7 +62,7 @@ const CASES: Array<{ text: string; expect: Expectation; note: string }> = [
   { text: 'SELECT * FROM users LIMIT 100', expect: 'IGNORE', note: 'SQL' },
 ];
 
-function localExec(text: string) {
+function localExec(text: string, detectionLevel: 'standard' | 'aggressive' = 'standard') {
   return {
     getInputData: () => [{ json: { text } }],
     getNodeParameter: (n: string, _i: number, fb?: unknown) =>
@@ -72,7 +72,7 @@ function localExec(text: string) {
         operation: 'tokenize',
         sessionId: '123e4567-e89b-42d3-a456-426614174777',
         textField: 'text',
-        detectionLevel: 'standard',
+        detectionLevel,
       })[n] ?? fb,
     getNode: () => ({ id: 'n1', name: 'Privent', type: 'n8n-nodes-privent.privent' }),
     getExecutionId: () => 'exec-1',
@@ -92,8 +92,11 @@ function localExec(text: string) {
   } as unknown as IExecuteFunctions;
 }
 
-async function detectedKinds(text: string): Promise<string[]> {
-  const out = await new Privent().execute.call(localExec(text));
+async function detectedKinds(
+  text: string,
+  level: 'standard' | 'aggressive' = 'standard',
+): Promise<string[]> {
+  const out = await new Privent().execute.call(localExec(text, level));
   const json = out[0]![0]!.json as { privent: { entities: Array<{ kind: string }> } };
   return json.privent.entities.map((e) => e.kind);
 }
@@ -119,5 +122,41 @@ describe('local detector matrix (standard level)', () => {
 
   it('a genuinely synthetic address is still suppressed, judged by its DOMAIN', async () => {
     expect(await detectedKinds('reach someone@example.com today')).toHaveLength(0);
+  });
+});
+
+/**
+ * ACCEPTANCE FOR N4-7b, CASE BY CASE.
+ *
+ * Not in aggregate. Aggregate is what made `TP=9 / FP=9 / TN=0` look like a
+ * success: `aggressive` scored a perfect recall by masking every word in every
+ * sentence, including `reach`, `today` and `FROM`.
+ *
+ * `aggressive` must be no worse than `standard` on EVERY case — never a missed
+ * detection, never a new false positive — while still being a superset, since it
+ * admits the measured `aggressive-only` tier on top.
+ */
+describe('aggressive is no worse than standard, case by case', () => {
+  for (const c of CASES) {
+    it(`${c.expect === 'DETECT' ? 'still masks' : 'still leaves alone'}: ${c.note}`, async () => {
+      const standard = await detectedKinds(c.text, 'standard');
+      const aggressive = await detectedKinds(c.text, 'aggressive');
+      if (c.expect === 'DETECT') {
+        expect(aggressive.length).toBeGreaterThanOrEqual(standard.length);
+        expect(aggressive).not.toHaveLength(0);
+      } else {
+        expect(aggressive).toHaveLength(0);
+      }
+    });
+  }
+
+  it('aggressive is a superset of standard: it admits the measured tier and nothing else', async () => {
+    // ETHEREUM_ADDRESS is in the measured admission list — zero false positives
+    // across both negative corpora and a positive hit under its own kind.
+    // MAC_ADDRESS is NOT: it fires on a fragment of a wallet address, which is a
+    // real value under the wrong kind, and that counts as a false positive.
+    const line = 'Treasury moved the balance to 0x52908400098527886E0F7030069857D2E4169EE7 last night.';
+    expect(await detectedKinds(line, 'standard')).not.toContain('ETHEREUM_ADDRESS');
+    expect(await detectedKinds(line, 'aggressive')).toContain('ETHEREUM_ADDRESS');
   });
 });
