@@ -443,3 +443,41 @@ one per target, and let the script die rather than write silently. **Corollary:*
 when a commit claims N changes, the diff stat is the check — `1 file changed` on
 a two-file claim is a failure report, not a detail.
 
+---
+
+## 14. A closing condition written first bounds the item in BOTH directions
+
+A pre-commitment is usually defended as protection against a weak result being
+talked up. That is half of what it does. The other half only exists if the
+condition is written **before** the work: it says what would **not** count as
+closing, and that keeps adjacent, plausible, unscoped work out of an item that
+did not need it.
+
+The asymmetry matters because the two failures arrive at different moments. A
+weak result is argued for at the end, when the author wants to be finished. An
+expanded one is argued for in the middle, when the author is already in the file
+and everything nearby looks cheap. A condition written first is the only artefact
+present at both moments.
+
+**Instance — NP-AK.** The condition, written before the branch was opened:
+
+> the ceiling exists **once** in this package and both transports reference it,
+> shown by an instrument that is **red on the pre-change tree**. It does **not**
+> close by unifying the two transports, and it does **not** answer the per-call-class
+> budget question — that stays NP-AJ's open trigger.
+
+Both negatives were live temptations. The two transports sit in the same file and
+differ by a handful of lines, so merging them looks like tidying rather than a
+change of behaviour — and the difference is precisely the authentication mode,
+which is the reason there are two. The per-class budget was the *next* finding and
+the file was already open.
+
+The refutation sign fired on the first measurement — the copies were **not**
+byte-equal — and because the condition already said what closing meant, the sign
+**narrowed** the item instead of growing it: unify the ceiling, nothing else. The
+result was 3 lines of decision logic against a budget of 4.
+
+**Rule.** Write the closing condition before the branch is opened, and write at
+least one thing that would **not** count as closing. Quote it in the report rather
+than paraphrasing it — a condition restated after the fact is a description of
+what happened, and cannot bound anything.
