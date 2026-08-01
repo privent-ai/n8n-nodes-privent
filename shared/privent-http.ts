@@ -173,6 +173,31 @@ export function wrapNodeError(ctx: IExecuteFunctions, err: unknown): Error {
 
 const DEFAULT_TTL_MS = 60 * 60 * 1000; // 60 minutes — mirrors CloudTokenVault.
 
+/**
+ * The scoring path's ceiling. A CHOSEN value — this is the one argument in the
+ * file that predates NP-AJ and survives it:
+ *
+ *   Auto/cloud Tokenize scores the original text via `/v1/risk/score`, whose
+ *   backend ML budget is 180 s on a cold start. It must exceed n8n's ~120 s
+ *   default so the backend wins — otherwise `auto` silently degrades to
+ *   regex-only (a PHI leak) and `cloud` errors.
+ *
+ * DECLARED ONCE BECAUSE IT WAS TWO (NP-AK). `priventRequest` and
+ * `priventVisitorRequest` each carried their own literal, and the transport is
+ * chosen BY AUTH MODE — so a future per-class budget applied to one of them
+ * would have left tokenless scoring on the old ceiling while every report said
+ * the item was fixed. The value was never the defect; having two places to
+ * change it was.
+ *
+ * This unifies the CEILING, not the transports: they differ in authentication
+ * (`httpRequestWithAuthentication` + `priventApi` vs a bare request carrying
+ * `X-Visitor-Id`), and that difference is the point of having two.
+ *
+ * Splitting this per call class is NP-AJ's open trigger, not this constant's
+ * business — and when it happens, it happens once here rather than twice.
+ */
+export const PRIVENT_REQUEST_TIMEOUT_MS = 200_000;
+
 async function priventRequest<T>(
   ctx: IExecuteFunctions,
   baseUrl: string,
@@ -186,11 +211,7 @@ async function priventRequest<T>(
     url,
     body,
     json: true,
-    // Auto/cloud Tokenize scores the original text via /v1/risk/score, whose
-    // backend ML budget is 180s (cold start). Must exceed n8n's ~120s default so
-    // the backend wins — otherwise auto silently degrades to regex-only (PHI
-    // leak) and cloud errors. Blanket is fine: vault/audit calls are fast.
-    timeout: 200_000,
+    timeout: PRIVENT_REQUEST_TIMEOUT_MS,
   })) as T;
 }
 
@@ -631,7 +652,7 @@ export async function priventVisitorRequest<T>(
       url,
       body,
       json: true,
-      timeout: 200_000,
+      timeout: PRIVENT_REQUEST_TIMEOUT_MS,
       headers: { 'X-Visitor-Id': visitorId },
     })) as T;
 
