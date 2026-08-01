@@ -196,6 +196,23 @@ present, 0.9.0's baked version literal was absent, and core's custom-pattern
 code was absent. That fingerprint could name what it ruled out. The first one
 could not.
 
+**Instance — NP-AF, the same day, on this rule's own author.** A measurement
+arrived from privent-n8n, taken against a real backend:
+`{"entities":null,"model":"visitor-lite"}`, forwarded as settled, with the
+conclusion that the visitor route returns no spans at all. Read at
+`privent-backend origin/dev d0afd7c`, that exact model string is emitted by three
+paths — a static/regex tier by design (`:331`), a regex fallback taken when both
+upstreams fail (`:407`), and the default `ml_lite` tier which **does** return
+spans when asked (`:389`) — with `resolveVisitorRiskMode()` defaulting to
+`ml_lite` and this node asking. The response cannot distinguish *lite by design*
+from *default deployment with its upstreams down*.
+
+The rule fired twice in one day, the second time against a measurement that had
+already been accepted upstream and passed down as established. **The routing
+worked as a check rather than as a relay** — the instruction was to verify rather
+than inherit, and verifying is the only reason an unestablished cause did not
+become a customer-facing README claim. A relay would have shipped it.
+
 **Rule.** Before using a feature to identify a version, a build, or a code path,
 check whether the alternatives also have it. State the identification as what it
 excludes: *"this is 0.8.0 and not 0.9.0, because 0.9.0 dropped the guard that is
@@ -330,4 +347,35 @@ because a measurement forced it.
 telemetry to carry entity kinds or counts, and adding an audit path to tokenless.
 The first leaks to close a visibility gap; the second invents an organisation for
 a mode whose whole premise is not having one.
+
+---
+
+## 12. Silence is not enough in a security property
+
+Text about a security property is read for what it implies, not only for what it
+states. A description that claims nothing false can still leave a reader with a
+belief the product does not support — and for a protection claim, that belief is
+the thing being sold.
+
+**Instance — NP-AF.** The README section shipped this morning described what
+tokenless mode gives you and said nothing about detection coverage. It claimed
+nothing false. A user reading *"Risk Check ✅"* and *"Cloud detection mode does
+send text to the backend for scoring"* would reasonably conclude that sending the
+text buys backend detection — and on the measured deployment it bought nothing,
+because the visitor route returned no spans, and no response field says which.
+
+The correction was not to remove a false sentence. There was none. It was to
+**add the two sentences whose absence was doing the work**: what the mode can be
+relied on for (structured PII), what it cannot (names, street addresses), and
+that `Auto`/`Cloud` in tokenless still sends text for scoring — so the privacy
+cost of leaving `Local (Regex)` is paid without a guaranteed return.
+
+**Rule.** For a security property, write what the product does **not** do beside
+what it does, and say which of the two a user can rely on. A mode that protects
+structured PII and not names is a defensible product; the sentence naming the gap
+is what makes it an honest one.
+
+**Test to apply before shipping such text:** if a reasonable user acted on this
+paragraph and later discovered the gap, would they say they were told? Not "was
+anything false" — "were they told".
 
