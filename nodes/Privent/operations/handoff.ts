@@ -3,6 +3,7 @@ import { NodeOperationError } from 'n8n-workflow';
 import type { AuditEvent, HandoffReason } from '@priventai/core';
 import {
   NODE_VERSION,
+  auditFields,
   auditLog,
   buildAuditMetadata,
   resolveContext,
@@ -92,12 +93,13 @@ export async function handleHandoff(
       ...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
     }),
   };
-  void auditLog(ctx, handoffEvent, baseUrl);
+  const auditOutcome = await auditLog(ctx, handoffEvent, baseUrl);
 
   return {
     ...item.json,
     privent: {
       nodeVersion: NODE_VERSION,
+      ...auditFields(auditOutcome),
       handoff: true,
       fromAgentName: ctxAudit.agentName,
       toAgentName: toAgentName ?? null,

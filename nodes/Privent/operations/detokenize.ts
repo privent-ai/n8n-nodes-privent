@@ -7,6 +7,7 @@ import {
   NODE_VERSION,
   N8nHttpVault,
   WorkflowStaticDataVault,
+  auditFields,
   auditLog,
   buildAuditMetadata,
   authWarning,
@@ -131,12 +132,13 @@ export async function handleDetokenize(
         ...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
       }),
     };
-    void auditLog(ctx, blockedEvent, baseUrl);
+    const blockedOutcome = await auditLog(ctx, blockedEvent, baseUrl);
 
     return {
       ...item.json,
       privent: {
         nodeVersion: NODE_VERSION,
+        ...auditFields(blockedOutcome),
         ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
         sessionId,
         detokenized: false,
@@ -222,12 +224,13 @@ export async function handleDetokenize(
       ...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
     }),
   };
-  void auditLog(ctx, event, baseUrl);
+  const auditOutcome = await auditLog(ctx, event, baseUrl);
 
   return {
     ...json,
     privent: {
       nodeVersion: NODE_VERSION,
+      ...auditFields(auditOutcome),
       ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
       sessionId,
       detokenized,
