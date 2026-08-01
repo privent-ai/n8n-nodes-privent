@@ -391,7 +391,7 @@ call sites:
 | | detector set | vault (where the token comes from) | false-positive filter |
 |---|---|---|---|
 | **E4-a** `apiKey` | core's `DEFAULT_DETECTORS` — **10 detectors** — plus org custom patterns (`tokenize.ts:294`, apiKey only) plus backend ML spans from `/v1/risk/score` | **`N8nHttpVault`** — the backend mints, `/v1/vault/find-or-create-batch` (`tokenize.ts:285-288`) | **not applied** |
-| **E4-b** `tokenless` | core's `DEFAULT_DETECTORS` — **10 detectors** — plus backend ML via the visitor path (`privent-http.ts:804`) | **`WorkflowStaticDataVault`** — minted locally in n8n's workflow static data (`tokenize.ts:287`) | **not applied** |
+| **E4-b** `tokenless` | core's `DEFAULT_DETECTORS` — **10 detectors** — plus backend ML via the visitor path **only when the deployment supplies it, which the client cannot tell** (see §9.1) | **`WorkflowStaticDataVault`** — minted locally in n8n's workflow static data (`tokenize.ts:287`) | **not applied** |
 | **E4-c** `local` | `buildLocalDetectors(level)` — **575 detectors**, this package's generated set | `WorkflowStaticDataVault` | **applied** (`isLocalFalsePositive`) |
 
 Three consequences, each of which breaks the transfer on its own:
@@ -410,6 +410,49 @@ Three consequences, each of which breaks the transfer on its own:
 
 > **A green in one sub-cell says nothing about the other two.** Print the
 > sub-cell with every E4 result, the way the contract check prints 3/9.
+
+### 9.1 · Correction — E4-b's ML clause is CONDITIONAL, and the condition is invisible
+
+privent-n8n ran E4-b against a real backend at `7732a76` and measured the visitor
+route directly:
+
+```json
+{"risk_score":0,"risk_level":"LOW","categories":[],"entities":null,
+ "model":"visitor-lite","latency_ms":19}
+```
+
+**The measurement is verified and it stands.** What it establishes is narrower
+than "the visitor route runs a lite scorer that returns no spans at all", and the
+difference is the reason this correction is worth writing.
+
+Read at `privent-backend origin/dev d0afd7c`, `src/risk/risk.service.ts`, the
+string `model: 'visitor-lite'` is emitted by **three distinct paths**:
+
+| path | entities | when |
+|---|---|---|
+| `scoreVisitorLite` static/regex (`:331`) | `null`, with the comment *"No entities on this route"* | `VISITOR_RISK_MODE` is `static_low` or `regex` |
+| `scoreVisitorRegexFallback` (`:407`) | `null` | default mode, **both ML and semantic upstreams failed** |
+| `scoreVisitorMlLite` (`:389`) | `toUtf16Spans(...)` **when `include_entities`** | default mode, upstreams healthy |
+
+`resolveVisitorRiskMode()` defaults to **`ml_lite`** (`visitor-risk-mode.ts:22`),
+and this node **does** ask for spans — `include_entities: true`,
+`shared/privent-http.ts:807`. So the observed response is consistent with a
+deliberate lite tier **and** with a default deployment whose upstreams were down,
+and **the response cannot distinguish them**: same model string, same null
+entities. METHOD §6 — a marker shared by the alternatives cannot select between
+them.
+
+**What this means for the spec, and it is not "delete the ML clause":** ML
+contribution in tokenless is **deployment-dependent and unobservable from the
+client**. Plan E4-b for the case where it does not arrive, because that case
+cannot be detected.
+
+**What it means for the control:** NC-E4-b1 came out stronger than designed —
+privent-n8n's sharpening is correct, the control needed neither a stub nor fault
+injection because their backend genuinely returned nothing for that kind. But on
+a deployment in the default mode with healthy upstreams it may return spans, so
+**the rig must pin `VISITOR_RISK_MODE` and record it beside the result**, or the
+control is flaky for a reason that will look like a product change.
 
 ## 10 · What the rig must supply
 
