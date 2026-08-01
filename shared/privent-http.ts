@@ -927,6 +927,17 @@ export function auditFields(o: AuditOutcome): Record<string, unknown> {
  * image (which does not boot without a licence, so the flavour is cloud). The
  * measured maximum is a FLOOR for a real deployment, not a typical value.
  *
+ * RE-DERIVATION TRIGGER — this rule is not a one-time justification. If anyone
+ * measures this POST ACROSS A REAL NETWORK (self-hosted n8n to a remote backend,
+ * the normal deployment and the one thing the figure above does not contain),
+ * re-apply the rule to that number and change the default. The multiplier does
+ * not need re-arguing; a measurement that contains the network shrinks what the
+ * multiplier has to buy.
+ *
+ * AND IF THE FOURTH STATE APPEARS REGULARLY ON HEALTHY TRAFFIC, that is evidence
+ * to re-derive this deadline — not evidence of a stall, and not a backend bug.
+ * The bound is derived from a floor, so it is the number most likely to be wrong.
+ *
  * BEING WRONG HERE DEGRADES HONESTLY, which is the argument for a tight bound
  * rather than a generous one: a healthy call slower than the deadline is reported
  * as `auditOutcomeKnown: false` — a named state — and never as accepted. The
