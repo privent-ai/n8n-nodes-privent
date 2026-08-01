@@ -1,0 +1,53 @@
+{
+  "_fixture": "A REAL rejected POST /v1/audit/events response body. Not synthesised.",
+  "_why_this_exists": [
+    "A mock that returns rejected:1 proves only that the mock agrees with the assertion.",
+    "These are the bytes a real backend returned to a real malformed request."
+  ],
+
+  "_capture_conditions": {
+    "captured": "2026-08-01",
+    "subject": "privent-backend:cloud, built 2026-06-20, CLOUD build flavour",
+    "NOT_the_subject": "This is NOT E4-a's backend. A verdict about E4-a cannot be drawn from it.",
+    "why_cloud_flavour": "The on-prem image does not boot without a licence (LICENSE_PREBOOT_FAILED code=NO_PUBLIC_KEYS): measured 6 minutes hung with zero log lines. Filed separately as a product finding.",
+    "stack": "Isolated and disposable: fresh postgres migrated by privent-backend:e5c0 (52 tables) + redis 7-alpine. Torn down after capture.",
+    "org_and_key": "Created through the product's own path (POST /auth/register -> /auth/login -> /api-keys/org {keyType: AGENT_SDK}) on the disposable database. Credentials deleted; never committed.",
+    "contract_verified_in_source": "audit-ingest.service.ts:67/:77/:91/:115 (rejected += 1) and :142 (return {accepted, rejected, errors}) — so the shape is not bound to this one image."
+  },
+
+  "_request_that_produced_it": {
+    "method": "POST",
+    "path": "/v1/audit/events",
+    "body": "{\"events\":[{\"eventType\":\"tool_call\"}]}",
+    "note": "Deliberately incomplete — every required field omitted."
+  },
+
+  "_response_status": 200,
+  "_note_status": "A REJECTED event still returns HTTP 200. The rejection is in the body, not the status code.",
+
+  "_TRUNCATION_WARNING": {
+    "finding": "N8N-U",
+    "what": "The `reason` string below is TRUNCATED at 400 characters and does not say so.",
+    "where": "audit-ingest.service.ts:768 -> return parts.join(';').slice(0, 400)",
+    "arithmetic": "'VALIDATION_FAILED:' (18 chars) + 400 = 418, which is the exact length below.",
+    "consequence": "The last item ends mid-sentence at 'framework must be shorter than or equal'. Do NOT read this string as the complete set of validation errors — there is no truncation marker and no count of what was dropped."
+  },
+
+  "_duplicate_note": "This file and reject-1.json in this directory were captured from BYTE-IDENTICAL responses (sha256 of the raw body: d9badd3cb42d658f488d62f39b48b53cc9a36bf7b5bb0561d2655f5794bf9e63). Same request, same response, captured twice. They are ONE observation, not two independent samples.",
+
+  "_scrub_statement": "Checked field by field against each item named as forbidden: no organization id, no API key, no visitor_id, no install_id, no host name, no instance id. `event_id` is the literal string 'unknown' as returned by the server — it was not minted and has not been replaced. Nothing was substituted; the body is as received.",
+
+  "_response_body_verbatim_sha256": "d9badd3cb42d658f488d62f39b48b53cc9a36bf7b5bb0561d2655f5794bf9e63",
+  "_response_body_verbatim": "{\"accepted\":0,\"rejected\":1,\"errors\":[{\"event_id\":\"unknown\",\"reason\":\"VALIDATION_FAILED:eventId must be a UUID;traceId must be shorter than or equal to 255 characters;traceId should not be empty;traceId must be a string;sessionId must be shorter than or equal to 255 characters;sessionId should not be empty;sessionId must be a string;timestamp must be shorter than or equal to 64 characters;timestamp should not be empty;timestamp must be a string;framework must be shorter than or equal\"}]}",
+
+  "_response_body_parsed": {
+    "accepted": 0,
+    "rejected": 1,
+    "errors": [
+      {
+        "event_id": "unknown",
+        "reason": "VALIDATION_FAILED:eventId must be a UUID;traceId must be shorter than or equal to 255 characters;traceId should not be empty;traceId must be a string;sessionId must be shorter than or equal to 255 characters;sessionId should not be empty;sessionId must be a string;timestamp must be shorter than or equal to 64 characters;timestamp should not be empty;timestamp must be a string;framework must be shorter than or equal"
+      }
+    ]
+  }
+}

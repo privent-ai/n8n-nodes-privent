@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { IExecuteFunctions } from 'n8n-workflow';
@@ -35,6 +36,11 @@ import { Privent } from '../nodes/Privent/Privent.node.js';
  * string with structure, not an enum, so nothing here matches on its content —
  * `rejected` and `errors` are asserted by name.
  *
+ * ONE OBSERVATION, NOT TWO. privent-n8n committed two files at `1efbb83`,
+ * `r1.json` and `reject-1.json`, and their bodies are BYTE-IDENTICAL — the same
+ * request and the same response, captured twice. Only `r1.json` is copied here,
+ * and nothing in this suite counts them as independent samples.
+ *
  * THE FIXTURE IS A RECORDED REAL RESPONSE, not a mock. privent-n8n captured it
  * against an isolated stack — `privent-backend:cloud`, fresh postgres, org and
  * AGENT_SDK key minted through the product's own path on a disposable database,
@@ -55,7 +61,19 @@ type IngestResponse = {
   errors: Array<{ event_id: string; reason: string }>;
 };
 
-function recordedRejection(): IngestResponse {
+/**
+ * The fixture as privent-n8n committed it at `1efbb83` — the body plus the
+ * conditions it was captured under, in one file, because bytes without their
+ * conditions are a number nobody can question.
+ */
+interface RecordedCapture {
+  _response_status: number;
+  _response_body_verbatim: string;
+  _response_body_verbatim_sha256: string;
+  _response_body_parsed: IngestResponse;
+}
+
+function capture(): RecordedCapture {
   if (!existsSync(FIXTURE)) {
     throw new Error(
       `The recorded rejection fixture is missing: ${FIXTURE}\n` +
@@ -65,7 +83,11 @@ function recordedRejection(): IngestResponse {
         'agrees with the assertion.',
     );
   }
-  return JSON.parse(readFileSync(FIXTURE, 'utf8')) as IngestResponse;
+  return JSON.parse(readFileSync(FIXTURE, 'utf8')) as RecordedCapture;
+}
+
+function recordedRejection(): IngestResponse {
+  return capture()._response_body_parsed;
 }
 
 function ctx(auditAnswer: unknown, authentication = 'apiKey') {
@@ -135,6 +157,21 @@ async function run(auditAnswer: unknown, authentication = 'apiKey') {
 }
 
 describe('the recorded rejection is a real captured body', () => {
+  it('the bytes are the bytes that were recorded — hashed, not trusted', () => {
+    const c = capture();
+    const computed = createHash('sha256').update(c._response_body_verbatim).digest('hex');
+    expect(computed).toBe(c._response_body_verbatim_sha256);
+    // Parsed and verbatim must agree, or the parsed copy is a second source that
+    // could drift from the bytes it claims to be.
+    expect(JSON.parse(c._response_body_verbatim)).toEqual(c._response_body_parsed);
+  });
+
+  it('a rejected event still returned HTTP 200 — the rejection is in the body', () => {
+    // Asserted because the node reads the body rather than the status, and if
+    // that ever stopped being true the node would be reading the wrong thing.
+    expect(capture()._response_status).toBe(200);
+  });
+
   it('has the shape the backend declares, by field name', () => {
     const body = recordedRejection();
     expect(typeof body.accepted).toBe('number');
@@ -144,13 +181,25 @@ describe('the recorded rejection is a real captured body', () => {
     expect(typeof body.errors[0]?.reason).toBe('string');
   });
 
-  it('carries no value, only names and counts', () => {
-    // The fixture is committed in a PUBLIC repository. This asserts the scrub
-    // rather than trusting it.
-    const raw = readFileSync(FIXTURE, 'utf8');
+  it('the BODY carries no value, only names and counts', () => {
+    // Scoped to the response bytes, not the whole file. The first version of this
+    // check scanned the file and tripped on the fixture's own scrub statement,
+    // which names each forbidden term in order to declare it absent — the check
+    // was measuring the prose rather than the payload. An instrument pointed at
+    // the wrong subject reports about the wrong subject.
+    const body = capture()._response_body_verbatim;
     for (const forbidden of ['pv_live_', 'visitor_id', 'install_id', 'organizationId', 'org_id']) {
-      expect(raw, `fixture must not carry ${forbidden}`).not.toContain(forbidden);
+      expect(body, `the recorded body must not carry ${forbidden}`).not.toContain(forbidden);
     }
+    // A UUID in the body would be an event id that was minted rather than the
+    // server's literal 'unknown'.
+    expect(body).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  });
+
+  it('the scrub was stated by the sender, not inferred by the receiver', () => {
+    const raw = JSON.parse(readFileSync(FIXTURE, 'utf8')) as Record<string, unknown>;
+    expect(typeof raw._scrub_statement).toBe('string');
+    expect(typeof raw._capture_conditions).toBe('object');
   });
 });
 
