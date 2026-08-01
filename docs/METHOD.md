@@ -271,6 +271,45 @@ overtaken this way, **report the number rather than absorbing it** — an overru
 that is reported is a scope record; an overrun that is absorbed is a number
 nobody can audit later.
 
+### 8a. An estimate is void the moment the reviewer changes the design
+
+The rule above says the budget re-opens. This says **when**, and the timing is the
+part that was still being got wrong: reporting the overrun at the end is the wrong
+point in the sequence. If the shape has moved, the estimate is already void, and
+implementing against a dead number produces a gap that has to be explained
+afterwards instead of a number that was correct all along.
+
+**Shape, not detail, is the trigger.** A reviewer who tightens a message or asks
+for one more assertion has changed a detail. A reviewer who selects a different
+mechanism has changed the shape, and the old estimate no longer describes
+anything.
+
+**Instance — NP-AJ, and the cause is measured rather than attributed.** The
+pre-gate costed **option A**: pass a `timeout` option to the host, two lines at
+two call sites, decision logic **4**. The requirements that came back selected
+**option B** — bound it in this package — **plus an operator-visible outcome**.
+Option B needs a deadline helper, a sentinel, a result type so `[]` stops meaning
+four things, and two restructured functions; the visible half needs a field to
+exist before it can be emitted. Final: **63**. The split was published line by line
+so the attribution could be checked rather than asserted:
+7 (constant + sentinel + helper) + 4 (result type) + ~20 (custom-patterns) +
+~28 (visitor, whose timed-out throw must sit **outside** the existing `catch` or a
+hang gets rewrapped as a failed request) + 4 (`tokenize.ts`).
+
+**Counter-instance, and it is the more important half — the same excuse was
+tested elsewhere the same day and did not apply.** `privent-document-engine` ran a
+3× overrun, checked whether a late reviewer constraint caused it, and found **~60
+of 71 lines traced to requirements already on the table**. The late constraint was
+not the cause; the estimate had simply been wrong.
+
+**Rule.** When a reviewer changes an item's *shape*, the reviewer says *re-derive
+the budget before implementing*. If they do not and the implementer notices the
+shape has moved, **re-derive anyway and say so in one line** — do not implement
+against a dead number and report the gap afterwards. And when an overrun is
+attributed to a late change, **publish the split**: an overrun's cause is a
+measurement, not an attribution, and the two cases above are distinguishable only
+because both were measured.
+
 ---
 
 ## 9. A simulation with no comparator teaches whatever it says
