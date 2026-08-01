@@ -109,6 +109,13 @@ export interface HttpExecOpts {
   /** Endpoints that should reject (simulate transport failure). */
   failUrls?: string[];
   /**
+   * Endpoints that ACCEPT the request and never answer — a hang, not an error.
+   * `failUrls` cannot produce this case and no arm of this suite could before:
+   * a `catch` runs when a request settles, and the point of NP-AJ is that a hang
+   * never settles. Used to prove a bound fires in this package's own code.
+   */
+  hangUrls?: string[];
+  /**
    * Endpoints that should reject with an HTTP STATUS, e.g. `{ '/v1/risk/score': 402 }`.
    *
    * `failUrls` throws a bare `Error`, which carries no status — so no test could
@@ -176,6 +183,9 @@ export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
     async (_cred: string, reqOpts: { url: string; body: Record<string, unknown> }) => {
       const { url, body } = reqOpts;
       calls.push({ url, body });
+      if (opts.hangUrls?.includes(url)) {
+        return await new Promise<never>(() => {}); // never answers
+      }
       if (opts.failUrls?.includes(url)) {
         throw new Error(`simulated transport failure: ${url}`);
       }

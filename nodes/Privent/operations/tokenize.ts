@@ -297,7 +297,8 @@ export async function handleTokenize(
   // 1b. Org custom patterns (authoritative). apiKey mode only, cached + fail-open
   //     (fetchActiveCustomDetectors returns [] for tokenless/local or any error),
   //     so custom masking applies even when ML/risk is skipped or unreachable.
-  const customDetectors = await fetchActiveCustomDetectors(ctx, baseUrl);
+  const { detectors: customDetectors, timedOut: customPatternsTimedOut } =
+    await fetchActiveCustomDetectors(ctx, baseUrl);
   const customSpans =
     customDetectors.length > 0 ? detectCustomMatches(text, customDetectors) : [];
 
@@ -426,6 +427,7 @@ export async function handleTokenize(
       flagged_for_review: flaggedForReview,
       detection_mode: detectionMode,
       ...(mlDegraded ? { ml_degraded: true, ml_degraded_status: mlDegraded.status } : {}),
+      ...(customPatternsTimedOut ? { custom_patterns_timed_out: true } : {}),
       ...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
     }),
   };
@@ -449,6 +451,10 @@ export async function handleTokenize(
       })),
       risk,
       ...(mlDegraded ? { mlDegraded } : {}),
+      // Emitted only when the custom-pattern fetch was CUT, never when it merely
+      // returned nothing: an operator seeing this knows org patterns were not
+      // applied to this item, which an empty result alone could never tell them.
+      ...(customPatternsTimedOut ? { customPatternsTimedOut: true } : {}),
       flaggedForReview,
     },
   };

@@ -357,7 +357,79 @@ interface CustomDetectorCacheEntry {
 }
 
 const _customDetectorCache = new Map<string, CustomDetectorCacheEntry>();
+/**
+ * Custom-pattern fetch result. `timedOut` exists because `[]` had to mean four
+ * different things — not apiKey mode, no credential, an HTTP error, and a hang —
+ * and the last one is the only one the operator can do something about.
+ */
+export interface CustomDetectorFetch {
+  detectors: CustomDetector[];
+  timedOut: boolean;
+}
+
 const CUSTOM_DETECTOR_TTL_SEC = 300;
+
+/**
+ * How long a PREREQUISITE call may hold an execution. A SETTING with a
+ * PROVISIONAL default — the marker is deliberate and comes off when a
+ * measurement lands (see the trigger below).
+ *
+ * Applies to the two calls that had no ceiling of their own and inherited one:
+ * `/v1/custom-patterns/active` and `/v1/visitor/credentials` (NP-AJ). Both are
+ * prerequisites — they exist to enable a scoring call, they run before it, and
+ * an execution waits on them.
+ *
+ * RULE A, which needs no measurement and settles the direction:
+ *
+ *   No prerequisite may carry a ceiling larger than the call it prepares for.
+ *
+ * The scoring call's ceiling is a CHOSEN 200_000 (ML cold start). Before this
+ * change both prerequisites inherited 300_000 from the host — 1.5x the call they
+ * prepare for — because nobody had chosen anything and the host's default
+ * applied (`@n8n/backend-network@1.2.4` sets `axios.defaults.timeout = 300000`,
+ * measured in `n8nio/n8n:2.28.7`). Rule A alone makes 300_000 indefensible
+ * whatever the eventual number is.
+ *
+ * THE VALUE IS A TRANSFER, NOT A MEASUREMENT, and says so: neither endpoint has
+ * a measured cost and this package cannot reach a backend. 5_000 is the only
+ * other CHOSEN non-ML ceiling in this file (telemetry) and these two are the same
+ * class of work — validate and read, or mint and sign; no ML on either path. It
+ * is also ~94x the nearest measured cost in the programme (the audit ingest's
+ * observed max of 53.11 ms, which is validate + one database write).
+ *
+ * RE-DERIVATION TRIGGER: when these two endpoints are measured on a rig that can
+ * reach a backend, apply the deadline rule to THEIR numbers — 10x the slowest
+ * measured healthy round-trip, rounded up to the nearest 100 ms — and drop the
+ * word provisional. The two may diverge then; one constant today reflects one
+ * basis, not a claim that the endpoints cost the same.
+ *
+ * BEING WRONG HERE FAILS OPEN, which is what permits a provisional value: a
+ * prerequisite cut short degrades the same way an erroring one already did, and
+ * the item now SAYS which happened.
+ */
+export const PREREQUISITE_TIMEOUT_MS = 5000;
+
+/** Returned instead of a value when a bounded call did not answer in time. */
+export const TIMED_OUT = Symbol('privent.timedOut');
+
+/**
+ * Bounds a call IN THIS PACKAGE rather than relying on the host to cut it.
+ *
+ * The host would: a `timeout` option is passed through to axios
+ * (`@n8n/backend-network` `http/axios/request.js:13-17`). That was measured on
+ * ONE host image, and NP-AH is the standing reason not to assume the host is the
+ * version we measured — so the bound is ours, and the host's own ceiling stays
+ * underneath it as a second line.
+ *
+ * `AbortSignal.timeout`, not `setTimeout`: this package's gate refuses the
+ * latter, and the refusal is right — see `auditLog`.
+ */
+async function withDeadline<T>(work: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
+  const expiry = new Promise<typeof TIMED_OUT>((resolve) => {
+    AbortSignal.timeout(ms).addEventListener('abort', () => resolve(TIMED_OUT), { once: true });
+  });
+  return Promise.race([work, expiry]);
+}
 
 function compileCustomDetectors(rows: ActiveCustomPattern[]): CustomDetector[] {
   const out: CustomDetector[] = [];
@@ -398,40 +470,50 @@ function compileCustomDetectors(rows: ActiveCustomPattern[]): CustomDetector[] {
 export async function fetchActiveCustomDetectors(
   ctx: IExecuteFunctions,
   baseUrl: string,
-): Promise<CustomDetector[]> {
-  if (getAuthMode(ctx) !== 'apiKey') return [];
+  timeoutMs: number = PREREQUISITE_TIMEOUT_MS,
+): Promise<CustomDetectorFetch> {
+  if (getAuthMode(ctx) !== 'apiKey') return { detectors: [], timedOut: false };
 
   let keyHash: string;
   try {
     const creds = await ctx.getCredentials('priventApi');
     keyHash = await sha256short(String(creds.apiKey ?? ''));
   } catch {
-    return [];
+    return { detectors: [], timedOut: false };
   }
 
   const nowSec = Math.floor(Date.now() / 1000);
   const cached = _customDetectorCache.get(keyHash);
-  if (cached && cached.expiresAt > nowSec) return cached.detectors;
+  if (cached && cached.expiresAt > nowSec) return { detectors: cached.detectors, timedOut: false };
 
   let rows: unknown;
   try {
-    rows = await ctx.helpers.httpRequestWithAuthentication.call(ctx, 'priventApi', {
-      method: 'GET',
-      baseURL: baseUrl,
-      url: '/v1/custom-patterns/active',
-      json: true,
-    });
+    const raced = await withDeadline(
+      ctx.helpers.httpRequestWithAuthentication.call(ctx, 'priventApi', {
+        method: 'GET',
+        baseURL: baseUrl,
+        url: '/v1/custom-patterns/active',
+        json: true,
+      }) as Promise<unknown>,
+      timeoutMs,
+    );
+    // A hang is not an error and `catch` never sees it: a `catch` runs when the
+    // request SETTLES, and a hang never settles. Fail-open protects against
+    // errors and does nothing against silence — so silence gets its own branch,
+    // and the item says which one happened. NP-AJ.
+    if (raced === TIMED_OUT) return { detectors: [], timedOut: true };
+    rows = raced;
   } catch {
-    return []; // fail-open
+    return { detectors: [], timedOut: false }; // fail-open
   }
-  if (!Array.isArray(rows)) return [];
+  if (!Array.isArray(rows)) return { detectors: [], timedOut: false };
 
   const detectors = compileCustomDetectors(rows as ActiveCustomPattern[]);
   _customDetectorCache.set(keyHash, {
     detectors,
     expiresAt: nowSec + CUSTOM_DETECTOR_TTL_SEC,
   });
-  return detectors;
+  return { detectors, timedOut: false };
 }
 
 interface VisitorCacheEntry {
@@ -456,7 +538,11 @@ function httpErrorStatus(err: unknown): number | undefined {
  * Cached per-baseUrl in workflow static data; reused while >5 min from expiry.
  * Minting uses the UNauthenticated helper — `/v1/visitor/credentials` is public.
  */
-export async function resolveVisitorId(ctx: IExecuteFunctions, baseUrl: string): Promise<string> {
+export async function resolveVisitorId(
+  ctx: IExecuteFunctions,
+  baseUrl: string,
+  timeoutMs: number = PREREQUISITE_TIMEOUT_MS,
+): Promise<string> {
   const staticData = ctx.getWorkflowStaticData('global');
   const cache = (staticData.priventVisitor ??= {}) as Record<string, VisitorCacheEntry>;
 
@@ -466,15 +552,18 @@ export async function resolveVisitorId(ctx: IExecuteFunctions, baseUrl: string):
     return cached.visitorId;
   }
 
-  let res: { visitor_id?: unknown; expires_at?: unknown };
+  let raced: { visitor_id?: unknown; expires_at?: unknown } | typeof TIMED_OUT;
   try {
-    res = (await ctx.helpers.httpRequest({
-      method: 'POST',
-      baseURL: baseUrl,
-      url: '/v1/visitor/credentials',
-      body: {},
-      json: true,
-    })) as { visitor_id?: unknown; expires_at?: unknown };
+    raced = (await withDeadline(
+      ctx.helpers.httpRequest({
+        method: 'POST',
+        baseURL: baseUrl,
+        url: '/v1/visitor/credentials',
+        body: {},
+        json: true,
+      }) as Promise<{ visitor_id?: unknown; expires_at?: unknown }>,
+      timeoutMs,
+    )) as { visitor_id?: unknown; expires_at?: unknown } | typeof TIMED_OUT;
   } catch (err) {
     const status = httpErrorStatus(err);
     if (status === 404) {
@@ -497,8 +586,22 @@ export async function resolveVisitorId(ctx: IExecuteFunctions, baseUrl: string):
     );
   }
 
-  const visitorId = res.visitor_id;
-  const expiresAt = res.expires_at;
+  // Thrown outside the `catch` above on purpose: a hang is not a failed request
+  // and must not be reported as one. The message names the wait, so a bounded
+  // wait and a successful mint are never the same thing to an operator. NP-AJ.
+  if (raced === TIMED_OUT) {
+    throw new NodeOperationError(
+      ctx.getNode(),
+      `Privent did not answer the visitor-credential request within ${timeoutMs} ms, so tokenless mode has no credential to send.`,
+      {
+        description:
+          'The request was not refused — it went unanswered, and the node stopped waiting rather than holding the execution. Check that the Base URL points at a reachable Privent deployment.',
+      },
+    );
+  }
+
+  const visitorId = raced.visitor_id;
+  const expiresAt = raced.expires_at;
   if (typeof visitorId !== 'string' || typeof expiresAt !== 'number') {
     throw new NodeOperationError(
       ctx.getNode(),
