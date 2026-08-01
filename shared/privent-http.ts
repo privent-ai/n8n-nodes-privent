@@ -244,9 +244,26 @@ export function authWarning(ctx: IExecuteFunctions): string | undefined {
 /** Reads the backend `baseUrl` for the active auth mode. apiKey →
  *  `priventApi.baseUrl` (unchanged); tokenless → `priventVisitorApi.baseUrl`. */
 export async function getPriventBaseUrl(ctx: IExecuteFunctions): Promise<string> {
-  const credName = getAuthMode(ctx) === 'tokenless' ? 'priventVisitorApi' : 'priventApi';
+  const tokenless = getAuthMode(ctx) === 'tokenless';
+  const credName = tokenless ? 'priventVisitorApi' : 'priventApi';
   const creds = await ctx.getCredentials(credName);
-  return creds.baseUrl as string;
+  const baseUrl = typeof creds.baseUrl === 'string' ? creds.baseUrl.trim() : '';
+  if (baseUrl.length === 0) {
+    // Empty is not a value; it is a field somebody cleared. Both credentials
+    // default Base URL to Privent Cloud and n8n fills that default at read time,
+    // so an empty string can only arrive one way: an operator deleted it, which
+    // is what they do when they mean "not Privent" — and before this check the
+    // node issued its requests against nothing and reported no error. See N8N-R.
+    throw new NodeOperationError(
+      ctx.getNode(),
+      `Base URL is empty on the ${tokenless ? 'Privent Tokenless API' : 'Privent API'} credential, so there is nowhere to send this.`,
+      {
+        description:
+          'Set Base URL to your self-hosted Privent deployment, or to https://api.privent.ai for Privent Cloud. It is left empty only by clearing it, so nothing was sent.',
+      },
+    );
+  }
+  return baseUrl;
 }
 
 /** The apiKey credential's configured vault backend (audit `vault_backend`).

@@ -29,7 +29,7 @@ export class PriventApi implements ICredentialType {
       type: 'string',
       default: 'https://api.privent.ai',
       description:
-        'Privent Cloud API base URL. Override only for self-hosted Privent deployments.',
+        'Where this credential sends token, risk and audit traffic. Left unchanged it points at Privent Cloud — self-hosted deployments must set their own URL. Clearing the field is refused rather than silently sent to.',
     },
     {
       displayName: 'Vault Backend',

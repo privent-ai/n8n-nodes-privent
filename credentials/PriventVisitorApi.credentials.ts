@@ -23,7 +23,7 @@ export class PriventVisitorApi implements ICredentialType {
       type: 'string',
       default: 'https://api.privent.ai',
       description:
-        'Privent backend base URL. Tokenless mode mints an anonymous visitor id against it — the backend must have visitor auth enabled.',
+        'Where Tokenless mode mints its anonymous visitor id and sends risk and telemetry traffic. Left unchanged it points at Privent Cloud — self-hosted deployments must set their own URL. The backend must have visitor auth enabled.',
     },
   ];
 
