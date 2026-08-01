@@ -989,17 +989,12 @@ export function safeFrameworkVersion(): string | undefined {
   if (_fwRead) return _fwVersion;
   _fwRead = true;
   try {
-    // Dynamic require, not a static import: `n8n-workflow` is a PEER the host
-    // supplies at runtime, and its `package.json` is not in that package's
-    // `exports` map, so a static import cannot resolve it. The try/catch is
-    // the contract — an unresolvable peer leaves the version undefined.
-    //
-    // The eslint-disable that used to sit here named
-    // `@typescript-eslint/no-require-imports`, a rule this config does not
-    // register: a directive protecting against nothing, which ESLint itself
-    // reported as an error once shared/ entered lint scope. If that plugin is
-    // ever registered, this line needs a real answer — recorded as F-G, not
-    // left as a TODO in the code.
+    // The host picks which copy of `n8n-workflow` answers, at install time, so the
+    // read is attempted at runtime and must tolerate failing — the try/catch is
+    // that contract. A static import would not compile here anyway
+    // (`resolveJsonModule` is unset) and would bind at build time to the build
+    // machine's copy, which is the mistake NP-O and NP-AB exist about. F-G, NP-AH.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pkg = require('n8n-workflow/package.json') as { version?: unknown };
     if (typeof pkg.version === 'string' && pkg.version.length > 0) _fwVersion = pkg.version;
   } catch {
