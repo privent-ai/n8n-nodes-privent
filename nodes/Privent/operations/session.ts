@@ -2,6 +2,7 @@ import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import type { AuditEvent } from '@priventai/core';
 import {
+  auditFields,
   auditLog,
   buildAuditMetadata,
   isUuid,
@@ -131,7 +132,7 @@ export async function handleSession(
         : {}),
     }),
   };
-  void auditLog(ctx, sessionOpen, baseUrl);
+  const auditOutcome = await auditLog(ctx, sessionOpen, baseUrl);
 
   return {
     ...item.json,
@@ -140,5 +141,10 @@ export async function handleSession(
     startedAt,
     executionId,
     agentName,
+    // Session's item is flat rather than nested under `privent`, so the audit
+    // outcome sits beside the rest of it. The four states are reported here for
+    // the same reason as everywhere else: silence must mean accepted and nothing
+    // else. NP-AG.
+    ...auditFields(auditOutcome),
   };
 }

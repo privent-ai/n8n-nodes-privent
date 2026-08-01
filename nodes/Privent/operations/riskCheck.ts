@@ -3,6 +3,7 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import type { AuditEvent } from '@priventai/core';
 import {
   NODE_VERSION,
+  auditFields,
   auditLog,
   buildAuditMetadata,
   getAuthMode,
@@ -123,13 +124,14 @@ export async function executeRiskCheck(ctx: IExecuteFunctions): Promise<INodeExe
         ...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
       }),
     };
-    void auditLog(ctx, event, baseUrl);
+    const auditOutcome = await auditLog(ctx, event, baseUrl);
 
     out.push({
       json: {
         ...item.json,
         privent: {
           nodeVersion: NODE_VERSION,
+          ...auditFields(auditOutcome),
           risk_score: risk.risk_score,
           risk_level: risk.risk_level,
           categories: risk.categories,

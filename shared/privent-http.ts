@@ -874,23 +874,133 @@ export async function riskScoreBatch(
   }));
 }
 
-/** Best-effort audit emission (fire-and-forget). */
+/**
+ * The audit outcome as item fields. One helper so all seven call sites phrase the
+ * four states identically — text that lets *nothing sent* read as *sent and
+ * accepted* reproduces the finding inside the fix.
+ *
+ * `auditAttempted` is emitted always, because its absence is what the accepted
+ * and not-sent states would otherwise share. The rejection fields appear only
+ * when there is a rejection, so silence means accepted and means nothing else.
+ */
+export function auditFields(o: AuditOutcome): Record<string, unknown> {
+  return {
+    auditAttempted: o.attempted,
+    ...(o.attempted ? { auditOutcomeKnown: o.outcomeKnown } : {}),
+    ...(o.rejected ? { auditRejected: true, ...(o.reason ? { auditRejectedReason: o.reason } : {}) } : {}),
+  };
+}
+
+/**
+ * How long an item waits for the audit ingest to answer before it is emitted
+ * with the outcome unknown. A SETTING with a default, not a constant.
+ *
+ * PROVISIONAL. The ruling on NP-AG requires this to be derived from a
+ * measurement of what `POST /v1/audit/events` actually costs against a reachable
+ * backend. No such measurement exists yet — privent-n8n's ingest probe captured
+ * response bodies but no timing, and this repository cannot reach a backend
+ * (NP-K, plus the standing constraint on the workspace `.env`). privent-n8n is
+ * taking it; when it lands this default is replaced and its basis recorded.
+ *
+ * It is deliberately NOT `priventRequest`'s blanket `timeout: 200_000`, whose
+ * stated basis is the backend ML budget on a cold start. The audit POST runs no
+ * ML, so that ceiling would let a hanging ingest hold an execution for two
+ * hundred seconds — the silent stall a bounded wait exists to prevent. See NP-AJ.
+ *
+ * 2000 ms is a placeholder chosen to be obviously provisional rather than
+ * plausibly derived: short enough that a stall is visible in a workflow, long
+ * enough that a healthy round-trip is not routinely cut off. It carries no
+ * authority and must not acquire any by sitting here.
+ */
+export const AUDIT_OUTCOME_DEADLINE_MS = 2000;
+
+/**
+ * What the node learned about its own audit event, at the moment the item was
+ * built. Four states, and the fourth is the one a bounded wait creates:
+ *
+ *   attempted=false                     nothing sent — non-apiKey mode
+ *   attempted, known, rejected=false    sent and accepted
+ *   attempted, known, rejected=true     sent and rejected, `reason` verbatim
+ *   attempted, known=false              sent, outcome not known in time
+ *
+ * The fourth must never be reported as the second. That collapse is the finding
+ * (NP-AG), and a bounded wait without a name for its own expiry reproduces it.
+ */
+export interface AuditOutcome {
+  attempted: boolean;
+  outcomeKnown: boolean;
+  rejected?: boolean;
+  reason?: string;
+}
+
+/** The ingest response body. `privent-backend origin/dev 3187d28`,
+ *  `audit-ingest.service.ts:33-37`. */
+interface AuditIngestResponse {
+  accepted?: number;
+  rejected?: number;
+  errors?: Array<{ event_id?: string; reason?: string }>;
+}
+
+/**
+ * Best-effort audit emission. The DATA PATH guarantee is unchanged — a failed or
+ * slow audit never breaks tokenization, and the caller is never thrown at.
+ *
+ * What changed is that fire-and-forget had been implemented as
+ * discard-and-forget: the response was thrown away and the catch was bare, so a
+ * rejection was indistinguishable from a success and from never having been
+ * sent. The server does not log its own rejections either
+ * (`audit-ingest.service.ts` :70, :78, :94, :116) — so the body it does return is
+ * the only place the rejection exists.
+ */
 export async function auditLog(
   ctx: IExecuteFunctions,
   event: AuditEvent,
   baseUrl: string,
-): Promise<void> {
+  deadlineMs: number = AUDIT_OUTCOME_DEADLINE_MS,
+): Promise<AuditOutcome> {
   // Audit is org-scoped and backend-bound — anonymous visitors have no org and
   // local mode has no backend at all, so skip entirely for any non-apiKey mode
   // (don't rely on the swallow / waste a round-trip).
-  if (getAuthMode(ctx) !== 'apiKey') return;
-  try {
-    await priventRequest(ctx, baseUrl, 'POST', '/v1/audit/events', {
-      events: [serializeForWire(event)],
-    });
-  } catch {
-    // Fire-and-forget: audit failures never break the data path.
-  }
+  if (getAuthMode(ctx) !== 'apiKey') return { attempted: false, outcomeKnown: false };
+
+  const post = priventRequest<AuditIngestResponse>(ctx, baseUrl, 'POST', '/v1/audit/events', {
+    events: [serializeForWire(event)],
+  })
+    .then((body): AuditOutcome => {
+      const rejected = typeof body?.rejected === 'number' && body.rejected > 0;
+      const reason = body?.errors?.[0]?.reason;
+      // `reason` is passed through untouched. The server truncates it at 400
+      // characters with no marker and no count of what was dropped (N8N-U); a
+      // second truncation on top of an unmarked one would make the operator's
+      // copy wrong in a way neither side reports.
+      return {
+        attempted: true,
+        outcomeKnown: true,
+        rejected,
+        ...(rejected && typeof reason === 'string' ? { reason } : {}),
+      };
+    })
+    // A transport failure is a known outcome too: it did not reach the ingest.
+    .catch((err: unknown): AuditOutcome => ({
+      attempted: true,
+      outcomeKnown: true,
+      rejected: true,
+      reason: `TRANSPORT_FAILED:${(err as { httpCode?: string })?.httpCode ?? (err as Error)?.constructor?.name ?? 'unknown'}`,
+    }));
+
+  // The deadline is `AbortSignal.timeout`, not `setTimeout`: this package's gate
+  // refuses `setTimeout` outright (`@n8n/community-nodes/no-restricted-globals`),
+  // and the refusal is right — a timer a community node leaves behind outlives
+  // the execution. The abort signal is owned by the runtime and needs no cleanup.
+  const expiry = new Promise<AuditOutcome>((resolve) => {
+    AbortSignal.timeout(deadlineMs).addEventListener(
+      'abort',
+      () => resolve({ attempted: true, outcomeKnown: false }),
+      { once: true },
+    );
+  });
+
+  return Promise.race([post, expiry]);
 }
 
 /**

@@ -3,6 +3,7 @@ import { NodeOperationError } from 'n8n-workflow';
 import type { AuditEvent, AuditEventType } from '@priventai/core';
 import {
   NODE_VERSION,
+  auditFields,
   auditLog,
   buildAuditMetadata,
   resolveContext,
@@ -92,12 +93,13 @@ export async function handleAudit(
     nodeId: node.id,
     metadata: buildAuditMetadata(auditCtx, node, metadata),
   };
-  void auditLog(ctx, event, baseUrl);
+  const auditOutcome = await auditLog(ctx, event, baseUrl);
 
   return {
     ...item.json,
     privent: {
       nodeVersion: NODE_VERSION,
+      ...auditFields(auditOutcome),
       sessionId,
       auditEventEmitted: true,
       eventType,

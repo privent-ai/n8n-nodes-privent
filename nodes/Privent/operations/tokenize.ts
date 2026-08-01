@@ -6,6 +6,7 @@ import {
   NODE_VERSION,
   N8nHttpVault,
   WorkflowStaticDataVault,
+  auditFields,
   auditLog,
   buildAuditMetadata,
   buildLocalDetectors,
@@ -232,6 +233,9 @@ async function handleTokenizeLocal(ctx: IExecuteFunctions, i: number): Promise<I
     [textField]: tokenizedText,
     privent: {
       nodeVersion: NODE_VERSION,
+      // Local mode sends no audit event at all, and that is a state of its own
+      // rather than the absence of one — see NP-AG's four states.
+      ...auditFields({ attempted: false, outcomeKnown: false }),
       ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
       sessionId,
       entities: entities.map((e) => ({
@@ -425,13 +429,14 @@ export async function handleTokenize(
       ...(triggerMode !== undefined ? { trigger_mode: triggerMode } : {}),
     }),
   };
-  void auditLog(ctx, tokenizeEvent, baseUrl);
+  const auditOutcome = await auditLog(ctx, tokenizeEvent, baseUrl);
 
   return {
     ...item.json,
     [textField]: tokenizedText,
     privent: {
       nodeVersion: NODE_VERSION,
+      ...auditFields(auditOutcome),
       ...(authWarning(ctx) ? { authWarning: authWarning(ctx) } : {}),
       sessionId,
       entities: entities.map((e) => ({
