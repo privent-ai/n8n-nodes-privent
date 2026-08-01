@@ -173,6 +173,43 @@ describe('sent and rejected — the state that was invisible', () => {
   });
 });
 
+describe('the fourth state — sent, outcome not known at item construction', () => {
+  // A bounded await is only honest if the deadline expiring has a name. Without
+  // it, a slow ingest folds into "accepted", which is the exact collapse this
+  // item was opened to prevent — and it is the arm that would rot silently,
+  // because nothing else in the suite would notice it disappearing.
+  //
+  // The deadline VALUE is not chosen here. It is passed in, because it must be
+  // derived from a measurement of what the audit POST actually costs against a
+  // reachable backend, and no such measurement exists yet — privent-n8n's
+  // ingest probe captured bodies but no timing.
+  it('a sink that never answers within the deadline is reported as unknown, not accepted', async () => {
+    const { exec } = ctx(new Promise(() => {}) /* never resolves */);
+    const out = await new Privent().execute.call(exec);
+    await new Promise((r) => setImmediate(r));
+    const privent = (out[0]![0]!.json as { privent: Record<string, unknown> }).privent;
+
+    expect(privent.auditAttempted).toBe(true);
+    expect(privent.auditOutcomeKnown).toBe(false);
+    // The failure this arm exists to catch: a stalled POST reported as success.
+    expect(privent.auditRejected).toBeUndefined();
+  });
+
+  it('the data path is not stalled by a sink that never answers', async () => {
+    const started = Date.now();
+    const { exec } = ctx(new Promise(() => {}));
+    const out = await new Privent().execute.call(exec);
+    const elapsed = Date.now() - started;
+    const privent = (out[0]![0]!.json as { privent: Record<string, unknown> }).privent;
+
+    expect(privent.sessionId).toBe('123e4567-e89b-42d3-a456-426614174222');
+    // Bounded: the item is produced without waiting for a sink that never
+    // answers. The bound itself is asserted loosely here because its value is
+    // derived elsewhere; what this pins is that a bound exists at all.
+    expect(elapsed).toBeLessThan(30_000);
+  });
+});
+
 describe('the other two states stay distinguishable', () => {
   it('sent and accepted says nothing — silence is correct here and only here', async () => {
     const { privent, calls } = await run({ accepted: 1, rejected: 0, errors: [] });
