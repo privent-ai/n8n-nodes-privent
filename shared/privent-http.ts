@@ -892,27 +892,51 @@ export function auditFields(o: AuditOutcome): Record<string, unknown> {
 }
 
 /**
- * How long an item waits for the audit ingest to answer before it is emitted
- * with the outcome unknown. A SETTING with a default, not a constant.
+ * How long an item waits for the audit ingest to answer before it is emitted with
+ * the outcome unknown. A SETTING with a DERIVED default — no longer provisional.
  *
- * PROVISIONAL. The ruling on NP-AG requires this to be derived from a
- * measurement of what `POST /v1/audit/events` actually costs against a reachable
- * backend. No such measurement exists yet — privent-n8n's ingest probe captured
- * response bodies but no timing, and this repository cannot reach a backend
- * (NP-K, plus the standing constraint on the workspace `.env`). privent-n8n is
- * taking it; when it lands this default is replaced and its basis recorded.
+ * DERIVATION RULE, stated so the number can be re-derived rather than trusted:
  *
- * It is deliberately NOT `priventRequest`'s blanket `timeout: 200_000`, whose
- * stated basis is the backend ML budget on a cold start. The audit POST runs no
- * ML, so that ceiling would let a hanging ingest hold an execution for two
- * hundred seconds — the silent stall a bounded wait exists to prevent. See NP-AJ.
+ *   deadline = 10 × the slowest measured healthy round-trip,
+ *              rounded up to the nearest 100 ms
+ *            = 10 × 53.11 ms = 531.1 ms → 600 ms
  *
- * 2000 ms is a placeholder chosen to be obviously provisional rather than
- * plausibly derived: short enough that a stall is visible in a workflow, long
- * enough that a healthy round-trip is not routinely cut off. It carries no
- * authority and must not acquire any by sitting here.
+ * The multiplier is not decoration. The measurement below was taken with client
+ * and server on the SAME DOCKER BRIDGE NETWORK, so its network component is
+ * approximately zero, and the normal deployment — self-hosted n8n against a
+ * remote backend — is not in that number at all. Ten buys a ~550 ms budget for
+ * the network round-trip, cold starts, load and concurrency that the measurement
+ * does not cover, on top of a ~53 ms server budget that it does.
+ *
+ * MEASUREMENT (privent-n8n, `privent-backend:e5c0`, cloud flavour, isolated
+ * `postgres:16-alpine` + `redis:7-alpine`, same bridge network, warm, n = 25):
+ *
+ *   accepted   min 12.56  p50 18.53  p90 35.46  p95 40.59  max 53.11  mean 22.11
+ *   rejected   min  2.91  p50  5.03  p90  7.68  p95  7.75  max 10.77  mean  5.19
+ *
+ * The accepted path does a database insert; the rejected path fails validation
+ * without touching the database — ~3.7× at p50. The deadline is anchored on the
+ * ACCEPTED path because it is the slower one and it is the healthy one.
+ *
+ * Reported as "p99", and at n = 25 the p99 index is 25 — so that figure IS the
+ * observed maximum of 25 samples, not a tail estimate. It is used here as the
+ * observed maximum, which is what it is.
+ *
+ * WHAT THE MEASUREMENT DOES NOT COVER, so the default cannot be read as implying
+ * it: any network latency, cold starts, load, concurrent traffic, and the on-prem
+ * image (which does not boot without a licence, so the flavour is cloud). The
+ * measured maximum is a FLOOR for a real deployment, not a typical value.
+ *
+ * BEING WRONG HERE DEGRADES HONESTLY, which is the argument for a tight bound
+ * rather than a generous one: a healthy call slower than the deadline is reported
+ * as `auditOutcomeKnown: false` — a named state — and never as accepted. The
+ * failure mode of too short is a truthful "not known"; the failure mode of too
+ * long is the silent stall this bound exists to prevent (NP-AJ).
+ *
+ * Deliberately NOT `priventRequest`'s blanket `timeout: 200_000`, whose stated
+ * basis is the backend ML budget on a cold start. The audit POST runs no ML.
  */
-export const AUDIT_OUTCOME_DEADLINE_MS = 2000;
+export const AUDIT_OUTCOME_DEADLINE_MS = 600;
 
 /**
  * What the node learned about its own audit event, at the moment the item was
