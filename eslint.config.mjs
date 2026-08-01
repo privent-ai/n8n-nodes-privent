@@ -1,6 +1,7 @@
 import { defineConfig } from 'eslint/config';
 import { n8nCommunityNodesPlugin } from '@n8n/eslint-plugin-community-nodes';
 import tsParser from '@typescript-eslint/parser';
+import tsPlugin from '@typescript-eslint/eslint-plugin';
 import n8nNodesPlugin from 'eslint-plugin-n8n-nodes-base';
 
 // Mirrors `@n8n/scan-community-package@0.30.0`'s own `buildScanConfig()`
@@ -74,4 +75,27 @@ export default defineConfig(
   { files: ['**/*.json'], languageOptions: { parser: tsParser } },
   // The nodes/credentials rulesets walk a TSESTree AST too.
   { files: ['**/*.ts'], languageOptions: { parser: tsParser } },
+  // ONE rule from @typescript-eslint, registered deliberately, over source only.
+  //
+  // A line in shared/ once carried `eslint-disable-next-line
+  // @typescript-eslint/no-require-imports`. The rule was never registered here,
+  // so the directive protected against nothing and ESLint reported it as unused;
+  // 49e0c18 removed the directive. Measured after the fact: registering the rule
+  // makes it fire, once, on that same line. So removing a suppression without
+  // registering the rule it suppressed did not fix the diagnostic — it hid that
+  // there had been one, and the line has been unreported rather than clean since.
+  //
+  // This WIDENS the gate past `@n8n/scan-community-package`, which does not run
+  // this plugin. That is a decision, and it is the second one of its kind: F-F
+  // records the first, where shared/ was brought into lint scope even though the
+  // scanner's SOURCE_FILE_PATTERNS never sees it. A third widening now has to
+  // argue against two precedents rather than one.
+  //
+  // Scoped to source: dist/ is excluded because the bundled @priventai/core
+  // carries requires this package does not own.
+  {
+    files: ['shared/**/*.ts', 'nodes/**/*.ts', 'credentials/**/*.ts'],
+    plugins: { '@typescript-eslint': tsPlugin },
+    rules: { '@typescript-eslint/no-require-imports': 'error' },
+  },
 );
