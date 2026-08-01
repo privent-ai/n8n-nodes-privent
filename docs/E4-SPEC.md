@@ -369,6 +369,24 @@ Status when this was written: **E4-c is green in CI. E4-a and E4-b have never
 been run.** "E4 passes" is currently a sentence that would be true of one third
 of E4, and the fraction belongs beside the claim the way NP-K's 3/9 does.
 
+> **STATUS UPDATE, 2026-08-01 — both have since run, and this paragraph is kept
+> rather than rewritten because the spec was written against the earlier state.**
+> privent-n8n measured **E4-b at `7732a76`** and **E4-a at `b500627`**, so **E4 is
+> three of three sub-cells measured on containment**. The verdicts are two-part,
+> as METHOD §11 requires:
+>
+> - **E4-a** — containment **PASS**, visibility **NOT ESTABLISHED** under
+>   `N8N-S`: the audit counters were zero and three causes are indistinguishable,
+>   so `FAIL` would have named one the data cannot support.
+> - **E4-b** — containment **PASS**, visibility **NOT-APPLICABLE-BY-DESIGN**
+>   under `NP-AE`.
+>
+> This repository's half of `N8N-S` is measured in **NP-AG**: the node's audit
+> call is unconditional and its payload maps cleanly onto the ingest's required
+> fields, so *never called* and *rejected for shape* are both refuted from here —
+> but `auditLog` swallows every failure, so the node cannot discriminate the
+> remaining causes either.
+
 ## 8 · The two remaining modes, named from the code
 
 `nodes/Privent/Privent.node.ts:82,88,93` declares exactly three `authentication`

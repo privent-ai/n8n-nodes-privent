@@ -379,3 +379,28 @@ is what makes it an honest one.
 paragraph and later discovered the gap, would they say they were told? Not "was
 anything false" — "were they told".
 
+---
+
+## 13. An edit that is not asserted is an edit that may not have happened
+
+A scripted replacement that finds no match usually fails **silently** — the file
+is rewritten unchanged, the commit succeeds, and the commit message describes
+work that is not in the diff. The message is then evidence for something the
+artifact does not contain, which is the same defect as a green tick that checked
+nothing.
+
+**Instance — `84c718f`.** One commit made two edits: a new finding in
+`FINDINGS.md`, whose anchor matched, and a status correction in `E4-SPEC.md`,
+whose anchor did not. The second `replace` was written **without an assert**, so
+it no-oped. The commit message said *"E4-SPEC's status corrected"* and the diff
+said `1 file changed`. The specification kept saying two cells had never run for
+one more commit, while the record said they had — the exact stale-status class
+the correction existed to remove.
+
+Caught by checking the file after the merge rather than by trusting the message.
+
+**Rule.** Assert every scripted edit. `assert old in s` before `s.replace(...)`,
+one per target, and let the script die rather than write silently. **Corollary:**
+when a commit claims N changes, the diff stat is the check — `1 file changed` on
+a two-file claim is a failure report, not a detail.
+
