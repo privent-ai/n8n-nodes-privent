@@ -4,6 +4,7 @@ import type {
   ICredentialTestRequest,
   Icon,
 } from 'n8n-workflow';
+import { PRIVENT_CLIENT_HEADERS } from '../shared/privent-client.js';
 
 /**
  * Tokenless (Visitor) credential. No API key: the node mints an anonymous
@@ -36,6 +37,7 @@ export class PriventVisitorApi implements ICredentialType {
       url: '/v1/visitor/credentials',
       method: 'POST',
       body: {},
+      headers: { ...PRIVENT_CLIENT_HEADERS },
     },
   };
 }

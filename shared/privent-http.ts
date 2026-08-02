@@ -25,6 +25,7 @@ import type {
 } from '@priventai/core';
 import { normalize, Contracts, DEFAULT_DETECTORS } from '@priventai/core';
 import { LOCAL_DETECTORS, runValidator } from './local-detectors.js';
+import { PRIVENT_CLIENT_HEADERS } from './privent-client.js';
 
 type AuditEventV1 = Contracts.v1.AuditEventV1;
 
@@ -212,6 +213,7 @@ async function priventRequest<T>(
     body,
     json: true,
     timeout: PRIVENT_REQUEST_TIMEOUT_MS,
+    headers: { ...PRIVENT_CLIENT_HEADERS },
   })) as T;
 }
 
@@ -515,6 +517,7 @@ export async function fetchActiveCustomDetectors(
         baseURL: baseUrl,
         url: '/v1/custom-patterns/active',
         json: true,
+        headers: { ...PRIVENT_CLIENT_HEADERS },
       }) as Promise<unknown>,
       timeoutMs,
     );
@@ -582,6 +585,7 @@ export async function resolveVisitorId(
         url: '/v1/visitor/credentials',
         body: {},
         json: true,
+        headers: { ...PRIVENT_CLIENT_HEADERS },
       }) as Promise<{ visitor_id?: unknown; expires_at?: unknown }>,
       timeoutMs,
     )) as { visitor_id?: unknown; expires_at?: unknown } | typeof TIMED_OUT;
@@ -653,7 +657,7 @@ export async function priventVisitorRequest<T>(
       body,
       json: true,
       timeout: PRIVENT_REQUEST_TIMEOUT_MS,
-      headers: { 'X-Visitor-Id': visitorId },
+      headers: { ...PRIVENT_CLIENT_HEADERS, 'X-Visitor-Id': visitorId },
     })) as T;
 
   const visitorId = await resolveVisitorId(ctx, baseUrl);
@@ -1197,6 +1201,7 @@ export async function telemetryPing(
       url: '/v1/telemetry/events',
       json: true,
       timeout: 5000,
+      headers: { ...PRIVENT_CLIENT_HEADERS },
       body: {
         events: [
           {

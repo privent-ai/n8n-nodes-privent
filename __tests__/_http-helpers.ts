@@ -139,7 +139,10 @@ export interface HttpExecOpts {
  */
 export interface HttpExecHandle {
   exec: IExecuteFunctions;
-  calls: Array<{ url: string; body: Record<string, unknown> }>;
+  /** `headers` is recorded because a request option that is never observed is a
+   *  request option nobody can assert. It was absent until the channel-header
+   *  item needed it, which is why no test could see one before. */
+  calls: Array<{ url: string; body: Record<string, unknown>; headers?: Record<string, unknown> }>;
   httpRequestWithAuthentication: ReturnType<typeof vi.fn>;
   /** Wire-format audit events posted to /v1/audit/events, flattened. */
   auditEvents: () => Array<Record<string, unknown>>;
@@ -162,7 +165,7 @@ export const DEFAULT_HTTP_NODE: FakeNode = {
 };
 
 export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
-  const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+  const calls: Array<{ url: string; body: Record<string, unknown>; headers?: Record<string, unknown> }> = [];
   const riskResponse: Record<string, unknown> = opts.risk ?? {
     risk_score: 0,
     risk_level: 'LOW',
@@ -180,9 +183,12 @@ export function makeHttpExecFn(opts: HttpExecOpts): HttpExecHandle {
   const workflow = opts.workflow ?? { id: 'wf-1', name: 'Test Workflow' };
 
   const httpRequestWithAuthentication = vi.fn(
-    async (_cred: string, reqOpts: { url: string; body: Record<string, unknown> }) => {
-      const { url, body } = reqOpts;
-      calls.push({ url, body });
+    async (
+      _cred: string,
+      reqOpts: { url: string; body: Record<string, unknown>; headers?: Record<string, unknown> },
+    ) => {
+      const { url, body, headers } = reqOpts;
+      calls.push({ url, body, ...(headers ? { headers } : {}) });
       if (opts.hangUrls?.includes(url)) {
         return await new Promise<never>(() => {}); // never answers
       }

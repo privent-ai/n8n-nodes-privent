@@ -4,6 +4,20 @@ All notable changes to `n8n-nodes-privent` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **`X-Privent-Client: n8n-nodes` on every outbound Privent request.** The
+  backend's `framework` field names the orchestration engine, so this package and
+  the in-engine interceptor both report `n8n` and neither is identifiable from it.
+  The header carries the channel instead, on the transport rather than in the
+  body, because eight of the nine endpoints this node calls have no `framework`
+  and no metadata to put it in. Sent on both transports (API Key and Tokenless),
+  on the telemetry ping, and on both credentials' Test button. Nothing about
+  detection, tokenization or audit content changes, and no request data is added
+  — it identifies the client, not the caller.
+
 ## [3.0.1] - 2026-08-01
 
 ### Fixed
