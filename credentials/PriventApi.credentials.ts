@@ -4,6 +4,7 @@ import type {
   ICredentialTestRequest,
   Icon,
 } from 'n8n-workflow';
+import { PRIVENT_CLIENT_HEADERS } from '../shared/privent-client.js';
 
 export class PriventApi implements ICredentialType {
   name = 'priventApi';
@@ -72,6 +73,7 @@ export class PriventApi implements ICredentialType {
       baseURL: '={{$credentials.baseUrl}}',
       url: '/v1/health',
       method: 'GET',
+      headers: { ...PRIVENT_CLIENT_HEADERS },
     },
   };
 }

@@ -15,6 +15,7 @@ import {
   telemetryPing,
   wrapNodeError,
 } from '../../shared/privent-http.js';
+import { PRIVENT_CLIENT_HEADERS } from '../../shared/privent-client.js';
 import { handleSession } from './operations/session.js';
 import { handleTokenize } from './operations/tokenize.js';
 import { handleDetokenize } from './operations/detokenize.js';
@@ -777,6 +778,7 @@ export class Privent implements INodeType {
               url: '/v1/pricing/models',
               qs: { search: filter ?? '' },
               json: true,
+              headers: { ...PRIVENT_CLIENT_HEADERS },
             },
           )) as { models?: Array<{ provider: string; model: string }> };
           const results = (resp.models ?? []).map((m) => ({
