@@ -265,7 +265,7 @@ Opens a Privent session. Place this first — downstream nodes consume its `sess
 
 **Output:** `sessionId` (UUID), `traceId`, `startedAt` (Unix ms), `executionId`, `agentName`.
 
-**Parameters:** Session ID Mode (`auto` = new UUID per execution; `manual` = supply your own, must be a UUID), Agent Name (logical agent id, written to the item and audit metadata `agent_name`), Framework (n8n/manual), Webhook Node Name (optional; extracts client IP / User-Agent from an upstream Webhook trigger).
+**Parameters:** Session ID Mode (`auto` = new UUID per execution; `manual` = supply your own, must be a UUID), Agent Name (logical agent id, written to the item and audit metadata `agent_name`), Webhook Node Name (optional; extracts client IP / User-Agent from an upstream Webhook trigger).
 
 ### Resource: Tokenize
 

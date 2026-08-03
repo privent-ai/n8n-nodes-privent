@@ -20,8 +20,12 @@ export async function handleSession(
   vaultBackend?: 'memory' | 'cloud',
 ): Promise<IDataObject> {
   const item = ctx.getInputData()[i]!;
-  const framework =
-    (ctx.getNodeParameter('framework', i, 'n8n') as string) === 'manual' ? 'manual' : 'n8n';
+  // Not a parameter. `framework` names the orchestration engine and this node
+  // only runs inside n8n, so there was never a second answer for an operator to
+  // pick. The `Framework` dropdown that used to feed this is removed; a stored
+  // workflow may still carry the key and it is deliberately not read, which is
+  // what makes an upgraded workflow report correctly without being re-saved.
+  const framework = 'n8n';
   const triggerMode = safeTriggerMode(ctx);
   const { id: workflowId, name: workflowName } = safeWorkflow(ctx);
   const executionId = safeExecutionId(ctx);

@@ -64,14 +64,21 @@ export const CORE_VERSION = (() => {
 /**
  * Inlined from `@priventai/core` `cloud/audit-wire.ts` — `serializeForWire` is
  * not part of the published 0.8.0 surface, but its `Contracts.v1.AuditEventV1Schema`
- * is. Byte-faithful copy so the v1 wire contract (camel→snake, ms→ISO,
- * `manual`→`sdk`, UUID-enforced `session_id`/`trace_id`) is preserved exactly.
+ * is. It was a byte-faithful copy so the v1 wire contract (camel→snake, ms→ISO,
+ * UUID-enforced `session_id`/`trace_id`) was preserved exactly.
+ *
+ * IT IS NO LONGER BYTE-FAITHFUL, AND THAT IS DELIBERATE — said here rather than
+ * left for a reader to discover, because a copy that has quietly stopped being a
+ * copy is worse than one that never claimed to be. Core's version carries a
+ * `manual`→`sdk` mapping. This one does not, and cannot: `framework` names the
+ * ORCHESTRATION ENGINE, an n8n workflow is running on n8n whatever the operator
+ * picked in a dropdown, and `sdk` is a CHANNEL value — now carried by
+ * `X-Privent-Client` (see `privent-client.ts`), where it belongs.
+ *
+ * The mapping is core's to keep: the SDK is a channel that genuinely has no
+ * orchestration engine, so `manual`→`sdk` says something true there. It said
+ * something false here.
  */
-function frameworkForWire(framework: AuditEvent['framework']): string {
-  if (framework === 'manual') return 'sdk';
-  return framework;
-}
-
 function serializeForWire(event: AuditEvent): AuditEventV1 {
   const wire: AuditEventV1 = {
     event_id: crypto.randomUUID(),
@@ -79,7 +86,7 @@ function serializeForWire(event: AuditEvent): AuditEventV1 {
     trace_id: event.traceId,
     session_id: event.sessionId,
     timestamp: new Date(event.timestamp).toISOString(),
-    framework: frameworkForWire(event.framework),
+    framework: event.framework,
     ...(event.workflowId != null ? { workflow_id: event.workflowId } : {}),
     ...(event.nodeId != null ? { node_id: event.nodeId } : {}),
     metadata: event.metadata ?? {},

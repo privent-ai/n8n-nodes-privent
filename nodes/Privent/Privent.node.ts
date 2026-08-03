@@ -297,18 +297,6 @@ export class Privent implements INodeType {
         displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'] } },
       },
       {
-        displayName: 'Framework',
-        name: 'framework',
-        type: 'options',
-        options: [
-          { name: 'Manual / Custom', value: 'manual' },
-          { name: 'Native', value: 'n8n' },
-        ],
-        default: 'n8n',
-        description: 'Identifies the orchestration framework in audit logs',
-        displayOptions: { show: { authentication: ['apiKey', 'tokenless'], resource: ['session'], operation: ['open'] } },
-      },
-      {
         displayName: 'Webhook Node Name',
         name: 'webhookNodeName',
         type: 'string',
