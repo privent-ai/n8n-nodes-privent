@@ -6,6 +6,31 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed — audit events from this node now always report `framework: n8n`
+
+- **The `Framework` parameter on the Session node is removed, and `framework` is
+  always `n8n`.** It offered *Manual / Custom* and *Native*, and *Manual /
+  Custom* was translated to the wire value `sdk` — so a session opened in an n8n
+  workflow reached the backend claiming to be from the SDK, and could not be
+  identified as n8n at all. `framework` names the **orchestration engine**; a
+  node that only runs inside n8n has exactly one, so the choice was the bug and
+  `manual`→`sdk` was its symptom. `sdk` is a **channel** value now, carried by
+  `X-Privent-Client`.
+
+- **APPEARANCE CHANGE, if you had Framework set to *Manual / Custom*.** Sessions
+  opened from that node were stored against `framework: "sdk"` and will now be
+  stored against `framework: "n8n"`. In the dashboard, those sessions move from
+  the *SDK* framework filter to *n8n*. **Historic rows are not rewritten**, so
+  that customer's session history will show both values either side of the
+  upgrade. This is a **correction, not a regression** — those events were
+  mislabelled, and they were already self-contradictory on the wire, carrying
+  `framework: "sdk"` beside `metadata.framework: "n8n"` in the same payload. If
+  you left Framework on *Native* (the default), nothing changes.
+
+- **No re-saving needed.** A workflow saved with the old parameter keeps it in
+  storage; the node no longer reads it, so an upgraded workflow reports
+  correctly without being opened or re-saved.
+
 ### Added
 
 - **`X-Privent-Client: n8n-nodes` on every outbound Privent request.** The
